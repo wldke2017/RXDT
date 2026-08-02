@@ -133,6 +133,91 @@
 .upload-box:hover { border-color: #00f2fe; color: #00f2fe; }
 .upload-icon { font-size: 32px; margin-bottom: 8px; }
 
+/* ========================================
+   CONTRACT TRADING PAGE
+   ======================================== */
+.contract-page { display: flex; flex-direction: column; gap: 16px; padding-bottom: 80px; }
+
+/* Header */
+.contract-header { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 16px; overflow: visible; position: relative; }
+.contract-pair-row { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; }
+.contract-pair-selector { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 18px; font-weight: 800; color: var(--text-main); padding: 8px 12px; border-radius: 10px; background: rgba(255,255,255,0.04); border: 1px solid var(--border-color); transition: background 0.2s; }
+.contract-pair-selector:hover { background: rgba(0, 242, 254, 0.08); border-color: rgba(0, 242, 254, 0.4); }
+.contract-live-price { text-align: right; }
+.price-val { font-size: 22px; font-weight: 900; display: block; }
+.price-change { font-size: 13px; font-weight: 700; }
+
+/* Pair Dropdown */
+.contract-pair-dropdown { position: absolute; top: 100%; left: 0; right: 0; background: var(--bg-card); border: 1px solid var(--border-color); border-top: none; border-radius: 0 0 16px 16px; z-index: 200; max-height: 360px; display: flex; flex-direction: column; box-shadow: 0 20px 40px rgba(0,0,0,0.5); }
+.pair-search-wrap { padding: 12px; border-bottom: 1px solid var(--border-color); }
+.pair-search-input { width: 100%; background: rgba(255,255,255,0.06); border: 1px solid var(--border-color); border-radius: 8px; color: var(--text-main); padding: 8px 12px; font-size: 14px; outline: none; }
+.pair-list { overflow-y: auto; flex: 1; }
+.pair-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 16px; cursor: pointer; font-size: 13px; border-bottom: 1px solid rgba(255,255,255,0.04); transition: background 0.15s; }
+.pair-item:hover { background: rgba(0, 242, 254, 0.06); }
+.pair-item.active { background: rgba(0, 242, 254, 0.08); }
+.pair-item-name { font-weight: 700; color: var(--text-main); }
+.pair-item-price { color: var(--text-sub); font-size: 12px; }
+.pair-item-loading { padding: 20px; text-align: center; color: var(--text-muted); font-size: 13px; }
+
+/* Stats Row */
+.contract-stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.cstat { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 2px; }
+.cstat-lbl { font-size: 11px; color: var(--text-muted); }
+.cstat-val { font-size: 13px; font-weight: 700; }
+
+/* Chart */
+.contract-chart-wrap { border-radius: 12px; overflow: hidden; border: 1px solid var(--border-color); background: #0a0e1a; }
+
+/* Trade Panel */
+.contract-trade-panel { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 16px; padding: 20px; }
+.ctp-section-title { font-size: 16px; font-weight: 800; color: var(--text-main); margin-bottom: 16px; }
+
+/* Leverage Selector */
+.leverage-selector { display: flex; gap: 8px; }
+.lev-btn { flex: 1; padding: 10px 0; border: 1px solid var(--border-color); border-radius: 8px; background: rgba(255,255,255,0.04); color: var(--text-sub); font-size: 14px; font-weight: 700; cursor: pointer; transition: all 0.2s; }
+.lev-btn:hover { border-color: rgba(0, 242, 254, 0.5); color: #00f2fe; }
+.lev-btn.active { background: rgba(0, 242, 254, 0.12); border-color: #00f2fe; color: #00f2fe; box-shadow: 0 0 12px rgba(0, 242, 254, 0.2); }
+
+/* Calc Info */
+.contract-calc-info { background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); border-radius: 10px; padding: 12px 14px; margin-bottom: 16px; }
+.calc-row { display: flex; justify-content: space-between; font-size: 13px; padding: 3px 0; color: var(--text-sub); }
+.calc-row span:last-child { color: var(--text-main); font-weight: 600; }
+
+/* Long / Short Buttons */
+.contract-action-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.btn-long { padding: 14px; border-radius: 12px; border: none; background: linear-gradient(135deg, #00c49a, #00f2fe); color: #060b19; font-size: 16px; font-weight: 900; cursor: pointer; transition: transform 0.15s, box-shadow 0.15s; }
+.btn-long:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0, 196, 154, 0.5); }
+.btn-long:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+.btn-short { padding: 14px; border-radius: 12px; border: none; background: linear-gradient(135deg, #ff416c, #ff4b2b); color: #ffffff; font-size: 16px; font-weight: 900; cursor: pointer; transition: transform 0.15s, box-shadow 0.15s; }
+.btn-short:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(255, 65, 108, 0.5); }
+.btn-short:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+/* Position Cards */
+.position-card { background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); border-radius: 12px; padding: 14px; margin-bottom: 10px; }
+.position-card:last-child { margin-bottom: 0; }
+.pos-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.pos-pair { font-size: 16px; font-weight: 800; color: var(--text-main); }
+.pos-dir { font-size: 13px; font-weight: 700; padding: 3px 10px; border-radius: 6px; }
+.dir-long { background: rgba(0, 196, 154, 0.15); color: #00c49a; border: 1px solid rgba(0, 196, 154, 0.4); }
+.dir-short { background: rgba(255, 65, 108, 0.15); color: #ff416c; border: 1px solid rgba(255, 65, 108, 0.4); }
+.pos-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+.pos-stat { display: flex; flex-direction: column; gap: 2px; }
+.pos-stat span:first-child { font-size: 11px; color: var(--text-muted); }
+.pos-stat span:last-child { font-size: 13px; font-weight: 700; color: var(--text-main); }
+.btn-close-pos { width: 100%; padding: 10px; background: rgba(255, 65, 108, 0.1); border: 1px solid rgba(255, 65, 108, 0.4); border-radius: 8px; color: #ff416c; font-size: 14px; font-weight: 700; cursor: pointer; transition: background 0.2s; }
+.btn-close-pos:hover { background: rgba(255, 65, 108, 0.2); }
+
+/* History Row */
+.history-row { display: grid; grid-template-columns: 1.5fr 1fr 1fr 1fr; gap: 8px; font-size: 12px; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.05); color: var(--text-sub); }
+.history-row:last-child { border-bottom: none; }
+
+/* Mobile adjustments for contract */
+@media (max-width: 480px) {
+  .contract-stats-row { grid-template-columns: repeat(2, 1fr); }
+  .history-row { grid-template-columns: 1fr 1fr; }
+  .price-val { font-size: 18px; }
+}
+
 /* ---- Home Page Hero & Top Balance Widget ---- */
 .home-hero-container {
   position: relative;

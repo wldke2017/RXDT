@@ -178,6 +178,25 @@ export async function initDatabase() {
     );
   `);
 
+  await query(`
+    CREATE TABLE IF NOT EXISTS contract_orders (
+      id VARCHAR(50) PRIMARY KEY,
+      order_number VARCHAR(100) NOT NULL,
+      user_id VARCHAR(50) REFERENCES users(id) ON DELETE CASCADE,
+      pair VARCHAR(20) NOT NULL,
+      direction VARCHAR(10) NOT NULL,
+      leverage INT NOT NULL DEFAULT 10,
+      amount NUMERIC(15, 2) NOT NULL,
+      entry_price NUMERIC(15, 4) NOT NULL,
+      liquidation_price NUMERIC(15, 4),
+      status VARCHAR(20) DEFAULT 'open',
+      profit_loss NUMERIC(15, 2) DEFAULT 0,
+      close_price NUMERIC(15, 4),
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+      closed_at TIMESTAMP WITH TIME ZONE
+    );
+  `);
+
   await seedInitialData();
   console.log('✅ Database setup and initialization completed successfully.');
 }

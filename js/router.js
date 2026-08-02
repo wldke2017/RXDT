@@ -11,6 +11,7 @@ import * as luckyWheelPage from './pages/luckyWheel.js';
 import * as profilePage from './pages/profile.js';
 import * as aboutPage from './pages/about.js';
 import * as adminPage from './pages/admin.js';
+import * as contractPage from './pages/contract.js';
 
 const routes = {
   'home':                 homePage,
@@ -35,13 +36,14 @@ const routes = {
   'agreement':            aboutPage,
   'investment-agreement': aboutPage,
   'admin':                adminPage,
+  'contract':             contractPage,
 };
 
 // Pages that require a logged-in user
 const authRequired = [
   'follow', 'follow/note', 'follow/team',
   'assets', 'recharge', 'withdraw', 'bind-address', 'account-change',
-  'lucky-wheel', 'invite-friends', 'security-settings', 'kyc'
+  'lucky-wheel', 'invite-friends', 'security-settings', 'kyc', 'contract'
 ];
 
 async function navigate(path) {
