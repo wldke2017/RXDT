@@ -1,4 +1,5 @@
 import store from '../store.js';
+import COUNTRIES from '../countries.js';
 
 // Utility: Show toast
 function toast(msg, type = 'info') {
@@ -218,15 +219,19 @@ function renderKYC() {
         </select>
       </div>
       <div class="form-group">
-        <label class="form-label">Nationality</label>
-        <select class="form-control" id="kyc-nationality">
-          <option value="">Please select nationality</option>
-          <option value="India">India</option>
-          <option value="USA">United States</option>
-          <option value="China">China</option>
-          <option value="UAE">United Arab Emirates</option>
-          <option value="Other">Other</option>
-        </select>
+        <label class="form-label">Country / Nationality</label>
+        <div class="country-search-wrapper" style="position:relative;">
+          <input type="text" id="kyc-country-search" class="form-control" placeholder="🔍 Search or select country..."
+            oninput="filterKycCountries(this.value)" onfocus="showKycCountryDropdown()" autocomplete="off"/>
+          <input type="hidden" id="kyc-nationality" value=""/>
+          <div id="kyc-country-dropdown" class="country-dropdown-list" style="display:none;position:absolute;top:100%;left:0;right:0;max-height:220px;overflow-y:auto;background:var(--bg-card);border:1px solid var(--border-color);border-radius:8px;z-index:100;box-shadow:0 10px 25px rgba(0,0,0,0.5);margin-top:4px;">
+            ${COUNTRIES.map(c => `
+              <div class="country-item" onclick="selectKycCountry('${c.replace(/'/g, "\\'")}')" style="padding:10px 14px;cursor:pointer;font-size:14px;border-bottom:1px solid rgba(255,255,255,0.05);color:var(--text-main);">
+                ${c}
+              </div>
+            `).join('')}
+          </div>
+        </div>
       </div>
       <div class="form-group">
         <label class="form-label">Real Name</label>
@@ -350,11 +355,52 @@ export function init(page) {
     reader.readAsDataURL(file);
   };
 
+  window.showKycCountryDropdown = function() {
+    const dd = document.getElementById('kyc-country-dropdown');
+    if (dd) dd.style.display = 'block';
+  };
+
+  window.filterKycCountries = function(query) {
+    const q = query.toLowerCase();
+    const dd = document.getElementById('kyc-country-dropdown');
+    if (!dd) return;
+    dd.style.display = 'block';
+    const filtered = COUNTRIES.filter(c => c.toLowerCase().includes(q));
+    if (!filtered.length) {
+      dd.innerHTML = `<div style="padding:12px;color:var(--text-muted);font-size:13px;text-align:center;">No matching country found</div>`;
+      return;
+    }
+    dd.innerHTML = filtered.map(c => `
+      <div class="country-item" onclick="selectKycCountry('${c.replace(/'/g, "\\'")}')" style="padding:10px 14px;cursor:pointer;font-size:14px;border-bottom:1px solid rgba(255,255,255,0.05);color:var(--text-main);">
+        ${c}
+      </div>
+    `).join('');
+  };
+
+  window.selectKycCountry = function(country) {
+    const searchInput = document.getElementById('kyc-country-search');
+    const hiddenInput = document.getElementById('kyc-nationality');
+    const dd = document.getElementById('kyc-country-dropdown');
+    if (searchInput) searchInput.value = country;
+    if (hiddenInput) hiddenInput.value = country;
+    if (dd) dd.style.display = 'none';
+  };
+
+  document.addEventListener('click', function(e) {
+    const wrapper = e.target.closest('.country-search-wrapper');
+    if (!wrapper) {
+      const dd = document.getElementById('kyc-country-dropdown');
+      if (dd) dd.style.display = 'none';
+    }
+  });
+
   window.submitKYC = function() {
     const idType = document.getElementById('kyc-id-type')?.value;
+    const nationality = document.getElementById('kyc-nationality')?.value || document.getElementById('kyc-country-search')?.value;
     const name = document.getElementById('kyc-name')?.value;
     const idNum = document.getElementById('kyc-id-number')?.value;
-    if (!idType || !name || !idNum) { toast('Please fill all required fields', 'error'); return; }
+    if (!idType || !nationality || !name || !idNum) { toast('Please fill all required fields including Country', 'error'); return; }
+    store.submitKyc({ idType, nationality, realName: name, idNumber: idNum });
     toast('KYC submitted! Under review, please wait.', 'success');
     setTimeout(() => { window.location.hash = '#/assets'; }, 1200);
   };
