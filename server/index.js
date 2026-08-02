@@ -50,21 +50,26 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(rootDir, 'index.html'));
 });
 
-// Start Server & Connect Database
+// Start Server & Connect Database (only start listening if run directly)
+export let dbInitializedPromise = null;
+
 async function startServer() {
   let retries = 5;
   while (retries > 0) {
     try {
-      await initDatabase();
-      app.listen(PORT, () => {
-        console.log(`\n🚀 RXDT Exchange Backend Server running on http://localhost:${PORT}`);
-        console.log(`🐘 Connected to Neon PostgreSQL Database`);
-      });
+      dbInitializedPromise = initDatabase();
+      await dbInitializedPromise;
+      if (process.env.VERCEL !== '1' && !process.env.VERCEL_ENV) {
+        app.listen(PORT, () => {
+          console.log(`\n🚀 RXDT Exchange Backend Server running on http://localhost:${PORT}`);
+          console.log(`🐘 Connected to Neon PostgreSQL Database`);
+        });
+      }
       break;
     } catch (err) {
       console.error(`⚠️ Database connection attempt failed (${retries} retries left):`, err.message);
       retries--;
-      if (retries === 0) {
+      if (retries === 0 && process.env.VERCEL !== '1') {
         console.error('❌ Failed to start server after multiple retries.');
         process.exit(1);
       }
@@ -74,4 +79,7 @@ async function startServer() {
 }
 
 startServer();
+
+export default app;
+
 
