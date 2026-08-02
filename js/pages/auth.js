@@ -31,6 +31,7 @@ function renderLogin() {
   <div class="auth-page">
     <div class="auth-card">
       <div class="auth-brand">
+        <img src="assets/images/rxdt_logo.png" alt="RXDT Logo" class="auth-brand-logo-img"/>
         <div class="auth-logo">RXDT</div>
         <div class="auth-tagline">Login to Your Account</div>
         <p class="auth-subtitle">Welcome back! Login with your phone or email</p>
@@ -84,6 +85,7 @@ function renderRegister() {
   <div class="auth-page">
     <div class="auth-card">
       <div class="auth-brand">
+        <img src="assets/images/rxdt_logo.png" alt="RXDT Logo" class="auth-brand-logo-img"/>
         <div class="auth-logo">RXDT</div>
         <div class="auth-tagline">Create Your Account</div>
       </div>

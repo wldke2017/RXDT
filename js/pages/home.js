@@ -44,12 +44,8 @@ export function render() {
             </div>
           ` : `
             <div class="hbh-stat-item">
-              <span class="hbh-lbl">Welcome to RXDT</span>
-              <span class="hbh-val" style="font-size:16px;">AI Quantitative Trading</span>
-            </div>
-            <div class="hbh-actions">
-              <button class="btn-primary btn-sm" onclick="navigateTo('login')">Login</button>
-              <button class="btn-outline btn-sm" onclick="navigateTo('register')">Register</button>
+              <span class="hbh-lbl">Global Quantitative Platform</span>
+              <span class="hbh-val" style="font-size:15px;color:var(--el-color-primary);">AI Trading Engine VI Active</span>
             </div>
           `}
         </div>
