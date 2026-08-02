@@ -81,6 +81,11 @@ function renderLogin() {
 
 // ---- REGISTER ----
 function renderRegister() {
+  // Parse invite code from URL (e.g. #/register?invite=RX1234 or ?invite=RX1234)
+  const hash = window.location.hash || '';
+  const match = hash.match(/[?&]invite=([^&]+)/) || window.location.search.match(/[?&]invite=([^&]+)/);
+  const defaultInvite = match ? decodeURIComponent(match[1]) : '';
+
   return `
   <div class="auth-page">
     <div class="auth-card">
@@ -124,8 +129,8 @@ function renderRegister() {
         <input type="password" id="reg-confirm-pwd" class="form-control" placeholder="Please enter your password again"/>
       </div>
       <div class="form-group">
-        <label class="form-label">Invite Code (Optional)</label>
-        <input type="text" id="reg-invite-code" class="form-control" placeholder="Enter invite code"/>
+        <label class="form-label">Invite Code ${defaultInvite ? '<span style="color:#00f2fe;font-size:12px;">(Auto-filled)</span>' : '(Optional)'}</label>
+        <input type="text" id="reg-invite-code" class="form-control" placeholder="Enter invite code" value="${defaultInvite}"/>
       </div>
 
       <div class="form-group" style="display:flex;align-items:flex-start;gap:8px;">

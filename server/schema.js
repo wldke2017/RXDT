@@ -25,6 +25,7 @@ export async function initDatabase() {
       transaction_password VARCHAR(255),
       daily_signal_count INT DEFAULT 3,
       avg_daily_return VARCHAR(50) DEFAULT '1.8% - 2.1%',
+      referred_by VARCHAR(50),
       created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
     );
   `);
@@ -194,6 +195,18 @@ export async function initDatabase() {
       close_price NUMERIC(15, 4),
       created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
       closed_at TIMESTAMP WITH TIME ZONE
+    );
+  `);
+
+  await query(`
+    CREATE TABLE IF NOT EXISTS referral_commissions (
+      id VARCHAR(50) PRIMARY KEY,
+      referrer_id VARCHAR(50) REFERENCES users(id) ON DELETE CASCADE,
+      referred_user_id VARCHAR(50) REFERENCES users(id) ON DELETE CASCADE,
+      level INT DEFAULT 1,
+      trade_amount NUMERIC(15, 2) DEFAULT 0,
+      amount NUMERIC(15, 2) NOT NULL,
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
     );
   `);
 

@@ -13,6 +13,7 @@ import kycRoutes from './routes/kyc.js';
 import adminRoutes from './routes/admin.js';
 import emailRoutes from './routes/email.js';
 import contractRoutes from './routes/contract.js';
+import referralRoutes from './routes/referrals.js';
 
 dotenv.config();
 
@@ -40,6 +41,7 @@ app.use('/api/kyc', kycRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/email', emailRoutes);
 app.use('/api/contract', contractRoutes);
+app.use('/api/referrals', referralRoutes);
 
 // Healthcheck
 app.get('/api/health', (req, res) => {

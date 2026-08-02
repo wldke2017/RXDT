@@ -20,8 +20,8 @@ export function render(page) {
 // ---- INVITE FRIENDS ----
 function renderInvite() {
   const user = store.getUser();
-  const inviteLink = `https://rxdtex.com/#/register?invite=${user?.inviteCode || 'RXDT0000'}`;
-  const team = store.getTeam();
+  const origin = window.location.origin;
+  const inviteLink = `${origin}/#/register?invite=${user?.inviteCode || 'RXDT'}`;
 
   return `
   <div>
@@ -38,29 +38,36 @@ function renderInvite() {
     <div class="card">
       <div class="card-title">Your Referral Info</div>
       <div class="invite-code-block">
-        <div class="invite-code-label">Your Invite Code</div>
-        <div class="invite-code-val">${user?.inviteCode || 'RXDT0000'}</div>
-        <button class="btn-outline" onclick="copyText('${user?.inviteCode || 'RXDT0000'}','Invite code copied!')">Copy Code</button>
+        <div class="invite-code-label">Your Unique Invite Code</div>
+        <div class="invite-code-val" id="ref-invite-code">${user?.inviteCode || 'Loading...'}</div>
+        <button class="btn-outline" onclick="copyText(document.getElementById('ref-invite-code').textContent,'Invite code copied!')">Copy Code</button>
       </div>
       <div class="invite-link-block">
-        <div class="invite-code-label">Your Invite Link</div>
-        <div class="invite-link-val">${inviteLink}</div>
-        <button class="btn-outline" onclick="copyText('${inviteLink}','Invite link copied!')">Copy Link</button>
+        <div class="invite-code-label">Your Unique Invite Link</div>
+        <div class="invite-link-val" id="ref-invite-link">${inviteLink}</div>
+        <button class="btn-outline" onclick="copyText(document.getElementById('ref-invite-link').textContent,'Invite link copied!')">Copy Link</button>
       </div>
     </div>
 
     <div class="grid-3" style="margin-bottom:20px;">
       <div class="card" style="text-align:center;margin-bottom:0;">
-        <div style="font-size:28px;font-weight:700;color:var(--el-color-primary);">${team.totalMembers}</div>
-        <div style="font-size:13px;color:var(--text-sub);">Total Invited</div>
+        <div style="font-size:28px;font-weight:700;color:var(--el-color-primary);" id="stat-total-members">0</div>
+        <div style="font-size:13px;color:var(--text-sub);">Total Team Members</div>
       </div>
       <div class="card" style="text-align:center;margin-bottom:0;">
-        <div style="font-size:28px;font-weight:700;color:var(--el-color-primary);">${team.directMembers}</div>
-        <div style="font-size:13px;color:var(--text-sub);">Direct Referrals</div>
+        <div style="font-size:28px;font-weight:700;color:var(--el-color-primary);" id="stat-direct-members">0</div>
+        <div style="font-size:13px;color:var(--text-sub);">Direct Referrals (Level 1)</div>
       </div>
       <div class="card" style="text-align:center;margin-bottom:0;">
-        <div style="font-size:28px;font-weight:700;color:var(--color-up);">$${Number(team.totalCommission).toFixed(2)}</div>
-        <div style="font-size:13px;color:var(--text-sub);">Total Commission</div>
+        <div style="font-size:28px;font-weight:700;color:var(--color-up);" id="stat-total-comm">$0.00</div>
+        <div style="font-size:13px;color:var(--text-sub);">Total Commission Earned</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">👥 Referred Members List</div>
+      <div id="referred-members-list">
+        <div style="text-align:center;padding:20px;color:var(--text-muted);font-size:13px;">Loading referred members...</div>
       </div>
     </div>
 
@@ -296,6 +303,55 @@ export function init(page) {
       }
     } catch (e) {}
   }
+  // Load real referral stats from server
+  async function loadReferralStats() {
+    try {
+      const data = await authFetch('/api/referrals/stats');
+      if (data.success) {
+        const totEl = document.getElementById('stat-total-members');
+        const dirEl = document.getElementById('stat-direct-members');
+        const commEl = document.getElementById('stat-total-comm');
+        const codeEl = document.getElementById('ref-invite-code');
+        const linkEl = document.getElementById('ref-invite-link');
+
+        if (totEl) totEl.textContent = data.totalMembers || 0;
+        if (dirEl) dirEl.textContent = data.directMembers || 0;
+        if (commEl) commEl.textContent = `$${(data.totalCommission || 0).toFixed(2)}`;
+        if (codeEl && data.inviteCode) codeEl.textContent = data.inviteCode;
+        if (linkEl && data.inviteCode) linkEl.textContent = `${window.location.origin}/#/register?invite=${data.inviteCode}`;
+
+        const listEl = document.getElementById('referred-members-list');
+        if (listEl) {
+          if (!data.members || data.members.length === 0) {
+            listEl.innerHTML = `<div style="text-align:center;padding:24px;color:var(--text-muted);font-size:13px;">No referred members yet. Share your invite link to get started!</div>`;
+          } else {
+            listEl.innerHTML = `
+              <div class="table-container">
+                <table class="data-table">
+                  <thead>
+                    <tr><th>User</th><th>Joined Date</th><th>Assets</th><th>Level</th></tr>
+                  </thead>
+                  <tbody>
+                    ${data.members.map(m => `
+                      <tr>
+                        <td><strong>${m.name}</strong> <span style="font-size:12px;color:var(--text-muted);">${m.phone || m.email}</span></td>
+                        <td>${new Date(m.joinedAt).toLocaleDateString()}</td>
+                        <td class="price-up">$${m.totalAssets.toFixed(2)}</td>
+                        <td><span class="badge badge-info">Level ${m.level}</span></td>
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                </table>
+              </div>`;
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to load referral stats:', e);
+    }
+  }
+
+  if (page === 'invite-friends') loadReferralStats();
   if (page === 'security-settings') checkEmailStatus();
 
   window.openBindEmailModal = function() {

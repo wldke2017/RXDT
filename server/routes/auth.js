@@ -32,14 +32,24 @@ router.post('/register', async (req, res) => {
     const hash = await bcrypt.hash(password, salt);
 
     const userId = 'U' + Math.floor(100000 + Math.random() * 900000);
-    const userInviteCode = 'RXDT' + Math.floor(1000 + Math.random() * 9000);
+    // Generate unique 6-character uppercase/number invite code
+    const userInviteCode = 'RX' + Math.random().toString(36).substring(2, 6).toUpperCase();
     const userName = name || (phone ? 'Trader_' + phone.slice(-4) : email.split('@')[0]);
 
+    // Check if inviteCode/referrer was provided
+    let referrerId = null;
+    if (inviteCode) {
+      const refRes = await query(`SELECT id FROM users WHERE invite_code = $1 OR id = $1`, [inviteCode.trim()]);
+      if (refRes.rows.length > 0) {
+        referrerId = refRes.rows[0].id;
+      }
+    }
+
     const newUser = await query(`
-      INSERT INTO users (id, name, phone, email, password_hash, invite_code, total_assets, available_balance, frozen_balance, total_earnings)
-      VALUES ($1, $2, $3, $4, $5, $6, 100.00, 100.00, 0.00, 0.00)
-      RETURNING id, name, phone, email, total_assets, available_balance, frozen_balance, total_earnings, invite_code, kyc_status, membership_tier;
-    `, [userId, userName, phone || null, email || null, hash, userInviteCode]);
+      INSERT INTO users (id, name, phone, email, password_hash, invite_code, referred_by, total_assets, available_balance, frozen_balance, total_earnings)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, 100.00, 100.00, 0.00, 0.00)
+      RETURNING id, name, phone, email, total_assets, available_balance, frozen_balance, total_earnings, invite_code, referred_by, kyc_status, membership_tier;
+    `, [userId, userName, phone || null, email || null, hash, userInviteCode, referrerId]);
 
     const user = newUser.rows[0];
     const token = jwt.sign({ id: user.id, phone: user.phone || '', email: user.email || '' }, JWT_SECRET, { expiresIn: '7d' });
