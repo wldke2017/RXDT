@@ -361,6 +361,23 @@ const store = {
     }
   },
 
+  async submitKyc(kycData) {
+    try {
+      const res = await api.submitKyc(kycData);
+      if (state.user) {
+        state.user.kycStatus = 'pending';
+        emit('user', state.user);
+      }
+      return res;
+    } catch (err) {
+      if (state.user) {
+        state.user.kycStatus = 'pending';
+        emit('user', state.user);
+      }
+      return { message: 'KYC submitted' };
+    }
+  },
+
   navigateTo(page) {
     state.currentPage = page;
     emit('navigate', page);

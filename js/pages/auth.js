@@ -425,15 +425,19 @@ export function init(page) {
     }
   });
 
-  window.submitKYC = function() {
+  window.submitKYC = async function() {
     const idType = document.getElementById('kyc-id-type')?.value;
     const nationality = document.getElementById('kyc-nationality')?.value || document.getElementById('kyc-country-search')?.value;
     const name = document.getElementById('kyc-name')?.value;
     const idNum = document.getElementById('kyc-id-number')?.value;
     if (!idType || !nationality || !name || !idNum) { toast('Please fill all required fields including Country', 'error'); return; }
-    store.submitKyc({ idType, nationality, realName: name, idNumber: idNum });
-    toast('KYC submitted! Under review, please wait.', 'success');
-    setTimeout(() => { window.location.hash = '#/assets'; }, 1200);
+    try {
+      await store.submitKyc({ idType, nationality, realName: name, idNumber: idNum });
+      toast('KYC submitted! Under review, please wait.', 'success');
+      setTimeout(() => { window.location.hash = '#/assets'; }, 1200);
+    } catch (err) {
+      toast(err.message || 'Failed to submit KYC', 'error');
+    }
   };
 
   window.toast = toast;
