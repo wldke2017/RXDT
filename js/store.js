@@ -49,13 +49,7 @@ const store = {
       this.syncAllUserData();
       return true;
     } catch (err) {
-      // Fallback for offline/mock demo
-      state.user = { ...MOCK_DATA.user };
-      state.isLoggedIn = true;
-      localStorage.setItem('rxdt_token', 'mock_token_12345');
-      emit('auth', { isLoggedIn: true });
-      emit('user', state.user);
-      return true;
+      throw err;
     }
   },
 

@@ -287,26 +287,47 @@ export function init(page) {
     if (inp) inp.type = inp.type === 'password' ? 'text' : 'password';
   };
 
-  window.doLogin = function() {
-    const phone = document.getElementById('login-phone')?.value || '';
-    const email = document.getElementById('login-email')?.value || '';
+  window.doLogin = async function() {
+    const phoneGroup = document.getElementById('login-phone-group');
+    const isPhone = phoneGroup && phoneGroup.style.display !== 'none';
+    const phone = isPhone ? (document.getElementById('login-phone')?.value || '') : '';
+    const email = !isPhone ? (document.getElementById('login-email')?.value || '') : '';
     const pwd = document.getElementById('login-password')?.value || '';
+
     if (!phone && !email) { toast('Please enter phone or email', 'error'); return; }
     if (!pwd) { toast('Please enter your password', 'error'); return; }
-    store.login({ phone, email, password: pwd });
-    toast('Login successful!', 'success');
-    setTimeout(() => { window.location.hash = '#/home'; }, 500);
+
+    try {
+      await store.login({ phone, email, password: pwd });
+      toast('Login successful!', 'success');
+      setTimeout(() => { window.location.hash = '#/home'; }, 500);
+    } catch (err) {
+      toast(err.message || 'Login failed', 'error');
+    }
   };
 
-  window.doRegister = function() {
+  window.doRegister = async function() {
+    const phoneGroup = document.getElementById('reg-phone-group');
+    const isPhone = phoneGroup && phoneGroup.style.display !== 'none';
+    const phone = isPhone ? (document.getElementById('reg-phone')?.value || '') : '';
+    const email = !isPhone ? (document.getElementById('reg-email')?.value || '') : '';
     const pwd = document.getElementById('reg-password')?.value || '';
     const confirm = document.getElementById('reg-confirm-pwd')?.value || '';
+    const inviteCode = document.getElementById('reg-invite-code')?.value || '';
+
+    if (isPhone && !phone) { toast('Please enter your phone number', 'error'); return; }
+    if (!isPhone && !email) { toast('Please enter your email address', 'error'); return; }
     if (!document.getElementById('agree-terms')?.checked) { toast('Please agree to the terms', 'error'); return; }
     if (pwd !== confirm) { toast('Passwords do not match', 'error'); return; }
     if (pwd.length < 6) { toast('Password must be at least 6 characters', 'error'); return; }
-    store.login({});
-    toast('Registration successful! Welcome to RXDT!', 'success');
-    setTimeout(() => { window.location.hash = '#/kyc'; }, 500);
+
+    try {
+      await store.register({ phone, email, password: pwd, inviteCode, name: phone ? `User_${phone.slice(-4)}` : email.split('@')[0] });
+      toast('Registration successful! Welcome to RXDT!', 'success');
+      setTimeout(() => { window.location.hash = '#/kyc'; }, 500);
+    } catch (err) {
+      toast(err.message || 'Registration failed', 'error');
+    }
   };
 
   window.sendCode = function() {

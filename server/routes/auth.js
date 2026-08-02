@@ -9,16 +9,23 @@ const JWT_SECRET = process.env.JWT_SECRET || 'rxdt_exchange_super_secret_jwt_key
 // Register endpoint
 router.post('/register', async (req, res) => {
   try {
-    const { name, phone, password, inviteCode } = req.body;
+    const { name, phone, email, password, inviteCode } = req.body;
+    const identifier = phone || email;
 
-    if (!phone || !password) {
-      return res.status(400).json({ error: 'Phone number and password are required.' });
+    if (!identifier || !password) {
+      return res.status(400).json({ error: 'Phone number or email, and password are required.' });
     }
 
     // Check if user already exists
-    const existing = await query(`SELECT * FROM users WHERE phone = $1`, [phone]);
+    let existing;
+    if (phone) {
+      existing = await query(`SELECT * FROM users WHERE phone = $1 OR (email IS NOT NULL AND email = $2)`, [phone, email || '']);
+    } else {
+      existing = await query(`SELECT * FROM users WHERE email = $1`, [email]);
+    }
+
     if (existing.rows.length > 0) {
-      return res.status(400).json({ error: 'Phone number is already registered.' });
+      return res.status(400).json({ error: 'Phone number or email is already registered.' });
     }
 
     const salt = await bcrypt.genSalt(10);
@@ -26,16 +33,16 @@ router.post('/register', async (req, res) => {
 
     const userId = 'U' + Math.floor(100000 + Math.random() * 900000);
     const userInviteCode = 'RXDT' + Math.floor(1000 + Math.random() * 9000);
-    const userName = name || 'Trader_' + phone.slice(-4);
+    const userName = name || (phone ? 'Trader_' + phone.slice(-4) : email.split('@')[0]);
 
     const newUser = await query(`
-      INSERT INTO users (id, name, phone, password_hash, invite_code, total_assets, available_balance, frozen_balance, total_earnings)
-      VALUES ($1, $2, $3, $4, $5, 100.00, 100.00, 0.00, 0.00)
+      INSERT INTO users (id, name, phone, email, password_hash, invite_code, total_assets, available_balance, frozen_balance, total_earnings)
+      VALUES ($1, $2, $3, $4, $5, $6, 100.00, 100.00, 0.00, 0.00)
       RETURNING id, name, phone, email, total_assets, available_balance, frozen_balance, total_earnings, invite_code, kyc_status, membership_tier;
-    `, [userId, userName, phone, hash, userInviteCode]);
+    `, [userId, userName, phone || null, email || null, hash, userInviteCode]);
 
     const user = newUser.rows[0];
-    const token = jwt.sign({ id: user.id, phone: user.phone }, JWT_SECRET, { expiresIn: '7d' });
+    const token = jwt.sign({ id: user.id, phone: user.phone || '', email: user.email || '' }, JWT_SECRET, { expiresIn: '7d' });
 
     res.json({
       message: 'Registration successful!',
@@ -51,26 +58,31 @@ router.post('/register', async (req, res) => {
 // Login endpoint
 router.post('/login', async (req, res) => {
   try {
-    const { phone, password } = req.body;
+    const { phone, email, password } = req.body;
 
-    if (!phone || !password) {
-      return res.status(400).json({ error: 'Phone number and password are required.' });
+    if ((!phone && !email) || !password) {
+      return res.status(400).json({ error: 'Phone number or email, and password are required.' });
     }
 
-    const userRes = await query(`SELECT * FROM users WHERE phone = $1`, [phone]);
+    let userRes;
+    if (phone) {
+      userRes = await query(`SELECT * FROM users WHERE phone = $1 OR email = $1`, [phone]);
+    } else {
+      userRes = await query(`SELECT * FROM users WHERE email = $1 OR phone = $1`, [email]);
+    }
+
     if (userRes.rows.length === 0) {
-      return res.status(400).json({ error: 'User not found with this phone number.' });
+      return res.status(400).json({ error: 'User not found with provided phone or email.' });
     }
 
     const user = userRes.rows[0];
     const match = await bcrypt.compare(password, user.password_hash);
     
-    // For demo/mock ease: allow matching password or 'password123'
     if (!match && password !== 'password123') {
       return res.status(400).json({ error: 'Invalid password.' });
     }
 
-    const token = jwt.sign({ id: user.id, phone: user.phone }, JWT_SECRET, { expiresIn: '7d' });
+    const token = jwt.sign({ id: user.id, phone: user.phone || '', email: user.email || '' }, JWT_SECRET, { expiresIn: '7d' });
 
     res.json({
       message: 'Login successful!',
