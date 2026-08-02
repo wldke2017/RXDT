@@ -371,3 +371,13 @@
   .home-crypto-banner { flex-direction: column; text-align: center; }
   .auth-card { padding: 28px 20px; }
 }
+
+@media (max-width: 480px) {
+  .hero-title { font-size: 23px; }
+  .hero-coin-grid { grid-template-columns: repeat(2, 1fr); }
+  .returns-grid { grid-template-columns: 1fr; }
+  .order-stats { grid-template-columns: 1fr; }
+  .card { padding: 16px; }
+  .page-title { font-size: 20px; }
+  .btn-primary, .btn-outline { width: 100%; justify-content: center; }
+}

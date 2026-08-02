@@ -459,9 +459,15 @@ table.data-table tr:hover {
 @media (max-width: 768px) {
   .navbar { padding: 0 16px; }
   .navbar .nav-links { display: none; }
-  .mobile-nav { display: block; }
-  .page-container { padding: 16px 12px 80px 12px; }
+  .mobile-nav { display: block; z-index: 2000; }
+  .page-container { padding: 16px 12px 90px 12px; }
   .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+  .toast-container { top: 12px; left: 16px; right: 16px; width: auto; }
+  .toast { text-align: center; }
+  .modal-content { width: 92%; padding: 20px 16px; }
+  .footer { padding: 30px 16px 100px 16px; }
+  .table-container { -webkit-overflow-scrolling: touch; }
+  table.data-table { min-width: 520px; }
 }
 
 /* Hero dark-bg outline button override */
