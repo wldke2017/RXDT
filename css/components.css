@@ -187,13 +187,14 @@
 
 /* ---- Market Page ---- */
 .market-search { flex: 1; max-width: 300px; }
-.market-chart { background: #f7f9fc; border-radius: 8px; overflow: hidden; margin-bottom: 12px; }
+.market-chart { background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; margin-bottom: 12px; }
 .timeframe-tabs { display: flex; gap: 4px; flex-wrap: wrap; }
 .tf-btn { padding: 5px 12px; border-radius: 4px; border: 1px solid var(--border-color); font-size: 13px; background: transparent; cursor: pointer; color: var(--text-sub); }
-.tf-btn.active { background: var(--el-color-primary); color: #fff; border-color: var(--el-color-primary); }
-.detail-stat { padding: 12px; background: #f7f9fc; border-radius: 8px; }
+.tf-btn.active { background: var(--el-color-primary); color: #000; border-color: var(--el-color-primary); font-weight: 700; }
+.detail-stat { padding: 12px; background: rgba(255,255,255,0.04); border: 1px solid var(--border-color); border-radius: 8px; }
 .ds-label { font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px; }
-.ds-val { font-size: 16px; font-weight: 600; }
+.ds-val { font-size: 16px; font-weight: 600; color: var(--text-main); }
+
 
 /* ---- Follow / Copy Trading Page ---- */
 .follow-sub-nav { display: flex; gap: 8px; flex-wrap: wrap; }
@@ -373,6 +374,15 @@
   .auth-card { padding: 28px 20px; }
   .summary-total { font-size: 30px; }
   .assets-summary-card { padding: 24px 20px; }
+  /* Market table — hide low-priority columns on tablet */
+  #market-table th:nth-child(4),
+  #market-table td:nth-child(4),
+  #market-table th:nth-child(5),
+  #market-table td:nth-child(5),
+  #market-table th:nth-child(6),
+  #market-table td:nth-child(6),
+  #market-table th:nth-child(7),
+  #market-table td:nth-child(7) { display: none; }
 }
 
 @media (max-width: 480px) {
@@ -382,12 +392,12 @@
   .order-stats { grid-template-columns: repeat(2, 1fr); }
   .card { padding: 16px; }
   .page-title { font-size: 20px; }
-  .btn-primary, .btn-outline { width: 100%; justify-content: center; }
   .summary-total { font-size: 26px; }
   .hero-stats { flex-direction: column; gap: 10px; }
   .stat-val { font-size: 18px; }
   .follow-sub-nav { gap: 6px; }
   .sub-nav-btn { font-size: 12px; padding: 6px 12px; }
   .analyst-card { padding: 16px; }
+  .hero-actions .hero-btn { font-size: 13px; }
 }
 

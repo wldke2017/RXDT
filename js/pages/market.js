@@ -20,12 +20,12 @@ let selectedItem = null;
 export function render() {
   currentMarketData = store.getMarketData();
   return `
-  < div >
+  <div>
     <div class="page-header">
       <h1 class="page-title">Market Conditions</h1>
       <div class="market-search">
-        <input type="text" id="market-search" class="form-control" placeholder="Search by symbol or name..."
-          oninput="filterMarket(this.value)" style="max-width:280px;"/>
+        <input type="text" id="market-search" class="form-control" placeholder="Search symbol or name..."
+          oninput="filterMarket(this.value)"/>
       </div>
     </div>
 
@@ -58,18 +58,18 @@ export function render() {
       </div>
     </div>
 
-    <!--Market Detail Drawer-- >
+  <!--Market Detail Drawer-->
   <div class="modal-overlay" id="market-detail-modal">
-    <div class="modal-content" style="max-width:660px;" id="market-detail-content">
+    <div class="modal-content" style="max-width:min(660px,95vw);" id="market-detail-content">
     </div>
   </div>
-  </div > `;
+  </div>`;
 }
 
 function renderMarketRows(data) {
-  if (!data.length) return `< tr > <td colspan="8" style="text-align:center;padding:40px;color:var(--text-muted)">No results found</td></tr > `;
+  if (!data.length) return `<tr><td colspan="8" style="text-align:center;padding:40px;color:var(--text-muted)">No results found</td></tr>`;
   return data.map(item => `
-  < tr onclick = "openMarketDetail('${item.symbol}')" style = "cursor:pointer;" >
+  <tr onclick="openMarketDetail('${item.symbol}')" style="cursor:pointer;">
       <td>
         <div style="font-weight:600;">${item.symbol}</div>
         <div style="font-size:12px;color:var(--text-muted);">${item.name}</div>
@@ -99,9 +99,9 @@ function renderDetailContent(item) {
       <button class="modal-close" onclick="closeModal('market-detail-modal')">✕</button>
     </div >
 
-    <div style="display:flex;align-items:baseline;gap:12px;margin-bottom:20px;">
-      <span style="font-size:36px;font-weight:700;">$${fmt(item.price)}</span>
-      <span class="${item.changeRate >= 0 ? 'price-up' : 'price-down'}" style="font-size:18px;">
+    <div style="display:flex;align-items:baseline;gap:12px;margin-bottom:20px;flex-wrap:wrap;">
+      <span style="font-size:clamp(24px,6vw,36px);font-weight:700;">$${fmt(item.price)}</span>
+      <span class="${item.changeRate >= 0 ? 'price-up' : 'price-down'}" style="font-size:clamp(14px,4vw,18px);">
         ${item.changeRate >= 0 ? '▲' : '▼'} ${Math.abs(item.changeRate).toFixed(2)}%
       </span>
     </div>
