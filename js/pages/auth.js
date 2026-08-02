@@ -103,10 +103,13 @@ function renderRegister() {
       </div>
 
       <div class="form-group">
-        <label class="form-label">Verification Code</label>
-        <div class="code-input-group">
-          <input type="text" id="reg-code" class="form-control" placeholder="Please enter verification code"/>
-          <button class="btn-primary code-btn" onclick="sendCode()" id="send-code-btn">Get Code</button>
+        <label class="form-label">Security Verification (CAPTCHA)</label>
+        <div style="display:flex;gap:10px;align-items:center;">
+          <div id="captcha-question" style="background:rgba(255,255,255,0.08);border:1px solid var(--border-color);border-radius:8px;padding:12px 18px;font-size:18px;font-weight:800;color:var(--el-color-primary);letter-spacing:2px;user-select:none;white-space:nowrap;">
+            <!-- Math equation loaded in JS -->
+          </div>
+          <input type="number" id="reg-captcha-answer" class="form-control" placeholder="Enter answer" style="font-size:16px;text-align:center;"/>
+          <button type="button" class="btn-outline" style="padding:10px 14px;white-space:nowrap;" onclick="generateCaptcha()">🔄</button>
         </div>
       </div>
 
@@ -148,18 +151,18 @@ function renderForgetPwd() {
     <div class="auth-card">
       <div class="auth-brand">
         <div class="auth-logo">RXDT</div>
-        <div class="auth-tagline">Reset Password</div>
+        <div class="auth-tagline">Reset Password via Email</div>
       </div>
 
       <div class="form-group">
-        <label class="form-label">Phone Number</label>
-        <input type="tel" id="fp-phone" class="form-control" placeholder="Please enter your phone number"/>
+        <label class="form-label">Bound Email Address</label>
+        <input type="email" id="fp-email" class="form-control" placeholder="Please enter your bound email address"/>
       </div>
       <div class="form-group">
-        <label class="form-label">Verification Code</label>
+        <label class="form-label">Email Verification Code</label>
         <div class="code-input-group">
-          <input type="text" id="fp-code" class="form-control" placeholder="Please enter verification code"/>
-          <button class="btn-primary code-btn" id="fp-send-btn" onclick="sendFpCode()">Get Code</button>
+          <input type="text" id="fp-code" class="form-control" placeholder="6-digit verification code"/>
+          <button class="btn-primary code-btn" id="fp-send-btn" onclick="sendFpEmailCode()">Get Code</button>
         </div>
       </div>
       <div class="form-group">
@@ -168,6 +171,17 @@ function renderForgetPwd() {
       </div>
       <div class="form-group">
         <label class="form-label">Confirm Password</label>
+        <input type="password" id="fp-confirm-pwd" class="form-control" placeholder="Please enter new password again"/>
+      </div>
+
+      <button class="btn-dark auth-submit" onclick="doResetPwd()">Confirm Reset</button>
+
+      <div class="auth-footer-links">
+        Remembered your password? <a onclick="navigateTo('login')" class="link">Back to Login</a>
+      </div>
+    </div>
+  </div>`;
+}
         <input type="password" id="fp-confirm-pwd" class="form-control" placeholder="Please enter your password again"/>
       </div>
 
@@ -311,22 +325,38 @@ export function init(page) {
       await store.login({ phone, email, password: pwd });
       toast('Login successful!', 'success');
       setTimeout(() => { window.location.hash = '#/home'; }, 500);
-    } catch (err) {
-      toast(err.message || 'Login failed', 'error');
-    }
+  let currentCaptchaAns = 0;
+
+  window.generateCaptcha = function() {
+    const a = Math.floor(Math.random() * 10) + 1;
+    const b = Math.floor(Math.random() * 10) + 1;
+    currentCaptchaAns = a + b;
+    const el = document.getElementById('captcha-question');
+    if (el) el.textContent = `${a} + ${b} = ?`;
   };
+
+  // Generate initial captcha on register load
+  if (page === 'register') {
+    setTimeout(() => window.generateCaptcha(), 100);
+  }
 
   window.doRegister = async function() {
     const phoneGroup = document.getElementById('reg-phone-group');
     const isPhone = phoneGroup && phoneGroup.style.display !== 'none';
     const phone = isPhone ? (document.getElementById('reg-phone')?.value || '') : '';
     const email = !isPhone ? (document.getElementById('reg-email')?.value || '') : '';
+    const captchaAns = parseInt(document.getElementById('reg-captcha-answer')?.value || '-1');
     const pwd = document.getElementById('reg-password')?.value || '';
     const confirm = document.getElementById('reg-confirm-pwd')?.value || '';
     const inviteCode = document.getElementById('reg-invite-code')?.value || '';
 
     if (isPhone && !phone) { toast('Please enter your phone number', 'error'); return; }
     if (!isPhone && !email) { toast('Please enter your email address', 'error'); return; }
+    if (captchaAns !== currentCaptchaAns) {
+      toast('❌ Incorrect CAPTCHA answer. Try again.', 'error');
+      window.generateCaptcha();
+      return;
+    }
     if (!document.getElementById('agree-terms')?.checked) { toast('Please agree to the terms', 'error'); return; }
     if (pwd !== confirm) { toast('Passwords do not match', 'error'); return; }
     if (pwd.length < 6) { toast('Password must be at least 6 characters', 'error'); return; }
@@ -337,42 +367,63 @@ export function init(page) {
       setTimeout(() => { window.location.hash = '#/kyc'; }, 500);
     } catch (err) {
       toast(err.message || 'Registration failed', 'error');
+      window.generateCaptcha();
     }
   };
 
-  window.sendCode = function() {
-    const btn = document.getElementById('send-code-btn');
-    if (!btn) return;
-    let sec = 60;
-    btn.disabled = true;
-    const timer = setInterval(() => {
-      btn.textContent = `${sec}s`;
-      sec--;
-      if (sec < 0) { clearInterval(timer); btn.disabled = false; btn.textContent = 'Get Code'; }
-    }, 1000);
-    toast('Verification code sent!', 'success');
-  };
+  window.sendFpEmailCode = async function() {
+    const email = document.getElementById('fp-email')?.value;
+    if (!email) { toast('Please enter your email address', 'error'); return; }
 
-  window.sendFpCode = function() {
     const btn = document.getElementById('fp-send-btn');
-    if (!btn) return;
-    let sec = 60;
-    btn.disabled = true;
-    const timer = setInterval(() => {
-      btn.textContent = `${sec}s`;
-      sec--;
-      if (sec < 0) { clearInterval(timer); btn.disabled = false; btn.textContent = 'Get Code'; }
-    }, 1000);
-    toast('Verification code sent!', 'success');
+    if (btn) btn.disabled = true;
+
+    try {
+      const res = await fetch('/api/email/send-otp-public', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to send reset code');
+
+      toast(data.message || 'Verification code sent to your email!', 'success');
+
+      let sec = 60;
+      const timer = setInterval(() => {
+        if (btn) btn.textContent = `${sec}s`;
+        sec--;
+        if (sec < 0) { clearInterval(timer); if (btn) { btn.disabled = false; btn.textContent = 'Get Code'; } }
+      }, 1000);
+    } catch (err) {
+      toast(err.message, 'error');
+      if (btn) btn.disabled = false;
+    }
   };
 
-  window.doResetPwd = function() {
-    const newPwd = document.getElementById('fp-new-pwd')?.value || '';
-    const confirm = document.getElementById('fp-confirm-pwd')?.value || '';
-    if (!newPwd || !confirm) { toast('Please fill all fields', 'error'); return; }
-    if (newPwd !== confirm) { toast('Passwords do not match', 'error'); return; }
-    toast('Password reset successfully!', 'success');
-    setTimeout(() => { window.location.hash = '#/login'; }, 1000);
+  window.doResetPwd = async function() {
+    const email = document.getElementById('fp-email')?.value;
+    const otp = document.getElementById('fp-code')?.value;
+    const newPassword = document.getElementById('fp-new-pwd')?.value;
+    const confirm = document.getElementById('fp-confirm-pwd')?.value;
+
+    if (!email || !otp || !newPassword) { toast('Please fill all required fields', 'error'); return; }
+    if (newPassword !== confirm) { toast('Passwords do not match', 'error'); return; }
+
+    try {
+      const res = await fetch('/api/email/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, otp, newPassword }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Reset failed');
+
+      toast('✅ Password reset successfully! Please log in.', 'success');
+      setTimeout(() => { window.location.hash = '#/login'; }, 1000);
+    } catch (err) {
+      toast(err.message, 'error');
+    }
   };
 
   window.previewUpload = function(input, previewId) {

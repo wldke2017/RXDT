@@ -11,6 +11,7 @@ import walletRoutes from './routes/wallet.js';
 import gamificationRoutes from './routes/gamification.js';
 import kycRoutes from './routes/kyc.js';
 import adminRoutes from './routes/admin.js';
+import emailRoutes from './routes/email.js';
 
 dotenv.config();
 
@@ -36,6 +37,7 @@ app.use('/api/wallet', walletRoutes);
 app.use('/api/lucky-wheel', gamificationRoutes);
 app.use('/api/kyc', kycRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/email', emailRoutes);
 
 // Healthcheck
 app.get('/api/health', (req, res) => {

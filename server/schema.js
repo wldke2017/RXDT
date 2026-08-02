@@ -19,6 +19,10 @@ export async function initDatabase() {
       invite_code VARCHAR(20) UNIQUE NOT NULL,
       kyc_status VARCHAR(20) DEFAULT 'unverified',
       membership_tier VARCHAR(50) DEFAULT 'Basic',
+      email_bound VARCHAR(100),
+      email_otp VARCHAR(10),
+      email_otp_expires TIMESTAMP WITH TIME ZONE,
+      transaction_password VARCHAR(255),
       daily_signal_count INT DEFAULT 3,
       avg_daily_return VARCHAR(50) DEFAULT '1.8% - 2.1%',
       created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP

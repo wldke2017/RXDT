@@ -124,9 +124,11 @@ function renderSecurity() {
       <div class="security-item">
         <div class="security-item-info">
           <div class="si-title">✉️ Email Verification</div>
-          <div class="si-sub">Bind an email for additional security</div>
+          <div class="si-sub" id="email-bind-status-sub">Bind an email for security & password changes</div>
         </div>
-        <button class="btn-outline" style="padding:7px 16px;font-size:13px;" onclick="openBindEmail()">Bind</button>
+        <div id="email-bind-btn-container">
+          <button class="btn-outline" style="padding:7px 16px;font-size:13px;" onclick="openBindEmailModal()">Bind Email</button>
+        </div>
       </div>
 
       <div class="security-divider"></div>
@@ -140,17 +142,36 @@ function renderSecurity() {
       </div>
     </div>
 
-    <!-- Change Password Modal -->
-    <div class="modal-overlay" id="change-pwd-modal">
-      <div class="modal-content" style="max-width:440px;">
-        <div class="modal-header">
-          <div class="modal-title" id="change-pwd-title">Change Password</div>
-          <button class="modal-close" onclick="document.getElementById('change-pwd-modal').classList.remove('active')">✕</button>
+    <!-- Bind Email Modal -->
+    <div class="modal-overlay" id="bind-email-modal">
+      <div class="modal-content" style="max-width:440px;background:var(--bg-card);border-radius:16px;padding:24px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+          <h3 style="margin:0;font-size:18px;font-weight:700;">✉️ Bind Email Address</h3>
+          <button class="btn-outline" style="padding:4px 10px;" onclick="closeBindEmailModal()">✕</button>
         </div>
         <div class="form-group">
-          <label class="form-label">Current Password</label>
-          <input type="password" id="sec-current-pwd" class="form-control" placeholder="Enter current password"/>
+          <label class="form-label">Your Email Address</label>
+          <input type="email" id="bind-email-input" class="form-control" placeholder="name@example.com"/>
         </div>
+        <div class="form-group">
+          <label class="form-label">Verification Code</label>
+          <div class="code-input-group" style="display:flex;gap:8px;">
+            <input type="text" id="bind-email-code" class="form-control" placeholder="6-digit code"/>
+            <button class="btn-primary" id="bind-email-send-btn" style="white-space:nowrap;padding:0 16px;" onclick="sendBindEmailOtp()">Send Code</button>
+          </div>
+        </div>
+        <button class="btn-dark" style="width:100%;height:48px;font-size:16px;margin-top:12px;" onclick="submitBindEmail()">Confirm Email Binding</button>
+      </div>
+    </div>
+
+    <!-- Change Password Modal -->
+    <div class="modal-overlay" id="change-pwd-modal">
+      <div class="modal-content" style="max-width:440px;background:var(--bg-card);border-radius:16px;padding:24px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+          <h3 style="margin:0;font-size:18px;font-weight:700;" id="change-pwd-title">Change Password</h3>
+          <button class="btn-outline" style="padding:4px 10px;" onclick="document.getElementById('change-pwd-modal').classList.remove('active')">✕</button>
+        </div>
+        <input type="hidden" id="sec-pwd-type" value="login"/>
         <div class="form-group">
           <label class="form-label">New Password</label>
           <input type="password" id="sec-new-pwd" class="form-control" placeholder="Enter new password"/>
@@ -159,8 +180,15 @@ function renderSecurity() {
           <label class="form-label">Confirm New Password</label>
           <input type="password" id="sec-confirm-pwd" class="form-control" placeholder="Confirm new password"/>
         </div>
-        <div class="auth-warning">⚠️ After changing password, withdrawals are suspended for 24 hours.</div>
-        <button class="btn-dark" style="width:100%;height:48px;font-size:16px;margin-top:12px;" onclick="submitChangePwd()">Confirm Change</button>
+        <div class="form-group">
+          <label class="form-label">Email Verification Code</label>
+          <div class="code-input-group" style="display:flex;gap:8px;">
+            <input type="text" id="sec-pwd-otp" class="form-control" placeholder="6-digit code"/>
+            <button class="btn-primary" id="sec-pwd-send-btn" style="white-space:nowrap;padding:0 16px;" onclick="sendPwdChangeOtp()">Send Code</button>
+          </div>
+        </div>
+        <div class="auth-warning" style="font-size:12px;color:#f59e0b;margin-bottom:12px;">⚠️ Code will be sent to your bound email address.</div>
+        <button class="btn-dark" style="width:100%;height:48px;font-size:16px;" onclick="submitChangePwd()">Confirm Change</button>
       </div>
     </div>
   </div>`;
@@ -248,26 +276,145 @@ export function init(page) {
       .catch(() => { const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); toast(msg || 'Copied!', 'success'); });
   };
 
-  window.openChangePwd = function(type) {
-    document.getElementById('change-pwd-title').textContent = type === 'login' ? 'Change Login Password' : 'Set Transaction Password';
-    document.getElementById('change-pwd-modal').classList.add('active');
+  // Helper to fetch with bearer token
+  const authFetch = async (url, opts = {}) => {
+    const token = localStorage.getItem('rxdt_token');
+    opts.headers = { ...opts.headers, 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
+    const res = await fetch(url, opts);
+    return res.json();
   };
 
-  window.submitChangePwd = function() {
-    const current = document.getElementById('sec-current-pwd')?.value;
-    const newPwd = document.getElementById('sec-new-pwd')?.value;
+  // Check email status on page load
+  async function checkEmailStatus() {
+    try {
+      const data = await authFetch('/api/email/email-status');
+      const sub = document.getElementById('email-bind-status-sub');
+      const container = document.getElementById('email-bind-btn-container');
+      if (data.emailBound) {
+        if (sub) sub.textContent = `Bound: ${data.emailBound}`;
+        if (container) container.innerHTML = `<span class="badge badge-success">Bound</span>`;
+      }
+    } catch (e) {}
+  }
+  if (page === 'security-settings') checkEmailStatus();
+
+  window.openBindEmailModal = function() {
+    document.getElementById('bind-email-modal')?.classList.add('active');
+  };
+
+  window.closeBindEmailModal = function() {
+    document.getElementById('bind-email-modal')?.classList.remove('active');
+  };
+
+  window.sendBindEmailOtp = async function() {
+    const email = document.getElementById('bind-email-input')?.value;
+    if (!email || !email.includes('@')) { toast('Please enter a valid email address', 'error'); return; }
+
+    const btn = document.getElementById('bind-email-send-btn');
+    if (btn) btn.disabled = true;
+
+    try {
+      const data = await authFetch('/api/email/send-otp', { method: 'POST', body: JSON.stringify({ email }) });
+      if (data.error) throw new Error(data.error);
+      toast(data.message || 'Verification code sent to your email!', 'success');
+
+      let sec = 60;
+      const timer = setInterval(() => {
+        if (btn) btn.textContent = `${sec}s`;
+        sec--;
+        if (sec < 0) { clearInterval(timer); if (btn) { btn.disabled = false; btn.textContent = 'Send Code'; } }
+      }, 1000);
+    } catch (err) {
+      toast(err.message, 'error');
+      if (btn) btn.disabled = false;
+    }
+  };
+
+  window.submitBindEmail = async function() {
+    const email = document.getElementById('bind-email-input')?.value;
+    const otp = document.getElementById('bind-email-code')?.value;
+
+    if (!email || !otp) { toast('Please enter email and verification code', 'error'); return; }
+
+    try {
+      const data = await authFetch('/api/email/bind-email', { method: 'POST', body: JSON.stringify({ email, otp }) });
+      if (data.error) throw new Error(data.error);
+      toast('✅ Email bound successfully!', 'success');
+      closeBindEmailModal();
+      checkEmailStatus();
+    } catch (err) {
+      toast(err.message, 'error');
+    }
+  };
+
+  window.openChangePwd = async function(type) {
+    // Check if email is bound first
+    try {
+      const statusData = await authFetch('/api/email/email-status');
+      if (!statusData.emailBound) {
+        toast('⚠️ Please bind an email address first before changing password', 'error');
+        openBindEmailModal();
+        return;
+      }
+    } catch (e) {}
+
+    const titleEl = document.getElementById('change-pwd-title');
+    const typeEl = document.getElementById('sec-pwd-type');
+    if (titleEl) titleEl.textContent = type === 'login' ? 'Change Login Password' : 'Set Transaction Password';
+    if (typeEl) typeEl.value = type;
+    document.getElementById('change-pwd-modal')?.classList.add('active');
+  };
+
+  window.sendPwdChangeOtp = async function() {
+    const btn = document.getElementById('sec-pwd-send-btn');
+    if (btn) btn.disabled = true;
+
+    try {
+      const statusData = await authFetch('/api/email/email-status');
+      if (!statusData.emailBound) throw new Error('No email bound');
+
+      const data = await authFetch('/api/email/send-otp', {
+        method: 'POST',
+        body: JSON.stringify({ email: statusData.emailBound })
+      });
+      if (data.error) throw new Error(data.error);
+
+      toast(`Code sent to ${statusData.emailBound}!`, 'success');
+
+      let sec = 60;
+      const timer = setInterval(() => {
+        if (btn) btn.textContent = `${sec}s`;
+        sec--;
+        if (sec < 0) { clearInterval(timer); if (btn) { btn.disabled = false; btn.textContent = 'Send Code'; } }
+      }, 1000);
+    } catch (err) {
+      toast(err.message, 'error');
+      if (btn) btn.disabled = false;
+    }
+  };
+
+  window.submitChangePwd = async function() {
+    const type = document.getElementById('sec-pwd-type')?.value || 'login';
+    const newPassword = document.getElementById('sec-new-pwd')?.value;
     const confirm = document.getElementById('sec-confirm-pwd')?.value;
-    if (!current || !newPwd || !confirm) { toast('Please fill all fields', 'error'); return; }
-    if (newPwd !== confirm) { toast('Passwords do not match', 'error'); return; }
-    if (newPwd.length < 6) { toast('Password must be at least 6 characters', 'error'); return; }
-    document.getElementById('change-pwd-modal').classList.remove('active');
-    toast('Password changed successfully!', 'success');
-  };
+    const otp = document.getElementById('sec-pwd-otp')?.value;
 
-  window.openBindEmail = function() {
-    const email = prompt('Enter your email address to bind:');
-    if (!email || !email.includes('@')) { if (email !== null) toast('Invalid email address', 'error'); return; }
-    toast(`Email ${email} bound successfully!`, 'success');
+    if (!newPassword || !confirm || !otp) { toast('Please fill all fields', 'error'); return; }
+    if (newPassword !== confirm) { toast('Passwords do not match', 'error'); return; }
+    if (newPassword.length < 6) { toast('Password must be at least 6 characters', 'error'); return; }
+
+    try {
+      const data = await authFetch('/api/email/change-password', {
+        method: 'POST',
+        body: JSON.stringify({ newPassword, otp, type })
+      });
+      if (data.error) throw new Error(data.error);
+
+      toast(`✅ ${type === 'login' ? 'Login' : 'Transaction'} password changed successfully!`, 'success');
+      document.getElementById('change-pwd-modal')?.classList.remove('active');
+    } catch (err) {
+      toast(err.message, 'error');
+    }
   };
 
   window.toggleFaq = function(el) {
