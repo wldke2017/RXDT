@@ -260,6 +260,16 @@ function renderKYC() {
           <img id="kyc-back-preview" style="display:none;max-width:100%;margin-top:8px;border-radius:4px;"/>
         </div>
       </div>
+      <div class="form-group">
+        <label class="form-label">Selfie Holding Your ID Document</label>
+        <div class="upload-box" onclick="document.getElementById('kyc-handheld').click()" style="border-color:var(--el-color-primary);">
+          <div class="upload-icon">🤳</div>
+          <div>Upload a clear photo of yourself holding your ID document</div>
+          <div style="font-size:11px;color:var(--text-sub);margin-top:4px;">Ensure your face and ID details are clearly visible</div>
+          <input type="file" id="kyc-handheld" accept="image/*" style="display:none;" onchange="previewUpload(this,'kyc-handheld-preview')"/>
+          <img id="kyc-handheld-preview" style="display:none;max-width:100%;margin-top:8px;border-radius:4px;"/>
+        </div>
+      </div>
 
       <button class="btn-dark auth-submit" onclick="submitKYC()">Submit</button>
     </div>
