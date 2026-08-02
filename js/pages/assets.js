@@ -228,7 +228,6 @@ function renderRecharge() {
     </div>
   </div>`;
 }
-}
 
 function renderNetworkOptions(coinData) {
   return coinData.networks.map((net, i) => `
