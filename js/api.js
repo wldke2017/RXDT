@@ -2,7 +2,7 @@
 const BASE_URL = '';
 
 async function request(endpoint, options = {}) {
-  const token = localStorage.getItem('qvse_token');
+  const token = localStorage.getItem('rxdt_token');
   const headers = {
     'Content-Type': 'application/json',
     ...(options.headers || {})

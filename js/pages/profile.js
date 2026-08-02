@@ -20,7 +20,7 @@ export function render(page) {
 // ---- INVITE FRIENDS ----
 function renderInvite() {
   const user = store.getUser();
-  const inviteLink = `https://qvsesp.com/#/register?invite=${user?.inviteCode || 'QVSE0000'}`;
+  const inviteLink = `https://rxdtex.com/#/register?invite=${user?.inviteCode || 'RXDT0000'}`;
   const team = store.getTeam();
 
   return `
@@ -30,7 +30,7 @@ function renderInvite() {
     <div class="invite-hero-card">
       <div class="invite-hero-text">
         <h2>Earn Up to <span class="highlight">15%</span> Commission</h2>
-        <p>Invite friends to join QVSE. Earn commission on every order they place. Level 1: 15% · Level 2: 7.5%</p>
+        <p>Invite friends to join RXDT. Earn commission on every order they place. Level 1: 15% · Level 2: 7.5%</p>
       </div>
       <div class="invite-icon-large">👥</div>
     </div>
@@ -39,8 +39,8 @@ function renderInvite() {
       <div class="card-title">Your Referral Info</div>
       <div class="invite-code-block">
         <div class="invite-code-label">Your Invite Code</div>
-        <div class="invite-code-val">${user?.inviteCode || 'QVSE0000'}</div>
-        <button class="btn-outline" onclick="copyText('${user?.inviteCode || 'QVSE0000'}','Invite code copied!')">Copy Code</button>
+        <div class="invite-code-val">${user?.inviteCode || 'RXDT0000'}</div>
+        <button class="btn-outline" onclick="copyText('${user?.inviteCode || 'RXDT0000'}','Invite code copied!')">Copy Code</button>
       </div>
       <div class="invite-link-block">
         <div class="invite-code-label">Your Invite Link</div>
@@ -185,14 +185,14 @@ function renderCustomerService() {
         <div class="csc-icon">📧</div>
         <div class="csc-info">
           <div class="csc-title">Email Support</div>
-          <div class="csc-sub">support@qvsesp.com</div>
+          <div class="csc-sub">support@rxdtex.com</div>
         </div>
       </div>
       <div class="cs-channel-card">
         <div class="csc-icon">📱</div>
         <div class="csc-info">
           <div class="csc-title">Telegram Support</div>
-          <div class="csc-sub">@QVSE_Official</div>
+          <div class="csc-sub">@RXDT_Official</div>
         </div>
       </div>
     </div>
@@ -221,12 +221,12 @@ function renderCustomerService() {
     <div class="modal-overlay" id="chat-modal">
       <div class="modal-content" style="max-width:480px;height:80vh;display:flex;flex-direction:column;padding:0;">
         <div style="padding:20px;border-bottom:1px solid var(--border-color);display:flex;justify-content:space-between;align-items:center;">
-          <div class="modal-title">QVSE Support</div>
+          <div class="modal-title">RXDT Support</div>
           <button class="modal-close" onclick="document.getElementById('chat-modal').classList.remove('active')">✕</button>
         </div>
         <div id="chat-messages" style="flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:12px;">
           <div class="chat-msg support">
-            <div class="chat-bubble">👋 Hello! Welcome to QVSE support. How can I help you today?</div>
+            <div class="chat-bubble">👋 Hello! Welcome to RXDT support. How can I help you today?</div>
             <div class="chat-time">Just now</div>
           </div>
         </div>
@@ -304,7 +304,7 @@ export function init(page) {
         'Thank you for your message! Our team will assist you shortly.',
         'I understand your concern. Let me check that for you.',
         'Please allow 1-2 minutes for our specialist to connect with you.',
-        'For urgent matters, please contact us at support@qvsesp.com.'
+        'For urgent matters, please contact us at support@rxdtex.com.'
       ];
       const reply = replies[Math.floor(Math.random() * replies.length)];
       const supportEl = document.createElement('div');

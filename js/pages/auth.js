@@ -30,7 +30,7 @@ function renderLogin() {
   <div class="auth-page">
     <div class="auth-card">
       <div class="auth-brand">
-        <div class="auth-logo">QVSE</div>
+        <div class="auth-logo">RXDT</div>
         <div class="auth-tagline">Login to Your Account</div>
         <p class="auth-subtitle">Welcome back! Login with your phone or email</p>
       </div>
@@ -83,7 +83,7 @@ function renderRegister() {
   <div class="auth-page">
     <div class="auth-card">
       <div class="auth-brand">
-        <div class="auth-logo">QVSE</div>
+        <div class="auth-logo">RXDT</div>
         <div class="auth-tagline">Create Your Account</div>
       </div>
 
@@ -146,7 +146,7 @@ function renderForgetPwd() {
   <div class="auth-page">
     <div class="auth-card">
       <div class="auth-brand">
-        <div class="auth-logo">QVSE</div>
+        <div class="auth-logo">RXDT</div>
         <div class="auth-tagline">Reset Password</div>
       </div>
 
@@ -300,7 +300,7 @@ export function init(page) {
     if (pwd !== confirm) { toast('Passwords do not match', 'error'); return; }
     if (pwd.length < 6) { toast('Password must be at least 6 characters', 'error'); return; }
     store.login({});
-    toast('Registration successful! Welcome to QVSE!', 'success');
+    toast('Registration successful! Welcome to RXDT!', 'success');
     setTimeout(() => { window.location.hash = '#/kyc'; }, 500);
   };
 

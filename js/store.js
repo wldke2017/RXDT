@@ -43,7 +43,7 @@ const store = {
       const res = await api.login(credentials);
       state.user = res.user;
       state.isLoggedIn = true;
-      localStorage.setItem('qvse_token', res.token);
+      localStorage.setItem('rxdt_token', res.token);
       emit('auth', { isLoggedIn: true });
       emit('user', state.user);
       this.syncAllUserData();
@@ -52,7 +52,7 @@ const store = {
       // Fallback for offline/mock demo
       state.user = { ...MOCK_DATA.user };
       state.isLoggedIn = true;
-      localStorage.setItem('qvse_token', 'mock_token_12345');
+      localStorage.setItem('rxdt_token', 'mock_token_12345');
       emit('auth', { isLoggedIn: true });
       emit('user', state.user);
       return true;
@@ -64,7 +64,7 @@ const store = {
       const res = await api.register(data);
       state.user = res.user;
       state.isLoggedIn = true;
-      localStorage.setItem('qvse_token', res.token);
+      localStorage.setItem('rxdt_token', res.token);
       emit('auth', { isLoggedIn: true });
       emit('user', state.user);
       return true;
@@ -76,13 +76,13 @@ const store = {
   logout() {
     state.user = null;
     state.isLoggedIn = false;
-    localStorage.removeItem('qvse_token');
+    localStorage.removeItem('rxdt_token');
     emit('auth', { isLoggedIn: false });
     emit('user', null);
   },
 
   async checkAuth() {
-    const token = localStorage.getItem('qvse_token');
+    const token = localStorage.getItem('rxdt_token');
     if (token) {
       try {
         const res = await api.getMe();

@@ -176,7 +176,7 @@ function getStockDescription(symbol) {
     'BTC/USDT': 'Bitcoin is the first decentralized cryptocurrency. It operates on a peer-to-peer network without a central bank or administrator.',
     'ETH/USDT': 'Ethereum is a decentralized, open-source blockchain with smart contract functionality. Ether is the native cryptocurrency.'
   };
-  return descs[symbol] || 'A publicly traded company listed on major US exchanges offering investment opportunities through the QVSE platform.';
+  return descs[symbol] || 'A publicly traded company listed on major US exchanges offering investment opportunities through the RXDT platform.';
 }
 
 export function init(page) {
