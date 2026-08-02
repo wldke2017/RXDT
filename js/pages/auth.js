@@ -182,20 +182,6 @@ function renderForgetPwd() {
     </div>
   </div>`;
 }
-        <input type="password" id="fp-confirm-pwd" class="form-control" placeholder="Please enter your password again"/>
-      </div>
-
-      <div class="auth-warning">
-        ⚠️ For asset security, transactions will be suspended for 24 hours after password reset.
-      </div>
-
-      <button class="btn-dark auth-submit" onclick="doResetPwd()">Reset Password</button>
-      <div class="auth-footer-links">
-        <a onclick="navigateTo('login')" class="link">Back to Login</a>
-      </div>
-    </div>
-  </div>`;
-}
 
 // ---- KYC ----
 function renderKYC() {
