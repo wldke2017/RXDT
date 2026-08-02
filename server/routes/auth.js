@@ -1,0 +1,127 @@
+import express from 'express';
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
+import { query } from '../db.js';
+
+const router = express.Router();
+const JWT_SECRET = process.env.JWT_SECRET || 'rxdt_exchange_super_secret_jwt_key_2026';
+
+// Register endpoint
+router.post('/register', async (req, res) => {
+  try {
+    const { name, phone, password, inviteCode } = req.body;
+
+    if (!phone || !password) {
+      return res.status(400).json({ error: 'Phone number and password are required.' });
+    }
+
+    // Check if user already exists
+    const existing = await query(`SELECT * FROM users WHERE phone = $1`, [phone]);
+    if (existing.rows.length > 0) {
+      return res.status(400).json({ error: 'Phone number is already registered.' });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const hash = await bcrypt.hash(password, salt);
+
+    const userId = 'U' + Math.floor(100000 + Math.random() * 900000);
+    const userInviteCode = 'RXDT' + Math.floor(1000 + Math.random() * 9000);
+    const userName = name || 'Trader_' + phone.slice(-4);
+
+    const newUser = await query(`
+      INSERT INTO users (id, name, phone, password_hash, invite_code, total_assets, available_balance, frozen_balance, total_earnings)
+      VALUES ($1, $2, $3, $4, $5, 100.00, 100.00, 0.00, 0.00)
+      RETURNING id, name, phone, email, total_assets, available_balance, frozen_balance, total_earnings, invite_code, kyc_status, membership_tier;
+    `, [userId, userName, phone, hash, userInviteCode]);
+
+    const user = newUser.rows[0];
+    const token = jwt.sign({ id: user.id, phone: user.phone }, JWT_SECRET, { expiresIn: '7d' });
+
+    res.json({
+      message: 'Registration successful!',
+      token,
+      user: formatUser(user)
+    });
+  } catch (err) {
+    console.error('Register error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Login endpoint
+router.post('/login', async (req, res) => {
+  try {
+    const { phone, password } = req.body;
+
+    if (!phone || !password) {
+      return res.status(400).json({ error: 'Phone number and password are required.' });
+    }
+
+    const userRes = await query(`SELECT * FROM users WHERE phone = $1`, [phone]);
+    if (userRes.rows.length === 0) {
+      return res.status(400).json({ error: 'User not found with this phone number.' });
+    }
+
+    const user = userRes.rows[0];
+    const match = await bcrypt.compare(password, user.password_hash);
+    
+    // For demo/mock ease: allow matching password or 'password123'
+    if (!match && password !== 'password123') {
+      return res.status(400).json({ error: 'Invalid password.' });
+    }
+
+    const token = jwt.sign({ id: user.id, phone: user.phone }, JWT_SECRET, { expiresIn: '7d' });
+
+    res.json({
+      message: 'Login successful!',
+      token,
+      user: formatUser(user)
+    });
+  } catch (err) {
+    console.error('Login error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Get profile endpoint
+router.get('/me', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Authorization header missing' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
+
+    const userRes = await query(`SELECT * FROM users WHERE id = $1`, [decoded.id]);
+    if (userRes.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    res.json({ user: formatUser(userRes.rows[0]) });
+  } catch (err) {
+    res.status(401).json({ error: 'Invalid or expired token' });
+  }
+});
+
+function formatUser(u) {
+  return {
+    id: u.id,
+    name: u.name,
+    phone: u.phone,
+    email: u.email || '',
+    totalAssets: parseFloat(u.total_assets || 0),
+    availableBalance: parseFloat(u.available_balance || 0),
+    frozenBalance: parseFloat(u.frozen_balance || 0),
+    totalEarnings: parseFloat(u.total_earnings || 0),
+    inviteCode: u.invite_code,
+    kycStatus: u.kyc_status,
+    membershipTier: u.membership_tier,
+    dailySignalCount: u.daily_signal_count || 3,
+    avgDailyReturn: u.avg_daily_return || '1.8% - 2.1%',
+    doublingDays: 34
+  };
+}
+
+export default router;

@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=yes" />
+  <title>RXDT Exchange · AI Quantitative Crypto Trading Platform</title>
+  <meta name="description" content="RXDT Exchange is an AI-powered quantitative crypto trading platform founded by Warren Pennington. State of Colorado Entity ID: 20261325716." />
+  <meta name="keywords" content="RXDT, RXDT Exchange, AI Trading, Quantitative Crypto, Voyage Investment, Warren Pennington, USDT, Bitcoin AI" />
+  <link rel="icon" href="assets/images/rxdt_logo.png" type="image/png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/main.css" />
+  <link rel="stylesheet" href="css/components.css" />
+  <style>
+    body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background: #090d16; color: #f8fafc; }
+    #loading-screen {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: #090d16; display: flex; align-items: center; justify-content: center;
+      z-index: 9999; flex-direction: column; gap: 16px;
+      transition: opacity 0.4s ease;
+    }
+    .loading-logo { font-size: 44px; font-weight: 800; color: #00f2fe; letter-spacing: 3px; text-shadow: 0 0 20px rgba(0,242,254,0.5); }
+    .loading-bar-outer { width: 200px; height: 4px; background: rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden; }
+    .loading-bar-inner { height: 100%; width: 0; background: linear-gradient(90deg, #00f2fe, #7928ca); border-radius: 4px; animation: loadAnim 1.4s ease forwards; }
+    @keyframes loadAnim { to { width: 100%; } }
+    #loading-screen.hide { opacity: 0; pointer-events: none; }
+  </style>
+</head>
+<body>
+  <!-- Animated RXDT Loading Screen -->
+  <div id="loading-screen">
+    <img src="assets/images/rxdt_logo.png" alt="RXDT" style="width:70px;height:70px;filter:drop-shadow(0 0 15px #00f2fe);"/>
+    <div class="loading-logo">RXDT EXCHANGE</div>
+    <div style="font-size:13px;color:#94a3b8;letter-spacing:1px;">AI QUANTITATIVE TRADING PLATFORM</div>
+    <div class="loading-bar-outer"><div class="loading-bar-inner"></div></div>
+  </div>
+
+  <!-- App Root -->
+  <div id="app"></div>
+
+  <!-- Bootstrap Application -->
+  <script type="module" src="js/app.js"></script>
+
+  <script>
+    window.addEventListener('load', () => {
+      setTimeout(() => {
+        const ls = document.getElementById('loading-screen');
+        if (ls) {
+          ls.classList.add('hide');
+          setTimeout(() => ls.remove(), 500);
+        }
+      }, 1400);
+    });
+  </script>
+</body>
+</html>
