@@ -325,6 +325,11 @@ export function init(page) {
       await store.login({ phone, email, password: pwd });
       toast('Login successful!', 'success');
       setTimeout(() => { window.location.hash = '#/home'; }, 500);
+    } catch (err) {
+      toast(err.message || 'Login failed', 'error');
+    }
+  };
+
   let currentCaptchaAns = 0;
 
   window.generateCaptcha = function() {
