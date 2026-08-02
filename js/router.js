@@ -1,29 +1,40 @@
 // Hash-based SPA Router
 import store from './store.js';
 
+// Static imports to prevent network dynamic-import MIME/HTML 404 errors
+import * as homePage from './pages/home.js';
+import * as marketPage from './pages/market.js';
+import * as followPage from './pages/follow.js';
+import * as assetsPage from './pages/assets.js';
+import * as authPage from './pages/auth.js';
+import * as luckyWheelPage from './pages/luckyWheel.js';
+import * as profilePage from './pages/profile.js';
+import * as aboutPage from './pages/about.js';
+import * as adminPage from './pages/admin.js';
+
 const routes = {
-  'home':                 () => import('./pages/home.js'),
-  'market':               () => import('./pages/market.js'),
-  'follow':               () => import('./pages/follow.js'),
-  'follow/note':          () => import('./pages/follow.js'),
-  'follow/team':          () => import('./pages/follow.js'),
-  'assets':               () => import('./pages/assets.js'),
-  'recharge':             () => import('./pages/assets.js'),
-  'withdraw':             () => import('./pages/assets.js'),
-  'bind-address':         () => import('./pages/assets.js'),
-  'account-change':       () => import('./pages/assets.js'),
-  'login':                () => import('./pages/auth.js'),
-  'register':             () => import('./pages/auth.js'),
-  'forget-pwd':           () => import('./pages/auth.js'),
-  'kyc':                  () => import('./pages/auth.js'),
-  'lucky-wheel':          () => import('./pages/luckyWheel.js'),
-  'invite-friends':       () => import('./pages/profile.js'),
-  'security-settings':    () => import('./pages/profile.js'),
-  'customer-service':     () => import('./pages/profile.js'),
-  'about':                () => import('./pages/about.js'),
-  'agreement':            () => import('./pages/about.js'),
-  'investment-agreement': () => import('./pages/about.js'),
-  'admin':                () => import('./pages/admin.js'),
+  'home':                 homePage,
+  'market':               marketPage,
+  'follow':               followPage,
+  'follow/note':          followPage,
+  'follow/team':          followPage,
+  'assets':               assetsPage,
+  'recharge':             assetsPage,
+  'withdraw':             assetsPage,
+  'bind-address':         assetsPage,
+  'account-change':       assetsPage,
+  'login':                authPage,
+  'register':             authPage,
+  'forget-pwd':           authPage,
+  'kyc':                  authPage,
+  'lucky-wheel':          luckyWheelPage,
+  'invite-friends':       profilePage,
+  'security-settings':    profilePage,
+  'customer-service':     profilePage,
+  'about':                aboutPage,
+  'agreement':            aboutPage,
+  'investment-agreement': aboutPage,
+  'admin':                adminPage,
 };
 
 // Pages that require a logged-in user
@@ -32,11 +43,6 @@ const authRequired = [
   'assets', 'recharge', 'withdraw', 'bind-address', 'account-change',
   'lucky-wheel', 'invite-friends', 'security-settings', 'kyc'
 ];
-
-// Pages only for guests (logged-in users get redirected away)
-const guestOnly = ['login', 'register'];
-
-let currentModule = null;
 
 async function navigate(path) {
   const page = path.replace(/^\//, '').split('?')[0] || 'home';
@@ -50,7 +56,7 @@ async function navigate(path) {
     return;
   }
 
-  // Update active nav
+  // Update active nav links
   document.querySelectorAll('.nav-item, .mobile-nav-item').forEach(el => {
     el.classList.remove('active');
     const navPage = el.dataset.page;
@@ -58,17 +64,15 @@ async function navigate(path) {
   });
 
   // Load and render page module
-  const loader = routes[page] || routes['home'];
+  const mod = routes[page] || routes['home'];
   try {
-    const mod = await loader();
-    currentModule = mod;
     const container = document.getElementById('page-content');
-    if (container && mod.render) {
+    if (container && mod && mod.render) {
       container.innerHTML = mod.render(page);
       if (mod.init) mod.init(page);
     }
   } catch (e) {
-    console.error('Router error:', e);
+    console.error('Router render error:', e);
   }
 
   store.navigateTo(page);
@@ -82,12 +86,10 @@ function init() {
     navigate(hash);
   });
 
-  // On refresh: always respect the current URL hash
-  // The auth guard inside navigate() handles redirects if needed
+  // On refresh: respect current URL hash
   const initialHash = window.location.hash.replace('#/', '') || 'home';
   navigate(initialHash);
 }
-
 
 // Expose global navigation helper used throughout all page files
 window.navigateTo = function(page) {
