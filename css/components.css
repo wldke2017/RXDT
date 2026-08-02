@@ -189,6 +189,16 @@
 
 /* Chart */
 .contract-chart-wrap { border-radius: 12px; overflow: hidden; border: 1px solid var(--border-color); background: #0a0e1a; }
+.chart-tf-tabs { display: flex; gap: 0; background: #0d1120; border-bottom: 1px solid rgba(255,255,255,0.07); padding: 0 8px; }
+.tf-tab { padding: 8px 14px; font-size: 12px; font-weight: 700; color: var(--text-muted); background: none; border: none; border-bottom: 2px solid transparent; cursor: pointer; transition: all 0.18s; }
+.tf-tab:hover { color: var(--text-main); }
+.tf-tab.active { color: #00f2fe; border-bottom-color: #00f2fe; }
+
+/* Quick Amounts */
+.quick-amounts { display: flex; gap: 8px; margin-top: 8px; }
+.qa-btn { flex: 1; padding: 7px 0; background: rgba(255,255,255,0.04); border: 1px solid var(--border-color); border-radius: 8px; color: var(--text-sub); font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.2s; }
+.qa-btn:hover { background: rgba(0,242,254,0.08); border-color: rgba(0,242,254,0.4); color: #00f2fe; }
+
 
 /* Trade Panel */
 .contract-trade-panel { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 16px; padding: 20px; }

@@ -42,9 +42,16 @@ export function render() {
       </div>
     </div>
 
-    <!-- TradingView Chart -->
+    <!-- Kline Chart + Timeframe Tabs -->
     <div class="contract-chart-wrap">
-      <div id="tradingview-container" style="height:260px;border-radius:12px;overflow:hidden;"></div>
+      <div class="chart-tf-tabs">
+        <button class="tf-tab active" data-tf="1m" onclick="switchChartTF('1m', this)">1m</button>
+        <button class="tf-tab" data-tf="15m" onclick="switchChartTF('15m', this)">15m</button>
+        <button class="tf-tab" data-tf="30m" onclick="switchChartTF('30m', this)">30m</button>
+        <button class="tf-tab" data-tf="1h" onclick="switchChartTF('1h', this)">1h</button>
+        <button class="tf-tab" data-tf="1d" onclick="switchChartTF('1d', this)">1D</button>
+      </div>
+      <div id="kline-chart" style="height:280px;width:100%;"></div>
     </div>
 
     <!-- Stats Row -->
@@ -52,7 +59,7 @@ export function render() {
       <div class="cstat"><span class="cstat-lbl">24H High</span><span class="cstat-val color-up" id="cs-high">--</span></div>
       <div class="cstat"><span class="cstat-lbl">24H Low</span><span class="cstat-val color-down" id="cs-low">--</span></div>
       <div class="cstat"><span class="cstat-lbl">24H Vol</span><span class="cstat-val" id="cs-vol">--</span></div>
-      <div class="cstat"><span class="cstat-lbl">Index Price</span><span class="cstat-val" id="cs-idx">--</span></div>
+      <div class="cstat"><span class="cstat-lbl">Funding Rate</span><span class="cstat-val color-up" id="cs-idx">0.01%</span></div>
     </div>
 
     <!-- Trade Panel -->
@@ -77,6 +84,13 @@ export function render() {
           <input type="number" id="contract-amount" class="form-control" placeholder="Min. $10 USDT" min="10" oninput="updateCalc()"/>
           <span style="position:absolute;right:14px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:13px;">USDT</span>
         </div>
+        <!-- Quick amounts -->
+        <div class="quick-amounts">
+          <button class="qa-btn" onclick="setQuickAmount(10)">$10</button>
+          <button class="qa-btn" onclick="setQuickAmount(50)">$50</button>
+          <button class="qa-btn" onclick="setQuickAmount(100)">$100</button>
+          <button class="qa-btn" onclick="setQuickAmount(500)">$500</button>
+        </div>
       </div>
 
       <!-- Calculated Info -->
@@ -88,11 +102,11 @@ export function render() {
 
       <!-- Long / Short Buttons -->
       <div class="contract-action-btns">
-        <button class="btn-long" onclick="openPosition('long')">
-          <span>▲</span> Open Long
+        <button class="btn-long" id="btn-open-long" onclick="openPosition('long')">
+          ▲ Open Long
         </button>
-        <button class="btn-short" onclick="openPosition('short')">
-          <span>▼</span> Open Short
+        <button class="btn-short" id="btn-open-short" onclick="openPosition('short')">
+          ▼ Open Short
         </button>
       </div>
     </div>
@@ -118,20 +132,141 @@ export function render() {
   </div>`;
 }
 
-export function init() {
+// Load Lightweight Charts library dynamically
+function loadLightweightCharts() {
+  return new Promise((resolve) => {
+    if (window.LightweightCharts) { resolve(); return; }
+    const script = document.createElement('script');
+    script.src = 'https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js';
+    script.onload = () => resolve();
+    script.onerror = () => resolve(); // fail gracefully
+    document.head.appendChild(script);
+  });
+}
+
+export async function init() {
   let currentPair = 'BTCUSDT';
   let currentLeverage = 10;
   let currentPrice = 0;
-  let currentChange = 0;
+  let currentTF = '1m';
   let ws = null;
+  let klineWs = null;
   let allPairs = [];
   let positionsInterval = null;
+  let chart = null;
+  let candleSeries = null;
 
   const TOKEN = localStorage.getItem('rxdt_token');
   const authHeaders = { 'Authorization': `Bearer ${TOKEN}`, 'Content-Type': 'application/json' };
 
-  // ---- Binance WebSocket ----
-  function connectWS(symbol) {
+  // ---- Load Chart Library ----
+  await loadLightweightCharts();
+  initChart();
+
+  // ---- Init Lightweight Chart ----
+  function initChart() {
+    const container = document.getElementById('kline-chart');
+    if (!container || !window.LightweightCharts) return;
+
+    chart = LightweightCharts.createChart(container, {
+      width: container.clientWidth,
+      height: 280,
+      layout: {
+        background: { color: '#0a0e1a' },
+        textColor: '#9ba3b2',
+      },
+      grid: {
+        vertLines: { color: 'rgba(255,255,255,0.05)' },
+        horzLines: { color: 'rgba(255,255,255,0.05)' },
+      },
+      crosshair: {
+        mode: LightweightCharts.CrosshairMode.Normal,
+        vertLine: { color: 'rgba(0,242,254,0.5)', width: 1, style: 2 },
+        horzLine: { color: 'rgba(0,242,254,0.5)', width: 1, style: 2, labelBackgroundColor: '#00f2fe' },
+      },
+      rightPriceScale: {
+        borderColor: 'rgba(255,255,255,0.08)',
+        textColor: '#9ba3b2',
+      },
+      timeScale: {
+        borderColor: 'rgba(255,255,255,0.08)',
+        timeVisible: true,
+        secondsVisible: false,
+        tickMarkFormatter: (time) => {
+          const d = new Date(time * 1000);
+          return `${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}`;
+        },
+      },
+      handleScroll: true,
+      handleScale: true,
+    });
+
+    candleSeries = chart.addCandlestickSeries({
+      upColor: '#00c49a',
+      downColor: '#ff416c',
+      borderUpColor: '#00c49a',
+      borderDownColor: '#ff416c',
+      wickUpColor: '#00c49a',
+      wickDownColor: '#ff416c',
+    });
+
+    // Resize on window resize
+    const ro = new ResizeObserver(() => {
+      if (chart && container) chart.applyOptions({ width: container.clientWidth });
+    });
+    ro.observe(container);
+
+    loadKlineData(currentPair, currentTF);
+    connectKlineWS(currentPair, currentTF);
+  }
+
+  // ---- Fetch Historical Kline Data from Binance ----
+  async function loadKlineData(symbol, interval) {
+    if (!candleSeries) return;
+    try {
+      const limit = interval === '1d' ? 90 : interval === '1h' ? 100 : 120;
+      const res = await fetch(`https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${interval}&limit=${limit}`);
+      const data = await res.json();
+      const candles = data.map(k => ({
+        time: Math.floor(k[0] / 1000),
+        open: parseFloat(k[1]),
+        high: parseFloat(k[2]),
+        low: parseFloat(k[3]),
+        close: parseFloat(k[4]),
+      }));
+      candleSeries.setData(candles);
+      chart.timeScale().fitContent();
+    } catch (e) {
+      console.warn('Kline fetch error:', e);
+    }
+  }
+
+  // ---- Kline WebSocket for Live Candle Updates ----
+  function connectKlineWS(symbol, interval) {
+    if (klineWs) klineWs.close();
+    const sym = symbol.toLowerCase();
+    klineWs = new WebSocket(`wss://stream.binance.com:9443/ws/${sym}@kline_${interval}`);
+    klineWs.onmessage = (event) => {
+      const msg = JSON.parse(event.data);
+      const k = msg.k;
+      if (!candleSeries) return;
+      candleSeries.update({
+        time: Math.floor(k.t / 1000),
+        open: parseFloat(k.o),
+        high: parseFloat(k.h),
+        low: parseFloat(k.l),
+        close: parseFloat(k.c),
+      });
+    };
+    klineWs.onclose = () => {
+      if (currentPair === symbol && currentTF === interval) {
+        setTimeout(() => connectKlineWS(symbol, interval), 3000);
+      }
+    };
+  }
+
+  // ---- Ticker WebSocket for Live Price ----
+  function connectTickerWS(symbol) {
     if (ws) ws.close();
     const sym = symbol.toLowerCase();
     ws = new WebSocket(`wss://stream.binance.com:9443/ws/${sym}@ticker`);
@@ -139,71 +274,45 @@ export function init() {
     ws.onmessage = (event) => {
       const data = JSON.parse(event.data);
       currentPrice = parseFloat(data.c);
-      currentChange = parseFloat(data.P);
+      const change = parseFloat(data.P);
       const high = parseFloat(data.h);
       const low = parseFloat(data.l);
       const vol = parseFloat(data.q);
 
       const priceEl = document.getElementById('contract-price');
       const changeEl = document.getElementById('contract-change');
+      if (priceEl) {
+        priceEl.textContent = `$${currentPrice < 1 ? currentPrice.toFixed(6) : currentPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}`;
+        priceEl.className = `price-val ${change >= 0 ? 'color-up' : 'color-down'}`;
+      }
+      if (changeEl) {
+        changeEl.textContent = `${change >= 0 ? '+' : ''}${change.toFixed(2)}%`;
+        changeEl.className = `price-change ${change >= 0 ? 'color-up' : 'color-down'}`;
+      }
       const highEl = document.getElementById('cs-high');
       const lowEl = document.getElementById('cs-low');
       const volEl = document.getElementById('cs-vol');
-      const idxEl = document.getElementById('cs-idx');
-
-      if (priceEl) {
-        priceEl.textContent = `$${currentPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}`;
-        priceEl.className = `price-val ${currentChange >= 0 ? 'color-up' : 'color-down'}`;
-      }
-      if (changeEl) {
-        changeEl.textContent = `${currentChange >= 0 ? '+' : ''}${currentChange.toFixed(2)}%`;
-        changeEl.className = `price-change ${currentChange >= 0 ? 'color-up' : 'color-down'}`;
-      }
-      if (highEl) highEl.textContent = `$${high.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}`;
-      if (lowEl) lowEl.textContent = `$${low.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}`;
+      if (highEl) highEl.textContent = `$${high < 1 ? high.toFixed(6) : fmt(high)}`;
+      if (lowEl) lowEl.textContent = `$${low < 1 ? low.toFixed(6) : fmt(low)}`;
       if (volEl) volEl.textContent = vol > 1e9 ? `${(vol / 1e9).toFixed(2)}B` : `${(vol / 1e6).toFixed(1)}M`;
-      if (idxEl) idxEl.textContent = priceEl?.textContent || '--';
 
       updateCalc();
-      updatePositionsPnL();
     };
 
-    ws.onerror = () => console.warn('WS error, reconnecting...');
-    ws.onclose = () => { if (currentPair === symbol) setTimeout(() => connectWS(symbol), 3000); };
+    ws.onclose = () => {
+      if (currentPair === symbol) setTimeout(() => connectTickerWS(symbol), 3000);
+    };
   }
 
-  // ---- TradingView Widget ----
-  function loadChart(symbol) {
-    const container = document.getElementById('tradingview-container');
-    if (!container) return;
-    container.innerHTML = '';
-    const script = document.createElement('script');
-    script.src = 'https://s3.tradingview.com/tv.js';
-    script.onload = () => {
-      new TradingView.widget({
-        container_id: 'tradingview-container',
-        symbol: `BINANCE:${symbol}`,
-        interval: '15',
-        timezone: 'Etc/UTC',
-        theme: 'dark',
-        style: '1',
-        locale: 'en',
-        toolbar_bg: '#0a0e1a',
-        enable_publishing: false,
-        hide_top_toolbar: false,
-        hide_legend: false,
-        save_image: false,
-        height: 260,
-        width: '100%',
-        studies: ['RSI@tv-basicstudies'],
-        hide_side_toolbar: true,
-        allow_symbol_change: false,
-        backgroundColor: '#0a0e1a',
-        gridColor: 'rgba(255,255,255,0.04)',
-      });
-    };
-    document.body.appendChild(script);
-  }
+  // ---- Switch Timeframe ----
+  window.switchChartTF = function(tf, btn) {
+    currentTF = tf;
+    document.querySelectorAll('.tf-tab').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    if (candleSeries) candleSeries.setData([]);
+    loadKlineData(currentPair, tf);
+    connectKlineWS(currentPair, tf);
+  };
 
   // ---- Load All Pairs ----
   async function loadPairs() {
@@ -212,9 +321,7 @@ export function init() {
       const data = await res.json();
       allPairs = data.pairs || [];
       renderPairList(allPairs);
-    } catch (e) {
-      console.warn('Failed to load pairs:', e);
-    }
+    } catch (e) { console.warn('Failed to load pairs:', e); }
   }
 
   function renderPairList(pairs) {
@@ -235,13 +342,15 @@ export function init() {
     const base = symbol.replace('USDT', '');
     const labelEl = document.getElementById('contract-pair-label');
     if (labelEl) labelEl.textContent = `${base}/USDT`;
-
-    const icons = { BTC: '₿', ETH: 'Ξ', BNB: '🔶', SOL: '◎', XRP: '✕', DOGE: '🐕', PEPE: '🐸', ADA: '♦' };
+    const icons = { BTC: '₿', ETH: 'Ξ', BNB: '🔶', SOL: '◎', XRP: '✕', DOGE: '🐕', PEPE: '🐸', ADA: '♦', AVAX: '🔺', MATIC: '🔷' };
     const iconEl = document.getElementById('contract-pair-icon');
     if (iconEl) iconEl.textContent = icons[base] || base[0];
 
-    connectWS(symbol);
-    loadChart(symbol);
+    // Reset chart and reconnect everything
+    if (candleSeries) candleSeries.setData([]);
+    loadKlineData(symbol, currentTF);
+    connectKlineWS(symbol, currentTF);
+    connectTickerWS(symbol);
     document.getElementById('pair-dropdown').style.display = 'none';
     updateCalc();
   };
@@ -252,7 +361,10 @@ export function init() {
   };
 
   window.filterPairs = function(q) {
-    const filtered = allPairs.filter(p => p.symbol.toLowerCase().includes(q.toLowerCase()) || p.base.toLowerCase().includes(q.toLowerCase()));
+    const filtered = allPairs.filter(p =>
+      p.symbol.toLowerCase().includes(q.toLowerCase()) ||
+      p.base.toLowerCase().includes(q.toLowerCase())
+    );
     renderPairList(filtered);
   };
 
@@ -265,13 +377,19 @@ export function init() {
     updateCalc();
   };
 
+  // ---- Quick Amount ----
+  window.setQuickAmount = function(amount) {
+    const inp = document.getElementById('contract-amount');
+    if (inp) { inp.value = amount; updateCalc(); }
+  };
+
   // ---- Calc Update ----
   window.updateCalc = function() {
     const amount = parseFloat(document.getElementById('contract-amount')?.value || '0');
     if (!amount || !currentPrice) return;
 
     const notional = amount * currentLeverage;
-    const estPnL = notional * 0.01; // at 1% price move
+    const estPnL = notional * 0.01;
     const liqLong = currentPrice * (1 - 0.9 / currentLeverage);
     const liqShort = currentPrice * (1 + 0.9 / currentLeverage);
 
@@ -281,7 +399,7 @@ export function init() {
 
     if (notEl) notEl.textContent = `$${fmt(notional)} USDT`;
     if (pnlEl) pnlEl.textContent = `±$${fmt(estPnL)}`;
-    if (liqEl) liqEl.textContent = `Long: $${fmt(liqLong, 2)} | Short: $${fmt(liqShort, 2)}`;
+    if (liqEl) liqEl.textContent = `L:$${fmt(liqLong,2)} | S:$${fmt(liqShort,2)}`;
   };
 
   // ---- Open Position ----
@@ -290,7 +408,8 @@ export function init() {
     const amount = parseFloat(document.getElementById('contract-amount')?.value || '0');
     if (!amount || amount < 10) { toast('Minimum position size is $10 USDT', 'error'); return; }
 
-    const btn = direction === 'long' ? document.querySelector('.btn-long') : document.querySelector('.btn-short');
+    const btnId = direction === 'long' ? 'btn-open-long' : 'btn-open-short';
+    const btn = document.getElementById(btnId);
     if (btn) { btn.disabled = true; btn.textContent = 'Opening...'; }
 
     try {
@@ -301,20 +420,22 @@ export function init() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to open position');
-
       toast(`✅ ${data.message}`, 'success');
       document.getElementById('contract-amount').value = '';
       loadPositions();
     } catch (err) {
       toast(err.message, 'error');
     } finally {
-      if (btn) { btn.disabled = false; btn.textContent = direction === 'long' ? '▲ Open Long' : '▼ Open Short'; }
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = direction === 'long' ? '▲ Open Long' : '▼ Open Short';
+      }
     }
   };
 
   // ---- Close Position ----
   window.closePosition = async function(id) {
-    if (!confirm('Close this position?')) return;
+    if (!confirm('Close this position at current market price?')) return;
     try {
       const res = await fetch(`/api/contract/close/${id}`, { method: 'POST', headers: authHeaders });
       const data = await res.json();
@@ -332,16 +453,14 @@ export function init() {
   async function loadPositions() {
     if (!store.isLoggedIn()) {
       const el = document.getElementById('positions-list');
-      if (el) el.innerHTML = `<div style="text-align:center;padding:24px;color:var(--text-muted);font-size:14px;"><a onclick="navigateTo('login')" class="link">Login to view positions</a></div>`;
+      if (el) el.innerHTML = `<div style="text-align:center;padding:24px;color:var(--text-muted);font-size:14px;">Login to view positions</div>`;
       return;
     }
     try {
       const res = await fetch('/api/contract/positions', { headers: authHeaders });
       const data = await res.json();
       renderPositions(data.positions || []);
-    } catch (e) {
-      console.warn('Load positions error:', e);
-    }
+    } catch (e) { console.warn('Load positions error:', e); }
   }
 
   function renderPositions(positions) {
@@ -355,7 +474,7 @@ export function init() {
       const entryPrice = parseFloat(p.entry_price);
       const liqPrice = parseFloat(p.liquidation_price);
       const margin = parseFloat(p.amount);
-      const livePrice = currentPair === p.pair ? currentPrice : entryPrice;
+      const livePrice = (currentPair === p.pair && currentPrice > 0) ? currentPrice : entryPrice;
       const pct = (livePrice - entryPrice) / entryPrice;
       const pnl = p.direction === 'long' ? margin * p.leverage * pct : margin * p.leverage * (-pct);
       const pnlSign = pnl >= 0 ? '+' : '';
@@ -371,21 +490,11 @@ export function init() {
           <div class="pos-stat"><span>Margin</span><span>$${fmt(margin)}</span></div>
           <div class="pos-stat"><span>Entry Price</span><span>$${entryPrice.toLocaleString()}</span></div>
           <div class="pos-stat"><span>Liq. Price</span><span class="color-down">$${fmt(liqPrice)}</span></div>
-          <div class="pos-stat"><span>Live P&L</span><span class="${pnl >= 0 ? 'color-up' : 'color-down'}" id="pnl-${p.id}">${pnlSign}$${fmt(pnl)} (${pnlSign}${(pct * p.leverage * 100).toFixed(2)}%)</span></div>
+          <div class="pos-stat"><span>Live P&L</span><span class="${pnl >= 0 ? 'color-up' : 'color-down'}">${pnlSign}$${fmt(pnl)} (${pnlSign}${(pct * p.leverage * 100).toFixed(2)}%)</span></div>
         </div>
-        <button class="btn-close-pos" onclick="closePosition('${p.id}')">Close Position</button>
+        <button class="btn-close-pos" onclick="closePosition('${p.id}')">Close Position at Market</button>
       </div>`;
     }).join('');
-  }
-
-  // ---- Update Positions P&L Live ----
-  function updatePositionsPnL() {
-    const posCards = document.querySelectorAll('[id^="pos-"]');
-    posCards.forEach(card => {
-      const id = card.id.replace('pos-', '');
-      const pnlEl = document.getElementById(`pnl-${id}`);
-      // Reload positions every 5s for live P&L
-    });
   }
 
   // ---- Load History ----
@@ -405,7 +514,7 @@ export function init() {
         const pnl = parseFloat(h.profit_loss);
         return `
         <div class="history-row">
-          <span>${h.pair.replace('USDT', '')}/USDT <span class="pos-dir ${h.direction === 'long' ? 'dir-long' : 'dir-short'}" style="font-size:11px;">${h.direction === 'long' ? '▲L' : '▼S'} ${h.leverage}x</span></span>
+          <span>${h.pair.replace('USDT', '')}/USDT <span class="pos-dir ${h.direction === 'long' ? 'dir-long' : 'dir-short'}" style="font-size:11px;padding:2px 6px;">${h.direction === 'long' ? '▲L' : '▼S'} ${h.leverage}x</span></span>
           <span>Entry: $${parseFloat(h.entry_price).toLocaleString()}</span>
           <span>Close: $${parseFloat(h.close_price || 0).toLocaleString()}</span>
           <span class="${pnl >= 0 ? 'color-up' : 'color-down'}" style="font-weight:700;">${pnl >= 0 ? '+' : ''}$${fmt(pnl)}</span>
@@ -414,8 +523,8 @@ export function init() {
     } catch (e) {}
   }
 
-  // ---- Close dropdown when clicking outside ----
-  document.addEventListener('click', function(e) {
+  // ---- Close dropdown on outside click ----
+  document.addEventListener('click', function handler(e) {
     const dd = document.getElementById('pair-dropdown');
     if (dd && !e.target.closest('.contract-pair-selector') && !e.target.closest('.contract-pair-dropdown')) {
       dd.style.display = 'none';
@@ -423,20 +532,19 @@ export function init() {
   });
 
   // ---- Init ----
-  connectWS(currentPair);
-  loadChart(currentPair);
+  connectTickerWS(currentPair);
   loadPairs();
   loadPositions();
   loadHistory();
 
-  // Auto-refresh positions live P&L every 5 seconds
-  positionsInterval = setInterval(() => {
-    loadPositions();
-  }, 5000);
+  // Auto-refresh positions every 5s for live P&L
+  positionsInterval = setInterval(() => loadPositions(), 5000);
 
-  // Cleanup WS and interval when navigating away
+  // Cleanup on navigate away
   window.addEventListener('hashchange', () => {
-    if (ws) ws.close();
+    if (ws) { ws.onclose = null; ws.close(); }
+    if (klineWs) { klineWs.onclose = null; klineWs.close(); }
     if (positionsInterval) clearInterval(positionsInterval);
+    if (chart) { chart.remove(); chart = null; }
   }, { once: true });
 }
