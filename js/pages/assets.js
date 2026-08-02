@@ -130,39 +130,75 @@ function renderAssets() {
 
 // ---- DEPOSIT (RECHARGE) ----
 function renderRecharge() {
-  const networks = store.getCryptoNetworks();
   const deposits = store.getDeposits();
 
   return `
   <div>
     <div class="page-header">
       <button class="btn-back" onclick="navigateTo('assets')">← Back</button>
-      <h1 class="page-title">Crypto Deposit</h1>
+      <h1 class="page-title">Deposit Crypto</h1>
     </div>
 
-    <div class="card">
-      <div class="card-title">Select Cryptocurrency</div>
-      <div class="coin-selector" id="coin-selector">
-        ${networks.map((n, i) => `
-          <div class="coin-option ${i===0?'active':''}" onclick="selectCoin('${n.coin}',this)" data-coin="${n.coin}">
-            ${n.coin}
-          </div>
-        `).join('')}
+    <!-- Deposit Form Container -->
+    <div class="card" style="max-width:580px;margin:0 auto 24px;">
+      <div class="tabs-header" style="margin-bottom:20px;">
+        <button class="tab-btn active" onclick="switchAssetTab('deposit',this)">Deposit</button>
+        <button class="tab-btn" onclick="navigateTo('withdraw')">Withdraw</button>
+      </div>
+
+      <!-- Coin Selection Dropdown -->
+      <div class="form-group">
+        <label class="form-label" style="font-weight:700;">Select Crypto Asset</label>
+        <div class="custom-select-box">
+          <select class="form-control" id="dep-coin-select" onchange="onDepCoinChange(this.value)">
+            <option value="USDT">₮ USDT (Tether)</option>
+            <option value="USDC">💲 USDC (USD Coin)</option>
+            <option value="BTC">₿ BTC (Bitcoin)</option>
+            <option value="ETH">Ξ ETH (Ethereum)</option>
+          </select>
+        </div>
+        <div style="font-size:13px;font-weight:600;color:var(--text-sub);margin-top:8px;">
+          Rate: <strong style="color:var(--text-main);">1 USDT = 1 USD</strong>
+        </div>
+      </div>
+
+      <!-- Network Selection Dropdown -->
+      <div class="card-glass" style="padding:16px;border-radius:12px;margin-bottom:20px;border:1px solid var(--border-color);">
+        <label class="form-label" style="font-weight:700;">Select Network</label>
+        <select class="form-control" id="dep-network-select">
+          <option value="TRC20">TRC20 (Tron Network)</option>
+          <option value="ERC20">ERC20 (Ethereum Network)</option>
+        </select>
+      </div>
+
+      <!-- Amount Entry -->
+      <div class="form-group">
+        <label class="form-label" style="font-weight:700;">Amount (USD)</label>
+        <input type="number" id="dep-amount-input" class="form-control" placeholder="Enter amount (USD)" oninput="updateDepCryptoApprox(this.value)"/>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px;font-size:13px;">
+          <span style="color:var(--text-sub);font-weight:600;" id="dep-approx-val">≈ 0.00000000 USDT</span>
+          <span style="color:var(--text-muted);">Minimum: <strong style="color:var(--el-color-primary);">(10 USDT)</strong></span>
+        </div>
+      </div>
+
+      <!-- Deposit Action Button -->
+      <button class="btn-primary" style="width:100%;height:52px;font-size:17px;font-weight:800;border-radius:100px;margin-top:12px;" onclick="handleDepositSubmit()">
+        Deposit
+      </button>
+
+      <!-- Important Notice Box -->
+      <div style="margin-top:24px;border-top:1px solid var(--border-color);padding-top:16px;">
+        <div style="font-size:13px;font-weight:700;color:var(--text-sub);margin-bottom:8px;">Important Notice</div>
+        <ul style="font-size:12px;color:var(--text-muted);line-height:1.7;padding-left:16px;">
+          <li>Do not deposit any non-USDT assets, otherwise the assets cannot be recovered.</li>
+          <li>USDT deposits only support simple send method. Deposits using other methods (send all) may not be credited temporarily.</li>
+          <li>After depositing to the above address, it requires confirmation by the entire network nodes. The deposit will be credited after 6 network confirmations.</li>
+          <li>Please ensure the security of your computer and browser to prevent information tampering or leakage.</li>
+        </ul>
       </div>
     </div>
 
-    <div class="card" id="network-card">
-      <div class="card-title">Select Network</div>
-      <div id="network-selector">
-        ${renderNetworkOptions(networks[0])}
-      </div>
-    </div>
-
-    <div class="card" id="deposit-address-card">
-      ${renderDepositAddress(networks[0].networks[0], networks[0].coin)}
-    </div>
-
-    <!-- My Deposits History -->
+    <!-- Deposit History -->
     <div class="card">
       <div class="card-title">Deposit History</div>
       <div class="table-container">
@@ -183,20 +219,14 @@ function renderRecharge() {
       </div>
     </div>
 
-    <!-- Submit Deposit Form -->
-    <div class="card">
-      <div class="card-title">Submit Deposit Record</div>
-      <div class="form-group">
-        <label class="form-label">Your Wallet Address / Card Number</label>
-        <input type="text" id="dep-from-addr" class="form-control" placeholder="Enter your sending wallet address or card number"/>
+    <!-- Checkout / Awaiting Payment Modal Overlay -->
+    <div class="modal-overlay" id="checkout-modal">
+      <div class="modal-content" style="max-width:520px;padding:24px;background:var(--bg-card);border-radius:16px;" id="checkout-modal-body">
+        <!-- Rendered dynamically upon pressing Deposit -->
       </div>
-      <div class="form-group">
-        <label class="form-label">Deposit Amount (USDT)</label>
-        <input type="number" id="dep-amount" class="form-control" placeholder="Min: $100"/>
-      </div>
-      <button class="btn-dark" style="width:100%;height:48px;font-size:16px;" onclick="submitDeposit()">Submit Deposit</button>
     </div>
   </div>`;
+}
 }
 
 function renderNetworkOptions(coinData) {
@@ -423,28 +453,144 @@ function renderAccountChange() {
 export function init(page) {
   window.toast = toast;
 
-  window.selectCoin = function(coin, el) {
-    document.querySelectorAll('.coin-option').forEach(o => o.classList.remove('active'));
-    el.classList.add('active');
-    const networks = store.getCryptoNetworks();
-    const coinData = networks.find(n => n.coin === coin);
-    if (!coinData) return;
-    const netSel = document.getElementById('network-selector');
-    if (netSel) netSel.innerHTML = renderNetworkOptions(coinData);
-    const addrCard = document.getElementById('deposit-address-card');
-    if (addrCard) addrCard.innerHTML = renderDepositAddress(coinData.networks[0], coin);
+  let depositTimerInterval = null;
+
+  window.onDepCoinChange = function(coin) {
+    const amountVal = document.getElementById('dep-amount-input')?.value || 0;
+    window.updateDepCryptoApprox(amountVal);
   };
 
-  window.selectNetwork = function(coin, networkName, el) {
-    document.querySelectorAll('.network-option').forEach(o => o.classList.remove('active'));
-    el.classList.add('active');
-    const networks = store.getCryptoNetworks();
-    const coinData = networks.find(n => n.coin === coin);
-    const net = coinData?.networks.find(n => n.name === networkName);
-    if (!net) return;
-    const addrCard = document.getElementById('deposit-address-card');
-    if (addrCard) addrCard.innerHTML = renderDepositAddress(net, coin);
+  window.updateDepCryptoApprox = function(val) {
+    const el = document.getElementById('dep-approx-val');
+    const coin = document.getElementById('dep-coin-select')?.value || 'USDT';
+    const num = parseFloat(val) || 0;
+    if (el) {
+      el.textContent = `≈ ${num.toFixed(8)} ${coin}`;
+    }
   };
+
+  window.handleDepositSubmit = async function() {
+    const coin = document.getElementById('dep-coin-select')?.value || 'USDT';
+    const network = document.getElementById('dep-network-select')?.value || 'TRC20';
+    const amount = parseFloat(document.getElementById('dep-amount-input')?.value || 0);
+
+    if (!amount || amount < 10) {
+      toast('Minimum deposit amount is $10 USDT', 'error');
+      return;
+    }
+
+    try {
+      // 1. Submit deposit to backend database
+      const depRecord = await store.addDeposit({ coin, network, amount, rate: 1.00 });
+
+      // 2. Open Awaiting Payment Checkout Screen Modal
+      const modal = document.getElementById('checkout-modal');
+      const body = document.getElementById('checkout-modal-body');
+      
+      const depositWalletAddress = network === 'TRC20' 
+        ? 'TVuPSBxWC3ADaQKoe2vM13NJbwXcBMYF4W' 
+        : '0x71C7656EC7ab88b098defB751B7401B5f6d8976F';
+
+      if (body && modal) {
+        body.innerHTML = `
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;border-bottom:1px solid var(--border-color);padding-bottom:12px;">
+            <a onclick="closeCheckoutModal()" class="link" style="font-size:14px;display:flex;align-items:center;gap:4px;">
+              ← return to merchant
+            </a>
+            <div style="font-size:18px;">🌐</div>
+          </div>
+
+          <div style="background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.3);border-radius:10px;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+            <div style="display:flex;align-items:center;gap:8px;font-weight:700;color:#f59e0b;">
+              <span>🟡</span> Awaiting Payment
+            </div>
+            <div style="font-family:monospace;font-size:18px;font-weight:800;color:#f59e0b;" id="dep-timer">
+              11:59:59
+            </div>
+          </div>
+
+          <div style="margin-bottom:20px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+              <div style="font-size:18px;font-weight:800;color:var(--el-color-primary);">
+                ${coin} <span style="font-size:13px;color:var(--text-sub);">(${network})</span>
+              </div>
+              <div style="font-size:18px;font-weight:800;">${amount} <small style="font-size:12px;color:var(--text-sub);">${coin}</small></div>
+            </div>
+
+            <div style="background:rgba(255,255,255,0.04);border-radius:8px;padding:8px 12px;display:flex;justify-content:space-between;margin-bottom:8px;font-size:13px;">
+              <span style="color:var(--text-sub);">🗄️ order amount</span>
+              <strong style="color:var(--text-main);">${amount} USD</strong>
+            </div>
+            <div style="background:rgba(255,255,255,0.04);border-radius:8px;padding:8px 12px;display:flex;justify-content:space-between;font-size:13px;">
+              <span style="color:var(--text-sub);">🔐 exchange rate</span>
+              <strong style="color:var(--text-main);">1 ${coin} = 1 USD</strong>
+            </div>
+          </div>
+
+          <div style="text-align:center;padding:16px 0;">
+            <div style="font-size:13px;font-weight:600;color:var(--text-main);margin-bottom:16px;">
+              Please only send ${coin} coins to this address on the ${network} network
+            </div>
+
+            <div style="background:#fff;padding:16px;border-radius:12px;display:inline-block;box-shadow:0 0 20px rgba(0,0,0,0.5);margin-bottom:20px;">
+              <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${depositWalletAddress}" alt="Deposit QR Code" style="width:160px;height:160px;display:block;"/>
+            </div>
+
+            <div style="text-align:left;margin-bottom:16px;">
+              <div style="font-size:12px;color:var(--text-sub);margin-bottom:4px;">Amount</div>
+              <div style="display:flex;justify-content:space-between;align-items:center;background:rgba(255,255,255,0.05);border:1px solid var(--border-color);border-radius:8px;padding:10px 14px;">
+                <span style="font-weight:700;font-size:16px;">${amount}</span>
+                <button class="btn-outline" style="padding:4px 10px;font-size:12px;" onclick="copyText('${amount}','Amount copied!')">📋</button>
+              </div>
+            </div>
+
+            <div style="text-align:left;margin-bottom:20px;">
+              <div style="font-size:12px;color:var(--text-sub);margin-bottom:4px;">Wallet address</div>
+              <div style="display:flex;justify-content:space-between;align-items:center;background:rgba(255,255,255,0.05);border:1px solid var(--border-color);border-radius:8px;padding:10px 14px;word-break:break-all;">
+                <span style="font-family:monospace;font-size:13px;font-weight:700;color:var(--el-color-primary);">${depositWalletAddress}</span>
+                <button class="btn-outline" style="padding:4px 10px;font-size:12px;margin-left:8px;" onclick="copyText('${depositWalletAddress}','Wallet address copied!')">📋</button>
+              </div>
+            </div>
+
+            <button class="btn-dark" style="width:100%;height:48px;font-size:15px;font-weight:700;" onclick="closeCheckoutModal()">
+              I Have Paid → View Status
+            </button>
+          </div>
+        `;
+        modal.classList.add('active');
+        startDepositCountdown();
+      }
+    } catch (err) {
+      toast(err.message || 'Failed to initialize deposit', 'error');
+    }
+  };
+
+  window.closeCheckoutModal = function() {
+    const modal = document.getElementById('checkout-modal');
+    if (modal) modal.classList.remove('active');
+    if (depositTimerInterval) clearInterval(depositTimerInterval);
+    toast('Deposit order submitted to database! Under review.', 'success');
+  };
+
+  function startDepositCountdown() {
+    let secondsLeft = 12 * 60; // 12 minutes countdown
+    if (depositTimerInterval) clearInterval(depositTimerInterval);
+
+    depositTimerInterval = setInterval(() => {
+      secondsLeft--;
+      const display = document.getElementById('dep-timer');
+      if (secondsLeft <= 0) {
+        clearInterval(depositTimerInterval);
+        if (display) display.textContent = '00:00:00';
+        return;
+      }
+      const m = Math.floor(secondsLeft / 60);
+      const s = secondsLeft % 60;
+      if (display) {
+        display.textContent = `11:${m < 10 ? '0' + m : m}:${s < 10 ? '0' + s : s}`;
+      }
+    }, 1000);
+  }
 
   window.copyAddress = function(addr) {
     navigator.clipboard?.writeText(addr).then(() => toast('Address copied!', 'success'))
