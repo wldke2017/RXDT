@@ -254,24 +254,20 @@ function renderWithdraw() {
     </div>
 
     <div class="card">
-      <div class="card-title">Withdrawal Method</div>
-      <div class="tabs-header" style="margin-bottom:16px;">
-        <button class="tab-btn active" onclick="switchWithdrawTab('crypto',this)">Crypto Wallet</button>
-        <button class="tab-btn" onclick="switchWithdrawTab('bank',this)">Bank Card</button>
-      </div>
+      <div class="card-title">Withdrawal Details</div>
 
       <div id="withdraw-crypto-panel">
         <div class="form-group">
-          <label class="form-label">Select Saved Address</label>
+          <label class="form-label">Select Bound Wallet Address</label>
           <select class="form-control" id="withdraw-saved-addr" onchange="fillWithdrawAddress(this)">
-            <option value="">-- Enter manually --</option>
+            <option value="">-- Select bound address or enter below --</option>
             ${addresses.filter(a => a.method === 'crypto').map(a => `
               <option value="${a.address}">${a.coin} (${a.network}) · ${a.address}</option>
             `).join('')}
           </select>
         </div>
         <div class="form-group">
-          <label class="form-label">Withdrawal Address</label>
+          <label class="form-label">Withdrawal Wallet Address</label>
           <input type="text" id="withdraw-address" class="form-control" placeholder="Enter crypto wallet address"/>
         </div>
         <div class="form-group">
@@ -287,17 +283,6 @@ function renderWithdraw() {
               <option value="ERC-20">ERC-20</option>
             </select>
           </div>
-        </div>
-      </div>
-
-      <div id="withdraw-bank-panel" style="display:none;">
-        <div class="form-group">
-          <label class="form-label">Bank Name</label>
-          <input type="text" id="wd-bank-name" class="form-control" placeholder="e.g. HDFC Bank"/>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Card Number</label>
-          <input type="text" id="wd-card-number" class="form-control" placeholder="Enter card number"/>
         </div>
       </div>
 
@@ -371,11 +356,7 @@ function renderBindAddress() {
 
     <!-- Add New Address -->
     <div class="card">
-      <div class="card-title">Add New Address</div>
-      <div class="tabs-header" style="margin-bottom:16px;">
-        <button class="tab-btn active" onclick="switchBindTab('crypto',this)">Crypto Wallet</button>
-        <button class="tab-btn" onclick="switchBindTab('bank',this)">Bank Card</button>
-      </div>
+      <div class="card-title">Bind Crypto Wallet Address</div>
 
       <div id="bind-crypto-panel">
         <div class="form-group">
@@ -396,21 +377,6 @@ function renderBindAddress() {
         <div class="form-group">
           <label class="form-label">Wallet Address</label>
           <input type="text" id="bind-address-val" class="form-control" placeholder="Please enter withdrawal address"/>
-        </div>
-      </div>
-
-      <div id="bind-bank-panel" style="display:none;">
-        <div class="form-group">
-          <label class="form-label">Bank Name</label>
-          <input type="text" id="bind-bank-name" class="form-control" placeholder="e.g. HDFC Bank"/>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Branch Name</label>
-          <input type="text" id="bind-branch-name" class="form-control" placeholder="e.g. Mumbai Main Branch"/>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Card Number</label>
-          <input type="text" id="bind-card-number" class="form-control" placeholder="Enter card number"/>
         </div>
       </div>
 
@@ -539,23 +505,33 @@ export function init(page) {
     document.getElementById('bind-bank-panel').style.display = tab === 'bank' ? '' : 'none';
   };
 
-  window.submitBindAddress = function() {
-    const cryptoPanel = document.getElementById('bind-crypto-panel');
-    const isCrypto = cryptoPanel && cryptoPanel.style.display !== 'none';
-    if (isCrypto) {
-      const coin = document.getElementById('bind-coin')?.value;
-      const network = document.getElementById('bind-network')?.value;
-      const address = document.getElementById('bind-address-val')?.value;
-      if (!address) { toast('Please enter a wallet address', 'error'); return; }
-      store.addBindAddress({ method: 'crypto', coin, network, address });
-    } else {
-      const bankName = document.getElementById('bind-bank-name')?.value;
-      const branchName = document.getElementById('bind-branch-name')?.value;
-      const cardNumber = document.getElementById('bind-card-number')?.value;
-      if (!bankName || !cardNumber) { toast('Please fill all bank details', 'error'); return; }
-      store.addBindAddress({ method: 'bank', bankName, branchName, cardNumber: '****' + cardNumber.slice(-4) });
+  window.submitBindAddress = async function() {
+    const coin = document.getElementById('bind-coin')?.value || 'USDT';
+    const network = document.getElementById('bind-network')?.value || 'TRC-20';
+    const address = document.getElementById('bind-address-val')?.value || '';
+
+    if (!address) { toast('Please enter a wallet address', 'error'); return; }
+
+    // Check if user already bound an address on this network
+    const saved = store.getBindAddresses();
+    const existingNet = saved.find(a => a.coin === coin && a.network === network);
+    if (existingNet) {
+      toast(`Wallet address already bound for ${coin} (${network}). You cannot bind another.`, 'error');
+      return;
     }
-    toast('Address bound successfully!', 'success');
-    setTimeout(() => window.location.hash = '#/bind-address', 500);
+
+    const existingAddr = saved.find(a => a.address === address);
+    if (existingAddr) {
+      toast('Wallet address already bound!', 'error');
+      return;
+    }
+
+    try {
+      await store.addBindAddress({ method: 'crypto', coin, network, address });
+      toast('Address bound successfully!', 'success');
+      setTimeout(() => window.location.hash = '#/bind-address', 500);
+    } catch (err) {
+      toast(err.message || 'Failed to bind address', 'error');
+    }
   };
 }

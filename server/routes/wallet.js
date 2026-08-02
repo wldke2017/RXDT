@@ -207,17 +207,41 @@ router.get('/bind-addresses', authenticate, async (req, res) => {
 router.post('/bind-addresses', authenticate, async (req, res) => {
   try {
     const { coin, network, address, label } = req.body;
-    if (!address) return res.status(400).json({ error: 'Address is required' });
+    if (!address) return res.status(400).json({ error: 'Wallet address is required.' });
+
+    const targetCoin = coin || 'USDT';
+    const targetNetwork = network || 'TRC-20';
+
+    // 1. Check if user already bound an address on this network (e.g. TRC-20)
+    const existingNetwork = await query(`
+      SELECT * FROM bind_addresses 
+      WHERE user_id = $1 AND coin = $2 AND network = $3;
+    `, [req.user.id, targetCoin, targetNetwork]);
+
+    if (existingNetwork.rows.length > 0) {
+      return res.status(400).json({ error: `Wallet address already bound for ${targetCoin} (${targetNetwork}). You can only bind one address per network.` });
+    }
+
+    // 2. Check if this exact address was bound already
+    const existingAddress = await query(`
+      SELECT * FROM bind_addresses 
+      WHERE user_id = $1 AND address = $2;
+    `, [req.user.id, address]);
+
+    if (existingAddress.rows.length > 0) {
+      return res.status(400).json({ error: 'Wallet address already bound to your account.' });
+    }
 
     const id = 'BA' + Date.now();
     const resDb = await query(`
       INSERT INTO bind_addresses (id, user_id, method, coin, network, address, label)
       VALUES ($1, $2, 'crypto', $3, $4, $5, $6)
       RETURNING *;
-    `, [id, req.user.id, coin || 'USDT', network || 'TRC-20', address, label || 'Primary Wallet']);
+    `, [id, req.user.id, targetCoin, targetNetwork, address, label || 'Primary Wallet']);
 
-    res.json({ address: resDb.rows[0] });
+    res.json({ message: 'Wallet address bound successfully!', address: resDb.rows[0] });
   } catch (err) {
+    console.error('Bind address error:', err);
     res.status(500).json({ error: 'Failed to bind address' });
   }
 });
