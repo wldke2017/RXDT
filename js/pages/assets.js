@@ -515,17 +515,21 @@ export function init(page) {
     if (addr) addr.value = sel.value;
   };
 
-  window.submitWithdrawal = function() {
+  window.submitWithdrawal = async function() {
     const user = store.getUser();
     const amount = parseFloat(document.getElementById('withdraw-amount')?.value || 0);
     const address = document.getElementById('withdraw-address')?.value || '';
-    if (!amount || amount < 50) { toast('Minimum withdrawal is $50', 'error'); return; }
+    if (!amount || amount < 10) { toast('Minimum withdrawal is $10 USDT', 'error'); return; }
     if (amount > user.availableBalance) { toast('Insufficient balance', 'error'); return; }
     if (!address) { toast('Please enter withdrawal address', 'error'); return; }
-    const fee = Math.max(2, amount * 0.005);
-    store.addWithdrawal({ coin: 'USDT', network: 'TRC-20', amount, fee, actualAmount: amount - fee, address });
-    toast('Withdrawal submitted! Under review.', 'success');
-    setTimeout(() => window.location.hash = '#/assets', 1000);
+    const fee = 1.00;
+    try {
+      await store.addWithdrawal({ coin: 'USDT', network: 'TRC-20', amount, fee, actualAmount: amount - fee, address });
+      toast('Withdrawal submitted! Under review.', 'success');
+      setTimeout(() => window.location.hash = '#/assets', 800);
+    } catch (err) {
+      toast(err.message || 'Failed to submit withdrawal', 'error');
+    }
   };
 
   window.switchBindTab = function(tab, btn) {
