@@ -154,6 +154,7 @@ function renderRecharge() {
             <option value="USDT">₮ USDT (Tether)</option>
             <option value="USDC">💲 USDC (USD Coin)</option>
             <option value="BTC">₿ BTC (Bitcoin)</option>
+            <option value="ETH">Ξ ETH (Ethereum)</option>
           </select>
         </div>
         <div style="font-size:13px;font-weight:600;color:var(--text-sub);margin-top:8px;" id="dep-rate-display">
@@ -467,7 +468,10 @@ export function init(page) {
       'BEP20': '0xaff3696164faaa572018494701688b8c326c98de',
     },
     'BTC': {
-      'BTC':   '0xaff3696164faaa572018494701688b8c326c98de',
+      'BTC':   '1HaFqtZeHBa99Lvs884vURfTW9TLp7wTBZ',
+    },
+    'ETH': {
+      'BEP20': '0xaff3696164faaa572018494701688b8c326c98de',
     },
   };
 
@@ -485,6 +489,9 @@ export function init(page) {
     'BTC': [
       { value: 'BTC', label: 'BTC — Bitcoin Network' },
     ],
+    'ETH': [
+      { value: 'BEP20', label: 'BSC — BNB Smart Chain (BEP20)' },
+    ],
   };
 
   window.onDepCoinChange = function(coin) {
@@ -497,7 +504,7 @@ export function init(page) {
     // Update rate label
     const rateEl = document.getElementById('dep-rate-display');
     if (rateEl) {
-      const rateMap = { USDT: '1 USDT = 1 USD', USDC: '1 USDC = 1 USD', BTC: '1 BTC ≈ market price' };
+      const rateMap = { USDT: '1 USDT = 1 USD', USDC: '1 USDC = 1 USD', BTC: '1 BTC ≈ market price', ETH: '1 ETH ≈ market price' };
       rateEl.innerHTML = `Rate: <strong style="color:var(--text-main);">${rateMap[coin] || ''}</strong>`;
     }
     const amountVal = document.getElementById('dep-amount-input')?.value || 0;
