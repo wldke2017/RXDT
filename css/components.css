@@ -133,6 +133,12 @@
 .upload-box:hover { border-color: #00f2fe; color: #00f2fe; }
 .upload-icon { font-size: 32px; margin-bottom: 8px; }
 
+/* ---- Coin Logos ---- */
+.mkt-coin-icon-wrap { position: relative; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+.coin-logo-img { border-radius: 50%; object-fit: cover; display: block; }
+.coin-logo-fallback { border-radius: 50%; display: none; align-items: center; justify-content: center; font-weight: 900; flex-shrink: 0; }
+
+
 /* ========================================
    LIVE MARKET PAGE
    ======================================== */

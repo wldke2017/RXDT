@@ -151,6 +151,26 @@ function renderSparkline(prices, color) {
   </svg>`;
 }
 
+// ---- Coin Logo URL with fallbacks ----
+function getCoinLogoUrl(base) {
+  return `https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/${base.toLowerCase()}.png`;
+}
+
+function renderCoinLogo(base, color, size = 38) {
+  const primary = getCoinLogoUrl(base);
+  const fallback1 = `https://cryptoicons.org/api/icon/${base.toLowerCase()}/${size}`;
+  const letter = base[0];
+  return `<img
+    src="${primary}"
+    alt="${base}"
+    width="${size}" height="${size}"
+    class="coin-logo-img"
+    onerror="this.onerror=null;this.src='${fallback1}';this.onerror=function(){this.style.display='none';this.nextElementSibling.style.display='flex';}"
+    style="border-radius:50%;object-fit:cover;"
+  /><span class="coin-logo-fallback" style="display:none;width:${size}px;height:${size}px;border-radius:50%;background:${color}22;color:${color};border:1px solid ${color}44;align-items:center;justify-content:center;font-size:${Math.round(size*0.45)}px;font-weight:900;">${letter}</span>`;
+}
+
+
 // ---- Render Market Row ----
 function renderMarketRow(pair) {
   const change = pair.change;
@@ -165,8 +185,8 @@ function renderMarketRow(pair) {
   return `
   <div class="mkt-row" onclick="openCoinDetail('${pair.symbol}')">
     <div class="mkt-coin-info">
-      <div class="mkt-coin-icon" style="background:${pair.color}22;color:${pair.color};border:1px solid ${pair.color}44;">
-        ${pair.icon}
+      <div class="mkt-coin-icon-wrap">
+        ${renderCoinLogo(pair.base, pair.color, 38)}
       </div>
       <div>
         <div class="mkt-coin-sym">${pair.base}<span class="mkt-usdt">/USDT</span></div>
@@ -258,7 +278,9 @@ async function openCoinDetail(symbol) {
   content.innerHTML = `
   <div class="coin-detail-header">
     <div style="display:flex;align-items:center;gap:12px;">
-      <div class="mkt-coin-icon" style="width:44px;height:44px;font-size:20px;background:${pair.color}22;color:${pair.color};border:1px solid ${pair.color}44;">${pair.icon}</div>
+      <div class="mkt-coin-icon-wrap" style="width:48px;height:48px;">
+        ${renderCoinLogo(pair.base, pair.color, 48)}
+      </div>
       <div>
         <div style="font-size:20px;font-weight:900;">${pair.base}/USDT</div>
         <div style="font-size:12px;color:var(--text-muted);">${pair.name}</div>

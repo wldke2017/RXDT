@@ -327,13 +327,20 @@ export async function init() {
   function renderPairList(pairs) {
     const el = document.getElementById('pair-list');
     if (!el) return;
-    el.innerHTML = pairs.slice(0, 80).map(p => `
+    el.innerHTML = pairs.slice(0, 80).map(p => {
+      const logo = `https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/${p.base.toLowerCase()}.png`;
+      const fallback = `https://cryptoicons.org/api/icon/${p.base.toLowerCase()}/28`;
+      return `
       <div class="pair-item ${p.symbol === currentPair ? 'active' : ''}" onclick="selectPair('${p.symbol}')">
-        <span class="pair-item-name">${p.base}/USDT</span>
+        <span style="display:flex;align-items:center;gap:8px;" class="pair-item-name">
+          <img src="${logo}" width="24" height="24" style="border-radius:50%;object-fit:cover;" 
+               onerror="this.onerror=null;this.src='${fallback}';this.onerror=function(){this.style.display='none';}" />
+          ${p.base}/USDT
+        </span>
         <span class="pair-item-price">$${p.price < 1 ? p.price.toFixed(6) : p.price.toFixed(2)}</span>
         <span class="pair-item-change ${p.change >= 0 ? 'color-up' : 'color-down'}">${p.change >= 0 ? '+' : ''}${p.change.toFixed(2)}%</span>
       </div>
-    `).join('');
+    `}).join('');
   }
 
   // ---- Pair Selection ----
