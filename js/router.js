@@ -23,6 +23,7 @@ const routes = {
   'about':                () => import('./pages/about.js'),
   'agreement':            () => import('./pages/about.js'),
   'investment-agreement': () => import('./pages/about.js'),
+  'admin':                () => import('./pages/admin.js'),
 };
 
 // Pages that require a logged-in user
