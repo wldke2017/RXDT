@@ -2,6 +2,8 @@
 import store from '../store.js';
 
 const ADMIN_SECRET = 'rxdt_admin_secret_key_2026';
+const ADMIN_PASSWORD = 'Lu4373212';
+const ADMIN_SESSION_KEY = 'rxdt_admin_unlocked';
 const BASE = '/api/admin';
 
 async function adminFetch(endpoint, method = 'GET', body = null) {
@@ -15,7 +17,33 @@ async function adminFetch(endpoint, method = 'GET', body = null) {
   return res.json();
 }
 
+function renderLockScreen() {
+  return `
+  <div style="min-height:80vh;display:flex;align-items:center;justify-content:center;">
+    <div style="background:var(--bg-card);border:1px solid var(--border-color);border-radius:20px;padding:40px 32px;max-width:380px;width:100%;text-align:center;">
+      <div style="font-size:52px;margin-bottom:16px;">🔐</div>
+      <h2 style="font-size:20px;font-weight:800;margin:0 0 6px;">Admin Access</h2>
+      <p style="font-size:14px;color:var(--text-sub);margin:0 0 24px;">Enter password to continue</p>
+      <input type="password" id="admin-pwd-input" class="form-control" placeholder="Password" 
+        style="margin-bottom:16px;text-align:center;font-size:16px;letter-spacing:2px;"
+        onkeydown="if(event.key==='Enter') submitAdminPassword()"/>
+      <div id="admin-pwd-error" style="color:#ef4444;font-size:13px;margin-bottom:12px;min-height:18px;"></div>
+      <button class="btn-primary" style="width:100%;height:48px;font-size:16px;font-weight:800;border-radius:10px;" onclick="submitAdminPassword()">
+        Unlock Dashboard
+      </button>
+    </div>
+  </div>`;
+}
+
 export function render() {
+  // Show lock screen if not authenticated this session
+  if (sessionStorage.getItem(ADMIN_SESSION_KEY) !== 'true') {
+    return renderLockScreen();
+  }
+  return renderDashboard();
+}
+
+function renderDashboard() {
   return `
   <div style="max-width:900px;margin:0 auto;padding:16px;">
 
@@ -71,6 +99,37 @@ export function render() {
 }
 
 export function init() {
+  window.toast = window.toast || ((m, t) => alert(m));
+
+  // ---- Password Gate Handler ----
+  window.submitAdminPassword = function() {
+    const input = document.getElementById('admin-pwd-input');
+    const errEl = document.getElementById('admin-pwd-error');
+    if (!input) return;
+
+    if (input.value === ADMIN_PASSWORD) {
+      sessionStorage.setItem(ADMIN_SESSION_KEY, 'true');
+      // Re-render the dashboard
+      const container = document.getElementById('page-content');
+      if (container) {
+        container.innerHTML = renderDashboard();
+        // Re-run init logic (skip password gate)
+        initDashboard();
+      }
+    } else {
+      if (errEl) errEl.textContent = '❌ Incorrect password. Try again.';
+      input.value = '';
+      input.focus();
+    }
+  };
+
+  // If still on lock screen, don't proceed
+  if (sessionStorage.getItem(ADMIN_SESSION_KEY) !== 'true') return;
+
+  initDashboard();
+}
+
+function initDashboard() {
   window.toast = window.toast || ((m, t) => alert(m));
 
   window.switchAdminTab = function(tab, btn) {
