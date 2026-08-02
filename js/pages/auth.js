@@ -430,9 +430,15 @@ export function init(page) {
     const nationality = document.getElementById('kyc-nationality')?.value || document.getElementById('kyc-country-search')?.value;
     const name = document.getElementById('kyc-name')?.value;
     const idNum = document.getElementById('kyc-id-number')?.value;
+
+    const frontImg = document.getElementById('kyc-front-preview')?.src || '';
+    const backImg = document.getElementById('kyc-back-preview')?.src || '';
+    const handheldImg = document.getElementById('kyc-handheld-preview')?.src || '';
+
     if (!idType || !nationality || !name || !idNum) { toast('Please fill all required fields including Country', 'error'); return; }
+
     try {
-      await store.submitKyc({ idType, nationality, realName: name, idNumber: idNum });
+      await store.submitKyc({ documentType: idType, nationality, realName: name, idNumber: idNum, frontImg, backImg, handheldImg });
       toast('KYC submitted! Under review, please wait.', 'success');
       setTimeout(() => { window.location.hash = '#/assets'; }, 1200);
     } catch (err) {

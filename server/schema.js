@@ -163,9 +163,11 @@ export async function initDatabase() {
       user_id VARCHAR(50) REFERENCES users(id) ON DELETE CASCADE,
       real_name VARCHAR(100) NOT NULL,
       id_number VARCHAR(100) NOT NULL,
+      nationality VARCHAR(100),
       document_type VARCHAR(50) DEFAULT 'Passport',
       front_img TEXT,
       back_img TEXT,
+      handheld_img TEXT,
       status VARCHAR(20) DEFAULT 'pending',
       reject_reason TEXT,
       created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP

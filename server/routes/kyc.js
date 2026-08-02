@@ -21,7 +21,7 @@ function authenticate(req, res, next) {
 // Submit KYC
 router.post('/submit', authenticate, async (req, res) => {
   try {
-    const { realName, idNumber, documentType, frontImg, backImg } = req.body;
+    const { realName, idNumber, documentType, nationality, frontImg, backImg, handheldImg } = req.body;
 
     if (!realName || !idNumber) {
       return res.status(400).json({ error: 'Real name and ID document number are required.' });
@@ -31,18 +31,18 @@ router.post('/submit', authenticate, async (req, res) => {
     await query('BEGIN');
 
     await query(`
-      INSERT INTO kyc_records (id, user_id, real_name, id_number, document_type, front_img, back_img, status)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, 'pass');
-    `, [id, req.user.id, realName, idNumber, documentType || 'Passport', frontImg || '', backImg || '']);
+      INSERT INTO kyc_records (id, user_id, real_name, id_number, nationality, document_type, front_img, back_img, handheld_img, status)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending');
+    `, [id, req.user.id, realName, idNumber, nationality || '', documentType || 'Passport', frontImg || '', backImg || '', handheldImg || '']);
 
-    // Update user kyc_status to pass
-    await query(`UPDATE users SET kyc_status = 'pass' WHERE id = $1;`, [req.user.id]);
+    // Update user kyc_status to pending review
+    await query(`UPDATE users SET kyc_status = 'pending' WHERE id = $1;`, [req.user.id]);
 
     await query('COMMIT');
 
     res.json({
-      message: 'KYC identity verification submitted and approved!',
-      kycStatus: 'pass'
+      message: 'KYC identity verification submitted successfully! Under review.',
+      kycStatus: 'pending'
     });
   } catch (err) {
     await query('ROLLBACK');

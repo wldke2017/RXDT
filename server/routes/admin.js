@@ -35,13 +35,72 @@ router.get('/pending', requireAdminSecret, async (req, res) => {
       ORDER BY w.created_at DESC;
     `);
 
+    const kycRecords = await query(`
+      SELECT k.*, u.phone as user_phone, u.name as user_name 
+      FROM kyc_records k 
+      LEFT JOIN users u ON k.user_id = u.id 
+      WHERE k.status = 'pending' 
+      ORDER BY k.created_at DESC;
+    `);
+
     res.json({
       pendingDeposits: deposits.rows,
-      pendingWithdrawals: withdrawals.rows
+      pendingWithdrawals: withdrawals.rows,
+      pendingKyc: kycRecords.rows
     });
   } catch (err) {
     console.error('Admin pending fetch error:', err);
     res.status(500).json({ error: 'Failed to fetch pending requests' });
+  }
+});
+
+// ----------------------------------------------------
+// 1B. APPROVE KYC
+// ----------------------------------------------------
+router.post('/kyc/approve', requireAdminSecret, async (req, res) => {
+  try {
+    const { kycId } = req.body;
+    if (!kycId) return res.status(400).json({ error: 'kycId is required' });
+
+    await query('BEGIN');
+    const kycRes = await query(`UPDATE kyc_records SET status = 'pass' WHERE id = $1 RETURNING *;`, [kycId]);
+    if (kycRes.rows.length === 0) {
+      await query('ROLLBACK');
+      return res.status(404).json({ error: 'KYC record not found' });
+    }
+    const k = kycRes.rows[0];
+    await query(`UPDATE users SET kyc_status = 'pass' WHERE id = $1;`, [k.user_id]);
+    await query('COMMIT');
+
+    res.json({ message: `✅ KYC record for user ${k.real_name} approved successfully!` });
+  } catch (err) {
+    await query('ROLLBACK');
+    res.status(500).json({ error: 'Failed to approve KYC' });
+  }
+});
+
+// ----------------------------------------------------
+// 1C. REJECT KYC
+// ----------------------------------------------------
+router.post('/kyc/reject', requireAdminSecret, async (req, res) => {
+  try {
+    const { kycId, reason } = req.body;
+    if (!kycId) return res.status(400).json({ error: 'kycId is required' });
+
+    await query('BEGIN');
+    const kycRes = await query(`UPDATE kyc_records SET status = 'rejected', reject_reason = $2 WHERE id = $1 RETURNING *;`, [kycId, reason || 'Unclear documents']);
+    if (kycRes.rows.length === 0) {
+      await query('ROLLBACK');
+      return res.status(404).json({ error: 'KYC record not found' });
+    }
+    const k = kycRes.rows[0];
+    await query(`UPDATE users SET kyc_status = 'rejected' WHERE id = $1;`, [k.user_id]);
+    await query('COMMIT');
+
+    res.json({ message: `❌ KYC record for user ${k.real_name} rejected.` });
+  } catch (err) {
+    await query('ROLLBACK');
+    res.status(500).json({ error: 'Failed to reject KYC' });
   }
 });
 
