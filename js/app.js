@@ -2,9 +2,9 @@ import store from './store.js';
 import router from './router.js';
 
 // Initialize app on DOM ready
-document.addEventListener('DOMContentLoaded', () => {
-  store.checkAuth();
+document.addEventListener('DOMContentLoaded', async () => {
   renderShell();
+  await store.checkAuth();
   router.init();
 
   store.subscribe('auth', () => updateUserNav());

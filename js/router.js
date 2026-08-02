@@ -50,12 +50,6 @@ async function navigate(path) {
     return;
   }
 
-  // Redirect already logged-in users away from login/register
-  if (guestOnly.includes(page) && isLoggedIn) {
-    window.location.hash = '#/home';
-    return;
-  }
-
   // Update active nav
   document.querySelectorAll('.nav-item, .mobile-nav-item').forEach(el => {
     el.classList.remove('active');
