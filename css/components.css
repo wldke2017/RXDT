@@ -81,18 +81,19 @@
   padding: 40px 16px;
 }
 .auth-card {
-  background: #fff;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
   border-radius: 16px;
   padding: 40px;
   width: 100%;
   max-width: 440px;
-  box-shadow: 0 8px 40px rgba(0,0,0,0.08);
+  box-shadow: 0 8px 40px rgba(0,0,0,0.4);
 }
 .auth-brand { text-align: center; margin-bottom: 28px; }
 .auth-logo { font-size: 32px; font-weight: 800; color: var(--el-color-primary); }
-.auth-tagline { font-size: 20px; font-weight: 600; margin: 8px 0 4px; }
+.auth-tagline { font-size: 20px; font-weight: 600; margin: 8px 0 4px; color: var(--text-main); }
 .auth-subtitle { font-size: 14px; color: var(--text-muted); }
-.auth-options { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; font-size: 13px; }
+.auth-options { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; font-size: 13px; color: var(--text-sub); }
 .remember-me { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-sub); }
 .auth-submit { width: 100%; height: 52px; font-size: 17px; border-radius: 100px; margin-bottom: 16px; }
 .auth-divider { text-align: center; font-size: 13px; color: var(--text-muted); margin: 12px 0; position: relative; }
@@ -142,8 +143,8 @@
 .hero-title { font-size: 40px; font-weight: 800; line-height: 1.2; margin-bottom: 12px; }
 .hero-title .highlight { color: #498cf2; }
 .hero-sub { font-size: 16px; color: rgba(255,255,255,0.7); margin-bottom: 24px; }
-.hero-actions { display: flex; gap: 12px; margin-bottom: 32px; }
-.hero-btn { height: 46px; font-size: 15px; }
+.hero-actions { display: flex; gap: 12px; margin-bottom: 32px; flex-wrap: wrap; }
+.hero-btn { height: 46px; font-size: 15px; min-width: 140px; flex: 1; text-align: center; }
 .hero-stats { display: flex; gap: 32px; }
 .hero-stat { display: flex; flex-direction: column; }
 .stat-val { font-size: 22px; font-weight: 700; }
@@ -152,12 +153,12 @@
 .hero-coin-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
 .hero-coin { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); border-radius: 10px; padding: 12px 16px; font-size: 14px; display: flex; flex-direction: column; gap: 4px; min-width: 120px; }
 
-.hot-tickers { display: flex; gap: 16px; overflow-x: auto; padding-bottom: 4px; }
-.ticker-card { min-width: 140px; background: #f7f9fc; border-radius: 10px; padding: 16px; cursor: pointer; flex-shrink: 0; }
-.ticker-card:hover { background: #e8f3ff; }
-.ticker-symbol { font-size: 14px; font-weight: 700; margin-bottom: 2px; }
+.hot-tickers { display: flex; gap: 16px; overflow-x: auto; padding-bottom: 4px; -webkit-overflow-scrolling: touch; }
+.ticker-card { min-width: 140px; background: var(--bg-card-hover); border: 1px solid var(--border-color); border-radius: 10px; padding: 16px; cursor: pointer; flex-shrink: 0; }
+.ticker-card:hover { background: #1a2234; border-color: var(--el-color-primary); }
+.ticker-symbol { font-size: 14px; font-weight: 700; margin-bottom: 2px; color: var(--text-main); }
 .ticker-name { font-size: 11px; color: var(--text-muted); margin-bottom: 8px; }
-.ticker-price { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
+.ticker-price { font-size: 16px; font-weight: 600; margin-bottom: 4px; color: var(--text-main); }
 
 .advantage-card { padding: 24px; background: #f7f9fc; border-radius: 12px; }
 .advantage-card .adv-icon { font-size: 32px; margin-bottom: 12px; }
@@ -200,14 +201,14 @@
 .sub-nav-btn.active { background: var(--el-color-primary); color: #fff; border-color: var(--el-color-primary); }
 
 .analysts-grid { display: flex; flex-direction: column; gap: 20px; }
-.analyst-card { background: #fff; border: 1px solid var(--border-color); border-radius: 12px; padding: 24px; }
-.analyst-card-header { display: flex; gap: 16px; margin-bottom: 20px; }
-.analyst-avatar-lg { font-size: 40px; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; background: #f7f9fc; border-radius: 50%; border: 1px solid var(--border-color); flex-shrink: 0; }
-.analyst-card-name { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
+.analyst-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 24px; }
+.analyst-card-header { display: flex; gap: 16px; margin-bottom: 20px; flex-wrap: wrap; }
+.analyst-avatar-lg { font-size: 40px; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; background: rgba(0,242,254,0.05); border-radius: 50%; border: 1px solid var(--border-color); flex-shrink: 0; }
+.analyst-card-name { font-size: 18px; font-weight: 700; margin-bottom: 4px; color: var(--text-main); }
 .analyst-card-meta { font-size: 13px; color: var(--text-sub); margin-bottom: 4px; }
 
 .returns-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
-.return-cell { background: #f7f9fc; border-radius: 8px; padding: 12px; display: flex; flex-direction: column; gap: 4px; }
+.return-cell { background: rgba(255,255,255,0.04); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; display: flex; flex-direction: column; gap: 4px; }
 .rc-label { font-size: 11px; color: var(--text-muted); }
 .rc-val { font-size: 16px; font-weight: 700; }
 .rc-num { font-size: 12px; }
@@ -217,15 +218,15 @@
 .product-name { font-weight: 600; }
 
 /* Follow Orders */
-.order-card { background: #fff; border: 1px solid var(--border-color); border-radius: 12px; padding: 20px; margin-bottom: 16px; }
-.order-card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }
-.order-product-name { font-size: 17px; font-weight: 700; margin-bottom: 4px; }
+.order-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 20px; margin-bottom: 16px; }
+.order-card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; flex-wrap: wrap; gap: 8px; }
+.order-product-name { font-size: 17px; font-weight: 700; margin-bottom: 4px; color: var(--text-main); }
 .order-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px; }
-.os-item { background: #f7f9fc; border-radius: 6px; padding: 10px 12px; }
+.os-item { background: rgba(255,255,255,0.04); border: 1px solid var(--border-color); border-radius: 6px; padding: 10px 12px; }
 .os-label { font-size: 11px; color: var(--text-muted); display: block; margin-bottom: 4px; }
-.os-val { font-size: 15px; font-weight: 600; }
+.os-val { font-size: 15px; font-weight: 600; color: var(--text-main); }
 .order-card-actions { display: flex; gap: 8px; flex-wrap: wrap; }
-.empty-state { text-align: center; padding: 60px; color: var(--text-muted); font-size: 16px; }
+.empty-state { text-align: center; padding: 60px 20px; color: var(--text-muted); font-size: 16px; }
 
 /* Detail Rows */
 .detail-rows { display: flex; flex-direction: column; gap: 0; }
@@ -236,17 +237,17 @@
 /* ---- Assets Page ---- */
 .assets-summary-card { background: linear-gradient(135deg, #1a1a2e, #0f3460); color: #fff; border-radius: 16px; padding: 32px; margin-bottom: 20px; }
 .summary-label { font-size: 14px; opacity: 0.7; margin-bottom: 8px; }
-.summary-total { font-size: 40px; font-weight: 800; margin-bottom: 24px; }
-.summary-row { display: flex; gap: 32px; margin-bottom: 24px; flex-wrap: wrap; }
+.summary-total { font-size: 40px; font-weight: 800; margin-bottom: 24px; word-break: break-all; }
+.summary-row { display: flex; gap: 24px; margin-bottom: 24px; flex-wrap: wrap; }
 .summary-item { display: flex; flex-direction: column; gap: 4px; }
 .si-label { font-size: 12px; opacity: 0.7; }
 .si-val { font-size: 18px; font-weight: 600; }
-.assets-action-row { display: flex; gap: 12px; }
-.assets-action-row button { height: 44px; font-size: 15px; min-width: 120px; }
+.assets-action-row { display: flex; gap: 12px; flex-wrap: wrap; }
+.assets-action-row button { height: 44px; font-size: 15px; min-width: 120px; flex: 1; }
 
 .assets-menu-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px; }
-.amenu-item { background: #fff; border: 1px solid var(--border-color); border-radius: 10px; padding: 16px; display: flex; align-items: center; gap: 12px; cursor: pointer; }
-.amenu-item:hover { background: #f7f9fc; border-color: var(--el-color-primary); }
+.amenu-item { background: var(--bg-card-hover); border: 1px solid var(--border-color); border-radius: 10px; padding: 16px; display: flex; align-items: center; gap: 12px; cursor: pointer; }
+.amenu-item:hover { background: #1a2234; border-color: var(--el-color-primary); }
 .amenu-icon { font-size: 22px; }
 .amenu-label { flex: 1; font-size: 14px; font-weight: 500; }
 .amenu-arrow { color: var(--text-muted); }
@@ -360,7 +361,7 @@
 @media (max-width: 768px) {
   .home-hero { flex-direction: column; padding: 32px 20px; }
   .hero-title { font-size: 28px; }
-  .hero-graphic { width: 100%; }
+  .hero-graphic { width: 100%; text-align: center; }
   .hero-coin-grid { grid-template-columns: repeat(4, 1fr); }
   .hero-coin { min-width: auto; font-size: 11px; padding: 8px; }
   .hero-stats { gap: 16px; flex-wrap: wrap; }
@@ -370,14 +371,23 @@
   .summary-row { gap: 16px; }
   .home-crypto-banner { flex-direction: column; text-align: center; }
   .auth-card { padding: 28px 20px; }
+  .summary-total { font-size: 30px; }
+  .assets-summary-card { padding: 24px 20px; }
 }
 
 @media (max-width: 480px) {
   .hero-title { font-size: 23px; }
   .hero-coin-grid { grid-template-columns: repeat(2, 1fr); }
-  .returns-grid { grid-template-columns: 1fr; }
-  .order-stats { grid-template-columns: 1fr; }
+  .returns-grid { grid-template-columns: repeat(2, 1fr); }
+  .order-stats { grid-template-columns: repeat(2, 1fr); }
   .card { padding: 16px; }
   .page-title { font-size: 20px; }
   .btn-primary, .btn-outline { width: 100%; justify-content: center; }
+  .summary-total { font-size: 26px; }
+  .hero-stats { flex-direction: column; gap: 10px; }
+  .stat-val { font-size: 18px; }
+  .follow-sub-nav { gap: 6px; }
+  .sub-nav-btn { font-size: 12px; padding: 6px 12px; }
+  .analyst-card { padding: 16px; }
 }
+

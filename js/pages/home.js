@@ -99,10 +99,10 @@ export function render() {
   <div class="card">
     <div class="card-title">🏛️ Institutional Leadership & Founder</div>
     <div style="display:flex;gap:24px;align-items:center;flex-wrap:wrap;">
-      <img src="assets/images/warren_pennington.png" alt="Warren Pennington" style="width:160px;height:160px;object-fit:cover;border-radius:12px;border:2px solid var(--el-color-primary);"/>
-      <div style="flex:1;min-width:280px;">
-        <h3 style="font-size:22px;font-weight:700;color:var(--el-color-primary);margin-bottom:4px;">WARREN PENNINGTON</h3>
-        <div style="font-size:14px;color:var(--text-sub);margin-bottom:12px;">Founder of RXDT Quantitative Model VI & Former Global Head of FinTech Strategies at Vanguard Group</div>
+      <img src="assets/images/warren_pennington.png" alt="Warren Pennington" style="width:140px;height:140px;object-fit:cover;border-radius:12px;border:2px solid var(--el-color-primary);flex-shrink:0;"/>
+      <div style="flex:1;min-width:0;">
+        <h3 style="font-size:20px;font-weight:700;color:var(--el-color-primary);margin-bottom:4px;">WARREN PENNINGTON</h3>
+        <div style="font-size:13px;color:var(--text-sub);margin-bottom:12px;">Founder of RXDT Quantitative Model VI & Former Global Head of FinTech Strategies at Vanguard Group</div>
         <p style="font-size:14px;color:var(--text-muted);line-height:1.6;margin-bottom:12px;">
           Mr. Pennington holds a B.S. in Aerospace Engineering and M.S. in Telecommunications (CU Boulder), CPA certified, and managed $50 Trillion in assets at Vanguard. He launched the proprietary RXDT Quantitative AI Model to help global investors navigate crypto markets safely.
         </p>
@@ -114,9 +114,9 @@ export function render() {
   <!-- Compliance Trophy & Regulatory Authorization -->
   <div class="card" style="background:linear-gradient(135deg,#0d1322,#161e31);border:1px solid rgba(0,242,254,0.3);">
     <div style="display:flex;gap:24px;align-items:center;flex-wrap:wrap;">
-      <div style="flex:1;min-width:280px;">
+      <div style="flex:1;min-width:0;">
         <div class="badge badge-info" style="margin-bottom:8px;">OFFICIAL COMPLIANCE STATEMENT</div>
-        <h2 style="font-size:24px;font-weight:800;color:#fff;margin-bottom:8px;">KORE / RXDT Exchange</h2>
+        <h2 style="font-size:22px;font-weight:800;color:#fff;margin-bottom:8px;">KORE / RXDT Exchange</h2>
         <p style="font-size:14px;color:var(--text-sub);line-height:1.7;margin-bottom:16px;">
           RXDT Exchange Inc is officially authorized and registered by the State of Colorado, USA (Entity ID: <strong>20261325716</strong>). You can verify official details directly on the Colorado Secretary of State Business Search System.
         </p>
@@ -124,7 +124,7 @@ export function render() {
           🔍 Verify Registration on Colorado SOS
         </a>
       </div>
-      <img src="assets/images/compliance_trophy.png" alt="Compliance Trophy" style="width:200px;border-radius:12px;box-shadow:0 0 25px rgba(0,242,254,0.2);"/>
+      <img src="assets/images/compliance_trophy.png" alt="Compliance Trophy" style="width:clamp(100px,40%,180px);border-radius:12px;box-shadow:0 0 25px rgba(0,242,254,0.2);flex-shrink:0;"/>
     </div>
   </div>
   `;
