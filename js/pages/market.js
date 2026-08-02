@@ -35,6 +35,7 @@ export function render() {
         <button class="tab-btn" onclick="switchMarketTab('hot',this)">🔥 Hot</button>
         <button class="tab-btn" onclick="switchMarketTab('stocks',this)">Stocks</button>
         <button class="tab-btn" onclick="switchMarketTab('crypto',this)">Crypto</button>
+        <button class="tab-btn contract-tab" onclick="switchMarketTab('contract',this)">⚡ Contract</button>
       </div>
 
       <div class="table-container">
@@ -83,8 +84,15 @@ function renderMarketRows(data) {
       <td>$${fmt(item.low)}</td>
       <td>${item.volume}</td>
       <td>${item.marketCap}</td>
-      <td><button class="btn-primary" style="padding:6px 14px;font-size:13px;" onclick="event.stopPropagation();openFollowFromMarket('${item.symbol}')">Follow</button></td>
-    </tr >
+      <td>
+        <div style="display:flex;gap:6px;">
+          <button class="btn-primary" style="padding:6px 12px;font-size:12px;" onclick="event.stopPropagation();openFollowFromMarket('${item.symbol}')">Follow</button>
+          <button class="btn-trade-market" onclick="event.stopPropagation();openContractFromMarket('${item.symbol}')">
+            ⚡ Trade
+          </button>
+        </div>
+      </td>
+    </tr>
   `).join('');
 }
 
@@ -130,9 +138,14 @@ function renderDetailContent(item) {
       <p style="font-size:14px;color:var(--text-sub);line-height:1.6;">${item.description || getStockDescription(item.symbol)}</p>
     </div>
 
-    <button class="btn-dark" style="width:100%;height:48px;font-size:16px;" onclick="openFollowFromMarket('${item.symbol}');closeModal('market-detail-modal')">
-      Follow This Order
-    </button>`;
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <button class="btn-dark" style="height:48px;font-size:15px;" onclick="openFollowFromMarket('${item.symbol}');closeModal('market-detail-modal')">
+        ⚡ Follow Order
+      </button>
+      <button class="btn-trade-modal" onclick="openContractFromMarket('${item.symbol}');closeModal('market-detail-modal')">
+        📊 Trade Now
+      </button>
+    </div>`;
 }
 
 function generateSparkline(item) {
@@ -198,6 +211,11 @@ export function init(page) {
     if (tab === 'hot') data = currentMarketData.filter(m => m.hot);
     else if (tab === 'stocks') data = currentMarketData.filter(m => !m.symbol.includes('/'));
     else if (tab === 'crypto') data = currentMarketData.filter(m => m.symbol.includes('/'));
+    else if (tab === 'contract') {
+      // Contract tab: navigate to contract page
+      window.location.hash = '#/contract';
+      return;
+    }
     else data = currentMarketData;
     const tbody = document.getElementById('market-tbody');
     if (tbody) tbody.innerHTML = renderMarketRows(data);
@@ -229,6 +247,23 @@ export function init(page) {
   window.openFollowFromMarket = function(symbol) {
     if (!store.checkAuth()) { window.location.hash = '#/login'; return; }
     window.location.hash = '#/follow';
+  };
+
+  window.openContractFromMarket = function(symbol) {
+    if (!store.checkAuth()) { window.location.hash = '#/login'; return; }
+    // Map market symbol to Binance pair format
+    let pair = symbol.replace('/', '');
+    // If it's a stock (no USDT), don't allow contract on it
+    if (!pair.endsWith('USDT')) {
+      toast('Contract trading is only available for crypto pairs', 'error');
+      return;
+    }
+    // Navigate to contract page with pre-selected pair
+    window.location.hash = '#/contract';
+    // After navigation, select the pair (short delay for page to load)
+    setTimeout(() => {
+      if (typeof window.selectPair === 'function') window.selectPair(pair);
+    }, 400);
   };
 
   // Close modal on overlay click
