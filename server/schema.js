@@ -30,6 +30,15 @@ export async function initDatabase() {
     );
   `);
 
+  // Ensure missing columns exist on existing database instances
+  await query(`
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS email_bound VARCHAR(100);
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS email_otp VARCHAR(10);
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS email_otp_expires TIMESTAMP WITH TIME ZONE;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS transaction_password VARCHAR(255);
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS referred_by VARCHAR(50);
+  `).catch(err => console.log('User schema migration notice:', err.message));
+
   // Create AI Models Table
   await query(`
     CREATE TABLE IF NOT EXISTS ai_models (
