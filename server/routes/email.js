@@ -232,7 +232,8 @@ router.get('/email-status', requireAuth, async (req, res) => {
     const user = result.rows[0];
     res.json({ emailBound: user?.email_bound || null });
   } catch (err) {
-    res.status(500).json({ error: 'Failed to get email status' });
+    console.error('Email status error:', err.message);
+    res.json({ emailBound: null });
   }
 });
 

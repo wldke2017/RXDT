@@ -234,7 +234,10 @@ function updateCount() {
 
 // ---- Binance All-Market Mini Ticker WebSocket ----
 function connectMarketWS() {
-  if (marketTickerWs) marketTickerWs.close();
+  if (marketTickerWs) {
+    marketTickerWs.onclose = null;
+    marketTickerWs.close();
+  }
   marketTickerWs = new WebSocket('wss://stream.binance.com:9443/ws/!miniTicker@arr');
   marketTickerWs.onmessage = (event) => {
     const tickers = JSON.parse(event.data);
@@ -259,7 +262,11 @@ function connectMarketWS() {
       }
     });
   };
-  marketTickerWs.onclose = () => setTimeout(connectMarketWS, 5000);
+  marketTickerWs.onclose = () => {
+    if (window.location.hash.includes('market')) {
+      setTimeout(connectMarketWS, 5000);
+    }
+  };
 }
 
 // ---- Coin Detail Modal ----
