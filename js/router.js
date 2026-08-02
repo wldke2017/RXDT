@@ -88,17 +88,12 @@ function init() {
     navigate(hash);
   });
 
-  // On page refresh/first load:
-  // - If logged in → always land on home (safe starting point)
-  // - If not logged in → load whatever hash is in the URL (or home)
-  const isLoggedIn = !!localStorage.getItem('rxdt_token');
-  if (isLoggedIn) {
-    navigate('home');
-  } else {
-    const initialHash = window.location.hash.replace('#/', '') || 'home';
-    navigate(initialHash);
-  }
+  // On refresh: always respect the current URL hash
+  // The auth guard inside navigate() handles redirects if needed
+  const initialHash = window.location.hash.replace('#/', '') || 'home';
+  navigate(initialHash);
 }
+
 
 // Expose global navigation helper used throughout all page files
 window.navigateTo = function(page) {
