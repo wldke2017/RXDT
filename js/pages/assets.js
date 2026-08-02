@@ -154,10 +154,9 @@ function renderRecharge() {
             <option value="USDT">₮ USDT (Tether)</option>
             <option value="USDC">💲 USDC (USD Coin)</option>
             <option value="BTC">₿ BTC (Bitcoin)</option>
-            <option value="ETH">Ξ ETH (Ethereum)</option>
           </select>
         </div>
-        <div style="font-size:13px;font-weight:600;color:var(--text-sub);margin-top:8px;">
+        <div style="font-size:13px;font-weight:600;color:var(--text-sub);margin-top:8px;" id="dep-rate-display">
           Rate: <strong style="color:var(--text-main);">1 USDT = 1 USD</strong>
         </div>
       </div>
@@ -165,9 +164,10 @@ function renderRecharge() {
       <!-- Network Selection Dropdown -->
       <div class="card-glass" style="padding:16px;border-radius:12px;margin-bottom:20px;border:1px solid var(--border-color);">
         <label class="form-label" style="font-weight:700;">Select Network</label>
-        <select class="form-control" id="dep-network-select">
-          <option value="TRC20">TRC20 (Tron Network)</option>
-          <option value="ERC20">ERC20 (Ethereum Network)</option>
+        <select class="form-control" id="dep-network-select" onchange="onDepNetworkChange(this.value)">
+          <option value="TRC20">TRX — Tron (TRC20)</option>
+          <option value="ERC20">ETH — Ethereum (ERC20)</option>
+          <option value="BEP20">BSC — BNB Smart Chain (BEP20)</option>
         </select>
       </div>
 
@@ -455,9 +455,57 @@ export function init(page) {
 
   let depositTimerInterval = null;
 
+  // ── Real Wallet Addresses per Coin + Network ──
+  const DEPOSIT_ADDRESSES = {
+    'USDT': {
+      'TRC20': 'TAXazbRgUPdJvBkrRKZpzT8qD7erJAhaU1',
+      'ERC20': '0xaff3696164faaa572018494701688b8c326c98de',
+      'BEP20': '0xaff3696164faaa572018494701688b8c326c98de',
+    },
+    'USDC': {
+      'ERC20': '0xaff3696164faaa572018494701688b8c326c98de',
+      'BEP20': '0xaff3696164faaa572018494701688b8c326c98de',
+    },
+    'BTC': {
+      'BTC':   '0xaff3696164faaa572018494701688b8c326c98de',
+    },
+  };
+
+  // Networks available per coin
+  const COIN_NETWORKS = {
+    'USDT': [
+      { value: 'TRC20', label: 'TRX — Tron (TRC20)' },
+      { value: 'ERC20', label: 'ETH — Ethereum (ERC20)' },
+      { value: 'BEP20', label: 'BSC — BNB Smart Chain (BEP20)' },
+    ],
+    'USDC': [
+      { value: 'ERC20', label: 'ETH — Ethereum (ERC20)' },
+      { value: 'BEP20', label: 'BSC — BNB Smart Chain (BEP20)' },
+    ],
+    'BTC': [
+      { value: 'BTC', label: 'BTC — Bitcoin Network' },
+    ],
+  };
+
   window.onDepCoinChange = function(coin) {
+    // Update network options for selected coin
+    const netSel = document.getElementById('dep-network-select');
+    if (netSel) {
+      const opts = COIN_NETWORKS[coin] || [];
+      netSel.innerHTML = opts.map(o => `<option value="${o.value}">${o.label}</option>`).join('');
+    }
+    // Update rate label
+    const rateEl = document.getElementById('dep-rate-display');
+    if (rateEl) {
+      const rateMap = { USDT: '1 USDT = 1 USD', USDC: '1 USDC = 1 USD', BTC: '1 BTC ≈ market price' };
+      rateEl.innerHTML = `Rate: <strong style="color:var(--text-main);">${rateMap[coin] || ''}</strong>`;
+    }
     const amountVal = document.getElementById('dep-amount-input')?.value || 0;
     window.updateDepCryptoApprox(amountVal);
+  };
+
+  window.onDepNetworkChange = function(network) {
+    // nothing extra needed - address will be read on submit
   };
 
   window.updateDepCryptoApprox = function(val) {
@@ -479,6 +527,16 @@ export function init(page) {
       return;
     }
 
+    // Resolve the correct wallet address
+    const depositWalletAddress = (DEPOSIT_ADDRESSES[coin] && DEPOSIT_ADDRESSES[coin][network])
+      ? DEPOSIT_ADDRESSES[coin][network]
+      : null;
+
+    if (!depositWalletAddress) {
+      toast(`No wallet address configured for ${coin} on ${network}`, 'error');
+      return;
+    }
+
     try {
       // 1. Submit deposit to backend database
       const depRecord = await store.addDeposit({ coin, network, amount, rate: 1.00 });
@@ -486,10 +544,6 @@ export function init(page) {
       // 2. Open Awaiting Payment Checkout Screen Modal
       const modal = document.getElementById('checkout-modal');
       const body = document.getElementById('checkout-modal-body');
-      
-      const depositWalletAddress = network === 'TRC20' 
-        ? 'TVuPSBxWC3ADaQKoe2vM13NJbwXcBMYF4W' 
-        : '0x71C7656EC7ab88b098defB751B7401B5f6d8976F';
 
       if (body && modal) {
         body.innerHTML = `
