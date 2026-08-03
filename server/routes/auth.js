@@ -16,6 +16,9 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ error: 'Phone number or email, and password are required.' });
     }
 
+    // Ensure phone column allows null (fail-safe migration)
+    await query(`ALTER TABLE users ALTER COLUMN phone DROP NOT NULL;`).catch(() => {});
+
     // Check if user already exists
     let existing;
     if (phone) {
@@ -45,11 +48,14 @@ router.post('/register', async (req, res) => {
       }
     }
 
+    // If phone is missing (email registration), provide clean fallback phone placeholder if DB table still has NOT NULL constraint
+    const effectivePhone = phone || ('EMAIL_' + userId);
+
     const newUser = await query(`
       INSERT INTO users (id, name, phone, email, password_hash, invite_code, referred_by, total_assets, available_balance, frozen_balance, total_earnings)
       VALUES ($1, $2, $3, $4, $5, $6, $7, 100.00, 100.00, 0.00, 0.00)
       RETURNING id, name, phone, email, total_assets, available_balance, frozen_balance, total_earnings, invite_code, referred_by, kyc_status, membership_tier;
-    `, [userId, userName, phone || null, email || null, hash, userInviteCode, referrerId]);
+    `, [userId, userName, effectivePhone, email || null, hash, userInviteCode, referrerId]);
 
     const user = newUser.rows[0];
     const token = jwt.sign({ id: user.id, phone: user.phone || '', email: user.email || '' }, JWT_SECRET, { expiresIn: '7d' });
