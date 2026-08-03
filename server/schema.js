@@ -236,10 +236,12 @@ export async function initDatabase() {
       balance_before NUMERIC(15, 4) NOT NULL,
       balance_after NUMERIC(15, 4) NOT NULL,
       tier_label VARCHAR(50),
-      status VARCHAR(20) DEFAULT 'completed',
+      status VARCHAR(20) DEFAULT 'open',
+      release_at TIMESTAMP WITH TIME ZONE,
       created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
     );
   `);
+  await query(`ALTER TABLE signal_trades ADD COLUMN IF NOT EXISTS release_at TIMESTAMP WITH TIME ZONE;`).catch(() => {});
 
   // Create System Settings Table (for persistent test signal override on Vercel serverless)
   await query(`

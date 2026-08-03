@@ -759,34 +759,21 @@ export async function init() {
   // ---- Execute Signal Trade ----
   window.executeSignalTrade = async function() {
     const btn = document.getElementById('sm-confirm-btn');
-    if (btn) { btn.disabled = true; btn.textContent = 'Processing...'; }
-
-    // 30-second countdown
-    let countdown = 30;
-    const el = document.getElementById('sm-estimated-profit');
-    const timer = setInterval(() => {
-      countdown--;
-      if (el) el.textContent = `⏳ Executing trade... ${countdown}s remaining`;
-      if (countdown <= 0) clearInterval(timer);
-    }, 1000);
+    if (btn) { btn.disabled = true; btn.textContent = 'Submitting Order...'; }
 
     try {
-      await new Promise(r => setTimeout(r, 30000)); // wait 30 seconds
-      clearInterval(timer);
-
       const res = await fetch('/api/signals/execute', { method: 'POST', headers: authHeaders });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Trade failed');
+      if (!res.ok) throw new Error(data.error || 'Submission failed');
 
       document.getElementById('signal-execute-modal').style.display = 'none';
-      toast(`✅ Trade complete! +$${data.trade.profit.toFixed(4)} USDT profit added`, 'success');
+      toast(`✅ Order Submitted! Capital is In Order and will release at signal close with profit.`, 'success');
 
-      // Refresh user data
-      store.refreshUser && store.refreshUser();
+      // Refresh user balance & tabs
+      if (store.checkAuth) store.checkAuth();
       loadSignalCard();
       loadConsumeRecord();
     } catch (err) {
-      clearInterval(timer);
       toast(err.message, 'error');
     } finally {
       if (btn) { btn.disabled = false; btn.textContent = 'Confirm'; }

@@ -206,9 +206,58 @@ router.get('/active', authMiddleware, async (req, res) => {
   }
 });
 
+// ---- Helper: Auto-settle completed signal trades when release_at has passed ----
+async function processDueSignalTrades(userId) {
+  try {
+    const dueTrades = await query(
+      `SELECT * FROM signal_trades WHERE user_id = $1 AND status = 'open' AND release_at <= NOW()`,
+      [userId]
+    );
+
+    for (const trade of dueTrades.rows) {
+      await query('BEGIN');
+      const tradeAmount = parseFloat(trade.trade_amount);
+      const profit = parseFloat(trade.profit);
+      const returnTotal = tradeAmount + profit;
+
+      // 1. Release frozen balance and add profit to available_balance & total_assets & total_earnings
+      const userRes = await query(
+        `UPDATE users 
+         SET frozen_balance = GREATEST(0, frozen_balance - $1),
+             available_balance = available_balance + $2,
+             total_assets = total_assets + $3,
+             total_earnings = total_earnings + $3
+         WHERE id = $4 RETURNING available_balance`,
+        [tradeAmount, returnTotal, profit, userId]
+      );
+
+      const newBal = parseFloat(userRes.rows[0]?.available_balance || 0);
+
+      // 2. Mark trade completed
+      await query(`UPDATE signal_trades SET status = 'completed' WHERE id = $1`, [trade.id]);
+
+      // 3. Log Close Position in account_changes
+      const closeId = 'AC' + Date.now() + 'C';
+      await query(
+        `INSERT INTO account_changes (id, user_id, type, amount, balance_after, remark)
+         VALUES ($1, $2, 'signal_close', $3, $4, $5)`,
+        [closeId, userId, 'signal_close', returnTotal, newBal,
+         `Signal ${trade.signal_id} — Close Position (${trade.pair}) +${profit.toFixed(4)} USDT`]
+      ).catch(() => {});
+
+      await query('COMMIT');
+    }
+  } catch (err) {
+    await query('ROLLBACK').catch(() => {});
+    console.error('Error settling due signal trades:', err);
+  }
+}
+
 // ---- POST /api/signals/execute ----
 router.post('/execute', authMiddleware, async (req, res) => {
   try {
+    await processDueSignalTrades(req.userId);
+
     const signal = await getActiveSignal();
     if (!signal) {
       return res.status(400).json({ error: 'No active signal right now. Log in at 5pm, 6pm, or 7pm EAT.' });
@@ -219,7 +268,7 @@ router.post('/execute', authMiddleware, async (req, res) => {
     if (!user) return res.status(404).json({ error: 'User not found' });
 
     const balance = parseFloat(user.available_balance);
-    const tier = getTier(balance);
+    const tier = getTier(balance, !!signal.isTestMode);
 
     if (!tier) {
       return res.status(400).json({ error: 'Minimum balance of $100 required to participate in copy trading signals.' });
@@ -232,7 +281,7 @@ router.post('/execute', authMiddleware, async (req, res) => {
       [req.userId, signal.signalId, today]
     ).catch(() => ({ rows: [] }));
     if (execCheck.rows.length > 0) {
-      return res.status(400).json({ error: `You have already executed Signal ${signal.signalId} today.` });
+      return res.status(400).json({ error: `You have already joined Signal ${signal.signalId} today.` });
     }
 
     // 100% Capital Allocation Trade
@@ -241,40 +290,43 @@ router.post('/execute', authMiddleware, async (req, res) => {
     const profitAmount  = parseFloat((balance * tier.profitOnBalancePercent * (1 + variation)).toFixed(4));
     const newBalance    = parseFloat((balance + profitAmount).toFixed(4));
 
+    // Release at closeTime (e.g. 17:30, 18:30, 19:30 EAT / end of signal window)
+    const releaseAt = signal.closeTime ? new Date(signal.closeTime).toISOString() : new Date(Date.now() + 30 * 60 * 1000).toISOString();
+
     const now    = Date.now();
     const tradeId = 'ST' + now;
     const openId  = 'AC' + now + 'O';
-    const closeId = 'AC' + (now + 1) + 'C';
 
-    // Insert signal trade record
+    await query('BEGIN');
+
+    // 1. Move available_balance into frozen_balance ("In Order")
     await query(
-      `INSERT INTO signal_trades (id, user_id, signal_id, pair, trade_amount, profit, balance_before, balance_after, tier_label)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-      [tradeId, req.userId, signal.signalId, signal.pairSymbol, tradeAmount, profitAmount, balance, newBalance, tier.label]
+      `UPDATE users 
+       SET available_balance = available_balance - $1,
+           frozen_balance = frozen_balance + $1
+       WHERE id = $2`,
+      [tradeAmount, req.userId]
     );
 
-    // Log Open Position (Full 100% Allocation)
+    // 2. Insert signal trade record (status = 'open')
     await query(
-      `INSERT INTO account_changes (id, user_id, type, amount, balance_after, remark) VALUES ($1,$2,$3,$4,$5,$6)`,
-      [openId, req.userId, 'signal_open', -tradeAmount, 0,
-       `Signal ${signal.signalId} — Open Position (${signal.pairSymbol})`]
-    ).catch(() => {});
-
-    // Log Close Position (100% Principal + Net Profit Returned)
-    await query(
-      `INSERT INTO account_changes (id, user_id, type, amount, balance_after, remark) VALUES ($1,$2,$3,$4,$5,$6)`,
-      [closeId, req.userId, 'signal_close', tradeAmount + profitAmount, newBalance,
-       `Signal ${signal.signalId} — Close Position (${signal.pairSymbol}) +${profitAmount} USDT`]
-    ).catch(() => {});
-
-    // Update user balance
-    await query(
-      `UPDATE users SET available_balance = $1, total_assets = total_assets + $2, total_earnings = total_earnings + $2 WHERE id = $3`,
-      [newBalance, profitAmount, req.userId]
+      `INSERT INTO signal_trades (id, user_id, signal_id, pair, trade_amount, profit, balance_before, balance_after, tier_label, status, release_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'open', $10)`,
+      [tradeId, req.userId, signal.signalId, signal.pairSymbol, tradeAmount, profitAmount, balance, newBalance, tier.label, releaseAt]
     );
+
+    // 3. Log Open Position (Full 100% Allocation into Order)
+    await query(
+      `INSERT INTO account_changes (id, user_id, type, amount, balance_after, remark)
+       VALUES ($1, $2, 'signal_open', $3, 0, $4)`,
+      [openId, req.userId, -tradeAmount, `Signal ${signal.signalId} — Open Position (${signal.pairSymbol}) placed in Order`]
+    );
+
+    await query('COMMIT');
 
     res.json({
       success: true,
+      message: `Order submitted successfully! Capital is placed In Order and will be released at ${new Date(releaseAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} with profit.`,
       trade: {
         id: tradeId,
         signalId: signal.signalId,
@@ -284,9 +336,12 @@ router.post('/execute', authMiddleware, async (req, res) => {
         balanceBefore: balance,
         balanceAfter: newBalance,
         tier: tier.label,
+        status: 'open',
+        releaseAt,
       },
     });
   } catch (err) {
+    await query('ROLLBACK').catch(() => {});
     console.error('Signal execute error:', err);
     res.status(500).json({ error: err.message });
   }
@@ -295,6 +350,7 @@ router.post('/execute', authMiddleware, async (req, res) => {
 // ---- GET /api/signals/history ----
 router.get('/history', authMiddleware, async (req, res) => {
   try {
+    await processDueSignalTrades(req.userId);
     const result = await query(
       `SELECT * FROM signal_trades WHERE user_id = $1 ORDER BY created_at DESC LIMIT 50`,
       [req.userId]
@@ -308,6 +364,7 @@ router.get('/history', authMiddleware, async (req, res) => {
 // ---- GET /api/signals/consume-record ----
 router.get('/consume-record', authMiddleware, async (req, res) => {
   try {
+    await processDueSignalTrades(req.userId);
     const result = await query(
       `SELECT * FROM account_changes WHERE user_id = $1 ORDER BY created_at DESC LIMIT 100`,
       [req.userId]
