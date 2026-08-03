@@ -72,10 +72,11 @@ const SIGNAL_TIERS = {
   },
 };
 
-function getTier(balance) {
+function getTier(balance, isTestMode = false) {
   if (balance >= 1000) return SIGNAL_TIERS.TIER3;
   if (balance >= 500)  return SIGNAL_TIERS.TIER2;
   if (balance >= 100)  return SIGNAL_TIERS.TIER1;
+  if (isTestMode)      return SIGNAL_TIERS.TIER1; // Allow test pop-up even for $0 balance in test mode
   return null;
 }
 
@@ -160,7 +161,7 @@ router.get('/active', authMiddleware, async (req, res) => {
       [req.userId]
     );
     const balance = parseFloat(userRes.rows[0]?.available_balance || 0);
-    const tier = getTier(balance);
+    const tier = getTier(balance, !!signal?.isTestMode);
 
     let alreadyExecuted = false;
     if (signal) {
