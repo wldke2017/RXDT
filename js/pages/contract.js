@@ -122,11 +122,57 @@ export function render() {
       </div>
     </div>
 
-    <!-- History -->
-    <div class="card">
-      <div class="card-title">🕐 Recent History</div>
-      <div id="history-list">
-        <div style="text-align:center;padding:16px;color:var(--text-muted);font-size:13px;">No history yet</div>
+    <!-- Consume Record / Invited Me Tabs -->
+    <div class="card signal-tabs-card">
+      <div class="signal-main-tabs">
+        <button class="signal-main-tab active" id="tab-consume" onclick="switchSignalTab('consume')">Consume Record</button>
+        <button class="signal-main-tab" id="tab-invited" onclick="switchSignalTab('invited')">Invited Me</button>
+      </div>
+
+      <!-- Consume Record -->
+      <div id="signal-panel-consume">
+        <div id="consume-record-list">
+          <div style="text-align:center;padding:32px;color:var(--text-muted);font-size:13px;">Loading records...</div>
+        </div>
+      </div>
+
+      <!-- Invited Me (Active Signal / Copy Trade) -->
+      <div id="signal-panel-invited" style="display:none;">
+        <div class="signal-subtabs">
+          <button class="signal-subtab active" id="subtab-current" onclick="switchSignalSubTab('current')">Current Copy Trade</button>
+          <button class="signal-subtab" id="subtab-history" onclick="switchSignalSubTab('history')">Copy Trade History</button>
+        </div>
+
+        <!-- Current Copy Trade Card -->
+        <div id="signal-current-panel">
+          <div id="signal-active-card">
+            <div style="text-align:center;padding:32px;color:var(--text-muted);font-size:13px;">Checking for active signal...</div>
+          </div>
+        </div>
+
+        <!-- Copy Trade History -->
+        <div id="signal-history-panel" style="display:none;">
+          <div id="signal-history-list">
+            <div style="text-align:center;padding:24px;color:var(--text-muted);font-size:13px;">Loading history...</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Signal Execution Modal -->
+  <div id="signal-execute-modal" class="signal-modal-overlay" style="display:none;">
+    <div class="signal-modal-box">
+      <div class="signal-modal-header">
+        <span>Confirm Copy Trade</span>
+        <button onclick="closeSignalModal()" style="background:none;border:none;color:var(--text-muted);font-size:20px;cursor:pointer;">✕</button>
+      </div>
+      <div class="signal-modal-body">
+        <div class="signal-modal-row"><span>Available balance:</span><span id="sm-balance">--</span></div>
+        <div class="signal-modal-row"><span>Copy Trade Amount</span><span id="sm-amount-label">--</span></div>
+        <input type="number" id="sm-amount-input" class="form-control" style="margin:12px 0;font-size:16px;text-align:center;" placeholder="Trade amount (USDT)"/>
+        <div id="sm-estimated-profit" style="text-align:center;font-size:13px;color:#00f2fe;margin-bottom:12px;"></div>
+        <button class="signal-confirm-btn" id="sm-confirm-btn" onclick="executeSignalTrade()">Confirm</button>
       </div>
     </div>
   </div>`;
@@ -538,11 +584,251 @@ export async function init() {
     }
   });
 
+  // ---- Signal Tab Switching ----
+  let activeSignalData = null;
+
+  window.switchSignalTab = function(tab) {
+    document.getElementById('signal-panel-consume').style.display = tab === 'consume' ? 'block' : 'none';
+    document.getElementById('signal-panel-invited').style.display = tab === 'invited' ? 'block' : 'none';
+    document.getElementById('tab-consume').classList.toggle('active', tab === 'consume');
+    document.getElementById('tab-invited').classList.toggle('active', tab === 'invited');
+    if (tab === 'invited') loadSignalCard();
+    if (tab === 'consume') loadConsumeRecord();
+  };
+
+  window.switchSignalSubTab = function(sub) {
+    document.getElementById('signal-current-panel').style.display = sub === 'current' ? 'block' : 'none';
+    document.getElementById('signal-history-panel').style.display = sub === 'history' ? 'block' : 'none';
+    document.getElementById('subtab-current').classList.toggle('active', sub === 'current');
+    document.getElementById('subtab-history').classList.toggle('active', sub === 'history');
+    if (sub === 'history') loadSignalHistory();
+  };
+
+  // ---- Load Consume Record (account_changes) ----
+  async function loadConsumeRecord() {
+    if (!store.isLoggedIn()) {
+      document.getElementById('consume-record-list').innerHTML = `<div style="text-align:center;padding:32px;color:var(--text-muted);">Login to view records</div>`;
+      return;
+    }
+    try {
+      const res = await fetch('/api/signals/consume-record', { headers: authHeaders });
+      const data = await res.json();
+      const list = document.getElementById('consume-record-list');
+      if (!list) return;
+      const records = data.records || [];
+      if (!records.length) {
+        list.innerHTML = `<div style="text-align:center;padding:32px;color:var(--text-muted);font-size:13px;">No transaction records yet</div>`;
+        return;
+      }
+      list.innerHTML = records.map(r => {
+        const amount = parseFloat(r.amount);
+        const isPositive = amount >= 0;
+        const typeMap = {
+          signal_close: 'Contract',
+          signal_open: 'Contract',
+          deposit: 'Funding',
+          withdrawal: 'Funding',
+          commission: 'Commission',
+        };
+        const subtitleMap = {
+          signal_close: 'Close Position (Futures)',
+          signal_open: 'Open Position (Futures)',
+          deposit: 'Deposit',
+          withdrawal: 'Withdraw',
+          commission: 'Referral Commission',
+        };
+        const typeName = typeMap[r.type] || 'Transaction';
+        const subName = subtitleMap[r.type] || (r.remark || 'Transaction');
+        const dt = new Date(r.created_at);
+        const timeStr = dt.toISOString().replace('T', ' ').substring(0, 19);
+        return `
+        <div class="consume-record-item">
+          <div class="cr-icon ${isPositive ? 'cr-icon-up' : 'cr-icon-down'}">
+            <svg viewBox="0 0 24 24" width="18" height="18"><path d="${isPositive ? 'M4 12l1.41 1.41L11 7.83V20h2V7.83l5.58 5.59L20 12l-8-8-8 8z' : 'M20 12l-1.41-1.41L13 16.17V4h-2v12.17l-5.58-5.59L4 12l8 8 8-8z'}" fill="currentColor"/></svg>
+          </div>
+          <div class="cr-info">
+            <div class="cr-title">${typeName}</div>
+            <div class="cr-sub">${subName}</div>
+            <div class="cr-time">🕐 ${timeStr}</div>
+          </div>
+          <div class="cr-amount ${isPositive ? 'cr-positive' : 'cr-negative'}">
+            ${isPositive ? '+' : ''}${amount.toFixed(3)}
+            <div class="cr-currency">USDT</div>
+          </div>
+        </div>`;
+      }).join('');
+    } catch (e) {
+      console.warn('Consume record error:', e);
+    }
+  }
+
+  // ---- Load Active Signal Card ----
+  async function loadSignalCard() {
+    if (!store.isLoggedIn()) {
+      document.getElementById('signal-active-card').innerHTML = `<div style="text-align:center;padding:32px;color:var(--text-muted);">Login to view signals</div>`;
+      return;
+    }
+    try {
+      const res = await fetch('/api/signals/active', { headers: authHeaders });
+      const data = await res.json();
+      activeSignalData = data;
+      const card = document.getElementById('signal-active-card');
+      if (!card) return;
+
+      if (!data.activeSignal) {
+        const now = new Date();
+        const h = now.getUTCHours();
+        let nextSignal = h < 14 ? '5:00 PM' : h < 15 ? '6:00 PM' : h < 16 ? '7:00 PM' : 'tomorrow at 5:00 PM';
+        card.innerHTML = `
+        <div style="text-align:center;padding:32px;">
+          <div style="font-size:40px;margin-bottom:12px;">⏰</div>
+          <div style="font-size:16px;font-weight:700;color:#fff;margin-bottom:6px;">No Active Signal Right Now</div>
+          <div style="font-size:13px;color:var(--text-muted);">Next signal window: <strong style="color:#00f2fe;">${nextSignal} EAT</strong></div>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:8px;">Log in at 5pm, 6pm, or 7pm EAT to copy AI signals</div>
+        </div>`;
+        return;
+      }
+
+      const signal = data.activeSignal;
+      const tier = data.tier;
+      const qualified = data.qualified;
+      const alreadyExecuted = data.alreadyExecuted;
+      const openTime = new Date(signal.openTime);
+      const timeStr = openTime.toISOString().replace('T', ' ').substring(0, 19);
+      const minsLeft = signal.minutesRemaining;
+
+      card.innerHTML = `
+      <div class="signal-card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+          <span style="font-size:12px;font-weight:700;color:#f59e0b;background:rgba(245,158,11,0.15);padding:4px 10px;border-radius:20px;">🟡 LIVE SIGNAL</span>
+          <span style="font-size:12px;color:var(--text-muted);">⏱ ${minsLeft} min left</span>
+        </div>
+        <div class="signal-detail-row"><span class="sd-label">Title</span><span class="sd-val">Signal ${signal.signalId}</span></div>
+        <div class="signal-detail-row"><span class="sd-label">Trading pair</span><span class="sd-val">${signal.tradingPair}</span></div>
+        <div class="signal-detail-row"><span class="sd-label">Purchase Duration</span><span class="sd-val">${signal.purchaseDuration}</span></div>
+        <div class="signal-detail-row"><span class="sd-label">Opening time</span><span class="sd-val">${timeStr}</span></div>
+        ${tier ? `<div class="signal-detail-row"><span class="sd-label">Your Tier</span><span class="sd-val" style="color:#00f2fe;">${tier.label} · ${tier.description}</span></div>` : ''}
+        <div class="signal-detail-row">
+          <span class="sd-label">Operate</span>
+          <span>
+            ${alreadyExecuted
+              ? `<span style="color:#00c49a;font-weight:700;">✅ Completed today</span>`
+              : qualified
+                ? `<button class="signal-confirm-cta" onclick="openSignalModal()">Confirm Copy Trade</button>`
+                : `<span style="color:#ff4d4d;font-size:13px;">⚠️ Minimum $100 balance required</span>`
+            }
+          </span>
+        </div>
+      </div>`;
+    } catch (e) {
+      console.warn('Signal load error:', e);
+    }
+  }
+
+  // ---- Open Confirm Modal ----
+  window.openSignalModal = function() {
+    if (!activeSignalData) return;
+    const balance = parseFloat(activeSignalData.userBalance || 0);
+    const tradeAmount = parseFloat((balance * 0.10).toFixed(2));
+    document.getElementById('sm-balance').textContent = `$${balance.toLocaleString('en-US', { minimumFractionDigits: 2 })} USDT`;
+    document.getElementById('sm-amount-label').textContent = `($${tradeAmount.toFixed(2)})`;
+    document.getElementById('sm-amount-input').value = tradeAmount;
+    document.getElementById('sm-estimated-profit').textContent = '';
+    document.getElementById('signal-execute-modal').style.display = 'flex';
+    updateSignalProfit();
+  };
+
+  window.closeSignalModal = function() {
+    document.getElementById('signal-execute-modal').style.display = 'none';
+  };
+
+  // Listen to input changes to update estimated profit
+  document.addEventListener('input', function(e) {
+    if (e.target && e.target.id === 'sm-amount-input') updateSignalProfit();
+  });
+
+  function updateSignalProfit() {
+    const balance = parseFloat(activeSignalData?.userBalance || 0);
+    const b = balance >= 1000 ? 0.11107 : balance >= 500 ? 0.08267 : 0.04621;
+    const amt = parseFloat(document.getElementById('sm-amount-input')?.value || 0);
+    const est = (amt * b).toFixed(4);
+    const el = document.getElementById('sm-estimated-profit');
+    if (el && amt > 0) el.textContent = `Estimated profit: +${est} USDT`;
+  }
+
+  // ---- Execute Signal Trade ----
+  window.executeSignalTrade = async function() {
+    const btn = document.getElementById('sm-confirm-btn');
+    if (btn) { btn.disabled = true; btn.textContent = 'Processing...'; }
+
+    // 30-second countdown
+    let countdown = 30;
+    const el = document.getElementById('sm-estimated-profit');
+    const timer = setInterval(() => {
+      countdown--;
+      if (el) el.textContent = `⏳ Executing trade... ${countdown}s remaining`;
+      if (countdown <= 0) clearInterval(timer);
+    }, 1000);
+
+    try {
+      await new Promise(r => setTimeout(r, 30000)); // wait 30 seconds
+      clearInterval(timer);
+
+      const res = await fetch('/api/signals/execute', { method: 'POST', headers: authHeaders });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Trade failed');
+
+      document.getElementById('signal-execute-modal').style.display = 'none';
+      toast(`✅ Trade complete! +$${data.trade.profit.toFixed(4)} USDT profit added`, 'success');
+
+      // Refresh user data
+      store.refreshUser && store.refreshUser();
+      loadSignalCard();
+      loadConsumeRecord();
+    } catch (err) {
+      clearInterval(timer);
+      toast(err.message, 'error');
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = 'Confirm'; }
+    }
+  };
+
+  // ---- Load Signal Trade History ----
+  async function loadSignalHistory() {
+    if (!store.isLoggedIn()) return;
+    try {
+      const res = await fetch('/api/signals/history', { headers: authHeaders });
+      const data = await res.json();
+      const el = document.getElementById('signal-history-list');
+      if (!el) return;
+      const trades = data.trades || [];
+      if (!trades.length) {
+        el.innerHTML = `<div style="text-align:center;padding:24px;color:var(--text-muted);">No copy trade history yet</div>`;
+        return;
+      }
+      el.innerHTML = trades.map(t => {
+        const dt = new Date(t.created_at);
+        const timeStr = dt.toISOString().replace('T', ' ').substring(0, 19);
+        return `
+        <div class="consume-record-item">
+          <div class="cr-icon cr-icon-up"><svg viewBox="0 0 24 24" width="18" height="18"><path d="M4 12l1.41 1.41L11 7.83V20h2V7.83l5.58 5.59L20 12l-8-8-8 8z" fill="currentColor"/></svg></div>
+          <div class="cr-info">
+            <div class="cr-title">Signal ${t.signal_id} · ${t.pair}</div>
+            <div class="cr-sub">Trade: $${parseFloat(t.trade_amount).toFixed(2)} → <span style="color:#00c49a;">+$${parseFloat(t.profit).toFixed(4)}</span></div>
+            <div class="cr-time">🕐 ${timeStr}</div>
+          </div>
+          <div class="cr-amount cr-positive">+${parseFloat(t.profit).toFixed(4)}<div class="cr-currency">USDT</div></div>
+        </div>`;
+      }).join('');
+    } catch (e) { console.warn('Signal history error:', e); }
+  }
+
   // ---- Init ----
   connectTickerWS(currentPair);
   loadPairs();
   loadPositions();
   loadHistory();
+  loadConsumeRecord(); // load consume record by default
 
   // Auto-refresh positions every 5s for live P&L
   positionsInterval = setInterval(() => loadPositions(), 5000);

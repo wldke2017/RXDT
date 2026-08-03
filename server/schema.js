@@ -224,6 +224,23 @@ export async function initDatabase() {
     );
   `);
 
+  // Create Signal Trades Table (Strategy Copy Trading)
+  await query(`
+    CREATE TABLE IF NOT EXISTS signal_trades (
+      id VARCHAR(50) PRIMARY KEY,
+      user_id VARCHAR(50) REFERENCES users(id) ON DELETE CASCADE,
+      signal_id INT NOT NULL,
+      pair VARCHAR(20) NOT NULL,
+      trade_amount NUMERIC(15, 4) NOT NULL,
+      profit NUMERIC(15, 4) NOT NULL,
+      balance_before NUMERIC(15, 4) NOT NULL,
+      balance_after NUMERIC(15, 4) NOT NULL,
+      tier_label VARCHAR(50),
+      status VARCHAR(20) DEFAULT 'completed',
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+
   await seedInitialData();
   console.log('✅ Database setup and initialization completed successfully.');
 }

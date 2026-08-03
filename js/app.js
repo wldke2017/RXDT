@@ -11,6 +11,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   store.subscribe('user', () => updateUserNav());
 
   startMarketUpdates();
+
+  // Check and show signal pop-up if in active window
+  if (store.isLoggedIn()) {
+    setTimeout(() => checkSignalWindow(), 1500); // slight delay after page load
+  }
+  store.subscribe('auth', () => {
+    if (store.isLoggedIn()) setTimeout(() => checkSignalWindow(), 1000);
+  });
 });
 
 function renderShell() {
@@ -158,3 +166,55 @@ function startMarketUpdates() {
     });
   }, 8000);
 }
+
+// ---- Signal Window Pop-Up ----
+async function checkSignalWindow() {
+  if (!store.isLoggedIn()) return;
+  if (document.getElementById('rxdt-signal-popup')) return; // already shown
+
+  const TOKEN = localStorage.getItem('rxdt_token');
+  try {
+    const res = await fetch('/api/signals/active', {
+      headers: { 'Authorization': `Bearer ${TOKEN}` }
+    });
+    const data = await res.json();
+    if (!data.activeSignal || !data.qualified || data.alreadyExecuted) return;
+    showSignalPopup(data);
+  } catch (e) {
+    console.warn('Signal check failed:', e);
+  }
+}
+
+function showSignalPopup(signalData) {
+  if (document.getElementById('rxdt-signal-popup')) return;
+
+  const signal = signalData.activeSignal;
+  const tier = signalData.tier;
+
+  const overlay = document.createElement('div');
+  overlay.id = 'rxdt-signal-popup';
+  overlay.className = 'rxdt-signal-overlay';
+  overlay.innerHTML = `
+  <div class="rxdt-signal-card" onclick="event.stopPropagation()">
+    <button class="rxdt-signal-close" onclick="document.getElementById('rxdt-signal-popup').remove()">✕</button>
+    <div class="rxdt-signal-badge">📩 Invited Me</div>
+    <div class="rxdt-signal-img-wrap">
+      <img src="assets/images/signal_popup.png" alt="RXDT Strategy Copy Trading" class="rxdt-signal-img"/>
+      <div class="rxdt-signal-img-gradient"></div>
+    </div>
+    <div class="rxdt-signal-content">
+      <div class="rxdt-signal-title">Strategy Copy Trading</div>
+      <div class="rxdt-signal-sub">AI-powered signals — 3 sessions daily at 5pm, 6pm, 7pm EAT. ${tier ? tier.description : ''}</div>
+    </div>
+    <div class="rxdt-signal-footer">
+      <span class="rxdt-signal-join-text">Join Copy Trading</span>
+      <button class="rxdt-signal-join-btn" onclick="document.getElementById('rxdt-signal-popup').remove();navigateTo('contract');setTimeout(()=>{const t=document.getElementById('tab-invited');if(t)t.click();},600);">
+        <svg viewBox="0 0 24 24" width="20" height="20"><path d="M8 5v14l11-7z" fill="currentColor"/></svg>
+      </button>
+    </div>
+  </div>`;
+
+  overlay.addEventListener('click', () => overlay.remove());
+  document.body.appendChild(overlay);
+}
+
