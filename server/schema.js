@@ -13,7 +13,7 @@ export async function initDatabase() {
     CREATE TABLE IF NOT EXISTS users (
       id VARCHAR(50) PRIMARY KEY,
       name VARCHAR(100) NOT NULL,
-      phone VARCHAR(20) UNIQUE NOT NULL,
+      phone VARCHAR(20) UNIQUE,
       email VARCHAR(100),
       password_hash VARCHAR(255) NOT NULL,
       total_assets NUMERIC(15, 2) DEFAULT 0.00,
@@ -34,13 +34,14 @@ export async function initDatabase() {
     );
   `);
 
-  // Ensure missing columns exist on existing database instances
+  // Ensure missing columns exist on existing database instances and allow null phone (email registration)
   await query(`
     ALTER TABLE users ADD COLUMN IF NOT EXISTS email_bound VARCHAR(100);
     ALTER TABLE users ADD COLUMN IF NOT EXISTS email_otp VARCHAR(10);
     ALTER TABLE users ADD COLUMN IF NOT EXISTS email_otp_expires TIMESTAMP WITH TIME ZONE;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS transaction_password VARCHAR(255);
     ALTER TABLE users ADD COLUMN IF NOT EXISTS referred_by VARCHAR(50);
+    ALTER TABLE users ALTER COLUMN phone DROP NOT NULL;
   `).catch(err => console.log('User schema migration notice:', err.message));
 
   // Create AI Models Table
