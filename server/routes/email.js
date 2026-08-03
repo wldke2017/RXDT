@@ -69,7 +69,7 @@ router.post('/send-otp', requireAuth, async (req, res) => {
     if (!resendRes.ok) {
       const err = await resendRes.json();
       console.error('Resend error:', err);
-      return res.status(500).json({ error: 'Failed to send email. Check your email address.' });
+      return res.status(400).json({ error: err.message || 'Failed to send email. Check your email address.' });
     }
 
     res.json({ success: true, message: `Verification code sent to ${email}` });
