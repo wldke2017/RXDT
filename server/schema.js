@@ -241,6 +241,15 @@ export async function initDatabase() {
     );
   `);
 
+  // Create System Settings Table (for persistent test signal override on Vercel serverless)
+  await query(`
+    CREATE TABLE IF NOT EXISTS system_settings (
+      key VARCHAR(100) PRIMARY KEY,
+      value TEXT,
+      updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+
   await seedInitialData();
   console.log('✅ Database setup and initialization completed successfully.');
 }

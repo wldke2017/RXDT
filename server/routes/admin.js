@@ -109,21 +109,21 @@ import { setTestSignalWindow, clearTestSignalWindow, getTestSignalStatus } from 
 // ----------------------------------------------------
 // SIGNAL TEST TRIGGER (ADMIN DEMO MODE)
 // ----------------------------------------------------
-router.get('/signal-status', requireAdminSecret, (req, res) => {
-  const status = getTestSignalStatus();
+router.get('/signal-status', requireAdminSecret, async (req, res) => {
+  const status = await getTestSignalStatus();
   res.json({ isTestActive: !!status, testSignal: status });
 });
 
-router.post('/trigger-signal', requireAdminSecret, (req, res) => {
+router.post('/trigger-signal', requireAdminSecret, async (req, res) => {
   const { action, signalId, duration } = req.body;
   if (action === 'stop') {
-    clearTestSignalWindow();
+    await clearTestSignalWindow();
     return res.json({ message: '🛑 Test signal deactivated.' });
   }
 
   const mins = parseInt(duration || 15);
   const sigId = parseInt(signalId || 1);
-  setTestSignalWindow(mins, sigId);
+  await setTestSignalWindow(mins, sigId);
   res.json({ message: `🚀 Test Signal ${sigId} triggered for ${mins} minutes! Users will now see the pop-up modal.` });
 });
 

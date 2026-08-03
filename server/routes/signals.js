@@ -80,39 +80,55 @@ function getTier(balance, isTestMode = false) {
   return null;
 }
 
-let forceActiveSignalUntil = null;
-let forceActiveSignalId = 1;
-
-export function setTestSignalWindow(durationMinutes = 15, signalId = 1) {
-  forceActiveSignalId = signalId;
-  forceActiveSignalUntil = new Date(Date.now() + durationMinutes * 60 * 1000);
+export async function setTestSignalWindow(durationMinutes = 15, signalId = 1) {
+  const expiresAt = new Date(Date.now() + durationMinutes * 60 * 1000).toISOString();
+  const val = JSON.stringify({ signalId, expiresAt });
+  await query(`
+    CREATE TABLE IF NOT EXISTS system_settings (
+      key VARCHAR(100) PRIMARY KEY,
+      value TEXT,
+      updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    )
+  `).catch(() => {});
+  await query(
+    `INSERT INTO system_settings (key, value, updated_at) VALUES ('test_signal', $1, NOW())
+     ON CONFLICT (key) DO UPDATE SET value = $1, updated_at = NOW()`,
+    [val]
+  );
 }
 
-export function clearTestSignalWindow() {
-  forceActiveSignalUntil = null;
+export async function clearTestSignalWindow() {
+  await query(`DELETE FROM system_settings WHERE key = 'test_signal'`).catch(() => {});
 }
 
-export function getTestSignalStatus() {
-  if (!forceActiveSignalUntil) return null;
-  if (new Date() > forceActiveSignalUntil) {
-    forceActiveSignalUntil = null;
+export async function getTestSignalStatus() {
+  try {
+    const res = await query(`SELECT value FROM system_settings WHERE key = 'test_signal'`);
+    if (!res.rows.length) return null;
+    const data = JSON.parse(res.rows[0].value);
+    const expiresAt = new Date(data.expiresAt);
+    if (new Date() > expiresAt) {
+      clearTestSignalWindow().catch(() => {});
+      return null;
+    }
+    const minsLeft = Math.ceil((expiresAt.getTime() - Date.now()) / 60000);
+    return {
+      signalId: data.signalId || 1,
+      tradingPair: 'BTC/USDT',
+      pairSymbol: 'BTCUSDT',
+      purchaseDuration: '30 seconds',
+      openTime: new Date().toISOString(),
+      closeTime: expiresAt.toISOString(),
+      minutesRemaining: minsLeft,
+      isTestMode: true,
+    };
+  } catch {
     return null;
   }
-  const minsLeft = Math.ceil((forceActiveSignalUntil.getTime() - Date.now()) / 60000);
-  return {
-    signalId: forceActiveSignalId,
-    tradingPair: 'BTC/USDT',
-    pairSymbol: 'BTCUSDT',
-    purchaseDuration: '30 seconds',
-    openTime: new Date().toISOString(),
-    closeTime: forceActiveSignalUntil.toISOString(),
-    minutesRemaining: minsLeft,
-    isTestMode: true,
-  };
 }
 
-function getActiveSignal() {
-  const testSignal = getTestSignalStatus();
+async function getActiveSignal() {
+  const testSignal = await getTestSignalStatus();
   if (testSignal) return testSignal;
 
   const now = new Date();
@@ -155,7 +171,7 @@ function authMiddleware(req, res, next) {
 // ---- GET /api/signals/active ----
 router.get('/active', authMiddleware, async (req, res) => {
   try {
-    const signal = getActiveSignal();
+    const signal = await getActiveSignal();
     const userRes = await query(
       `SELECT available_balance FROM users WHERE id = $1`,
       [req.userId]
@@ -193,7 +209,7 @@ router.get('/active', authMiddleware, async (req, res) => {
 // ---- POST /api/signals/execute ----
 router.post('/execute', authMiddleware, async (req, res) => {
   try {
-    const signal = getActiveSignal();
+    const signal = await getActiveSignal();
     if (!signal) {
       return res.status(400).json({ error: 'No active signal right now. Log in at 5pm, 6pm, or 7pm EAT.' });
     }
