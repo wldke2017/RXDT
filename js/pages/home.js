@@ -131,13 +131,12 @@ export function render() {
     <div style="display:flex;gap:20px;align-items:center;flex-wrap:wrap;">
       <div style="flex:1;min-width:240px;">
         <div class="badge badge-info" style="margin-bottom:8px;">INSTITUTIONAL FOUNDER</div>
-        <h3 style="font-size:20px;font-weight:700;color:#fff;margin-bottom:6px;">Warren Pennington & RXDT Exchange</h3>
-        <p style="font-size:14px;color:var(--text-sub);line-height:1.6;margin-bottom:12px;">
-          Founded by former Vanguard Group Global Head of FinTech Strategies. Fully registered in Colorado, USA (Entity ID: <strong>20261325716</strong>).
+        <h3 style="font-size:20px;font-weight:700;color:#fff;margin-bottom:6px;">Arthur Vance & RXDT Exchange</h3>
+        <p style="color:var(--text-sub);font-size:14px;line-height:1.6;margin-bottom:12px;">
+          Founded by Arthur Vance, RXDT Exchange operates under USA Colorado State Compliance (Entity ID: 20261325716). Backed by Vanguard FinTech quantitative algorithms and Voyage Investment.
         </p>
-        <button class="btn-outline" onclick="navigateTo('about')">Learn More About RXDT →</button>
       </div>
-      <img src="assets/images/warren_pennington.png" alt="Warren Pennington" style="width:100px;height:100px;object-fit:cover;border-radius:12px;border:2px solid var(--el-color-primary);flex-shrink:0;"/>
+      <img src="assets/images/warren_pennington.png" alt="Arthur Vance" style="width:100px;height:100px;object-fit:cover;border-radius:12px;border:2px solid var(--el-color-primary);flex-shrink:0;"/>
     </div>
   </div>
   `;

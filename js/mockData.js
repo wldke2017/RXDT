@@ -6,7 +6,7 @@ const MOCK_DATA = {
     entityId: '20261325716',
     jurisdiction: 'State of Colorado, USA',
     foundedYear: 2026,
-    founder: 'Warren Pennington',
+    founder: 'Arthur Vance',
     parentCompany: 'Vanguard Alternative Investments / Voyage Investment',
     secRegistration: 'Registered Investment Advisor (SEC RIA / FinCEN MSB)',
     searchUrl: 'https://www.coloradosos.gov/biz/BusinessEntityCriteriaExt.do'
@@ -40,7 +40,7 @@ const MOCK_DATA = {
       thirtyDayProfit: 89500.0, thirtyDayReturnRate: 72.40,
       totalFollowers: 14210, totalFunds: 28500000,
       commission: 5, minOrder: 500, maxOrder: 500000,
-      winRate: 94.8, intro: 'Proprietary Quantitative AI Model VI developed by Warren Pennington (Ex-Vanguard FinTech Head). High-precision algorithmic execution on BTC, ETH, and NASDAQ-100.',
+      winRate: 94.8, intro: 'Proprietary Quantitative AI Model VI developed by Arthur Vance (Ex-Vanguard FinTech Head). High-precision algorithmic execution on BTC, ETH, and NASDAQ-100.',
       products: [
         { id: 'P001', name: '3-Signal Daily Quantitative Pool', period: 34, minAmount: 500, maxAmount: 100000, dailyRate: 1.95, status: 'active' },
         { id: 'P002', name: '4-Signal VIP Team Leader Pool', period: 26, minAmount: 1000, maxAmount: 500000, dailyRate: 2.60, status: 'active' }

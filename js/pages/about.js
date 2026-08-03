@@ -12,15 +12,15 @@ function renderAbout() {
     <div class="card about-header-card" style="background:linear-gradient(135deg,#0d1322,#161e31);border:1px solid rgba(0,242,254,0.3);">
       <div style="font-size:36px;font-weight:800;color:var(--el-color-primary);letter-spacing:3px;">RXDT EXCHANGE</div>
       <div style="font-size:14px;color:var(--text-sub);margin-top:4px;">Powered by Voyage Investment & Quantitative AI VI Model</div>
-      <p style="color:var(--text-muted);font-size:13px;margin-top:8px;">U.S. Headquartered in Colorado · Entity ID: <strong>20261325716</strong> · Founded by Warren Pennington</p>
+      <p style="color:var(--text-muted);font-size:13px;margin-top:8px;">U.S. Headquartered in Colorado · Entity ID: <strong>20261325716</strong> · Founded by Arthur Vance</p>
     </div>
 
     <div class="card">
-      <div class="card-title">🏛️ Founder Leadership: Warren Pennington</div>
+      <div class="card-title">🏛️ Founder Leadership: Arthur Vance</div>
       <div style="display:flex;gap:20px;align-items:flex-start;flex-wrap:wrap;margin-bottom:16px;">
-        <img src="assets/images/warren_pennington.png" alt="Warren Pennington" style="width:140px;height:140px;object-fit:cover;border-radius:12px;border:2px solid var(--el-color-primary);"/>
+        <img src="assets/images/warren_pennington.png" alt="Arthur Vance" style="width:140px;height:140px;object-fit:cover;border-radius:12px;border:2px solid var(--el-color-primary);"/>
         <div style="flex:1;min-width:260px;">
-          <h3 style="font-size:18px;font-weight:700;color:var(--el-color-primary);margin-bottom:4px;">Warren Pennington — Founder</h3>
+          <h3 style="font-size:18px;font-weight:700;color:var(--el-color-primary);margin-bottom:4px;">Arthur Vance — Founder</h3>
           <p style="font-size:14px;color:var(--text-sub);line-height:1.6;margin-bottom:8px;">
             Former Global Head of the Office of Investment Management FinTech Strategies at <strong>Vanguard Group</strong>, where his division managed nearly <strong>$50 Trillion</strong> in assets across global financial sectors.
           </p>

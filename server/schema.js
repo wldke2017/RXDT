@@ -270,7 +270,7 @@ async function seedInitialData() {
       (
         'AI001', 'RXDT Quant VI Model Alpha', '🤖', 2450.50, 2.10, 16800.00, 14.50,
         38200.00, 32.80, 89500.00, 72.40, 14210, 28500000.00, 5, 500, 500000, 94.8,
-        'Proprietary Quantitative AI Model VI developed by Warren Pennington (Ex-Vanguard FinTech Head). High-precision algorithmic execution on BTC, ETH, and NASDAQ-100.'
+        'Proprietary Quantitative AI Model VI developed by Arthur Vance (Ex-Vanguard FinTech Head). High-precision algorithmic execution on BTC, ETH, and NASDAQ-100.'
       ),
       (
         'AI002', 'RXDT Neural Arbitrage v4', '⚡', 1890.00, 1.85, 12630.00, 12.80,
