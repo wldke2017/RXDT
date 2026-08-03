@@ -245,6 +245,72 @@ async function processDueSignalTrades(userId) {
          `Signal ${trade.signal_id} — Close Position (${trade.pair}) +${profit.toFixed(4)} USDT`]
       ).catch(() => {});
 
+      // 4. Referral Commissions — auto-credit Level 1 (15%) and Level 2 (7.5%)
+      try {
+        const refRes = await query(`SELECT referred_by FROM users WHERE id = $1`, [userId]);
+        const referrerId = refRes.rows[0]?.referred_by;
+
+        if (referrerId && profit > 0) {
+          // --- Level 1: 15% of profit to direct referrer ---
+          const l1Commission = parseFloat((profit * 0.15).toFixed(4));
+          if (l1Commission > 0) {
+            const l1Id = 'RC' + Date.now() + 'L1';
+            await query(
+              `INSERT INTO referral_commissions (id, referrer_id, referred_user_id, level, trade_amount, amount)
+               VALUES ($1, $2, $3, 1, $4, $5)`,
+              [l1Id, referrerId, userId, tradeAmount, l1Commission]
+            );
+            const l1BalRes = await query(
+              `UPDATE users 
+               SET available_balance = available_balance + $1,
+                   total_assets = total_assets + $1,
+                   total_earnings = total_earnings + $1
+               WHERE id = $2 RETURNING available_balance`,
+              [l1Commission, referrerId]
+            );
+            const l1Bal = parseFloat(l1BalRes.rows[0]?.available_balance || 0);
+            await query(
+              `INSERT INTO account_changes (id, user_id, type, amount, balance_after, remark)
+               VALUES ($1, $2, 'commission', $3, $4, $5)`,
+              ['AC' + Date.now() + 'R1', referrerId, l1Commission, l1Bal,
+               `L1 Referral Commission — ${trade.pair} trade by referred user +${l1Commission.toFixed(4)} USDT`]
+            ).catch(() => {});
+
+            // --- Level 2: 7.5% of profit to referrer's referrer ---
+            const ref2Res = await query(`SELECT referred_by FROM users WHERE id = $1`, [referrerId]);
+            const level2Id = ref2Res.rows[0]?.referred_by;
+            if (level2Id) {
+              const l2Commission = parseFloat((profit * 0.075).toFixed(4));
+              if (l2Commission > 0) {
+                const l2RcId = 'RC' + Date.now() + 'L2';
+                await query(
+                  `INSERT INTO referral_commissions (id, referrer_id, referred_user_id, level, trade_amount, amount)
+                   VALUES ($1, $2, $3, 2, $4, $5)`,
+                  [l2RcId, level2Id, userId, tradeAmount, l2Commission]
+                );
+                const l2BalRes = await query(
+                  `UPDATE users 
+                   SET available_balance = available_balance + $1,
+                       total_assets = total_assets + $1,
+                       total_earnings = total_earnings + $1
+                   WHERE id = $2 RETURNING available_balance`,
+                  [l2Commission, level2Id]
+                );
+                const l2Bal = parseFloat(l2BalRes.rows[0]?.available_balance || 0);
+                await query(
+                  `INSERT INTO account_changes (id, user_id, type, amount, balance_after, remark)
+                   VALUES ($1, $2, 'commission', $3, $4, $5)`,
+                  ['AC' + Date.now() + 'R2', level2Id, l2Commission, l2Bal,
+                   `L2 Referral Commission — ${trade.pair} trade by L2 referral +${l2Commission.toFixed(4)} USDT`]
+                ).catch(() => {});
+              }
+            }
+          }
+        }
+      } catch (commErr) {
+        console.error('Referral commission error (non-fatal):', commErr);
+      }
+
       await query('COMMIT');
     }
   } catch (err) {
