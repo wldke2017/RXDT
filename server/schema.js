@@ -1,7 +1,11 @@
 import { query } from './db.js';
 import bcrypt from 'bcryptjs';
 
+let isDbInitialized = false;
+
 export async function initDatabase() {
+  if (isDbInitialized) return;
+  isDbInitialized = true;
   console.log('⚡ Initializing Neon PostgreSQL Database Schemas...');
 
   // Create Users Table

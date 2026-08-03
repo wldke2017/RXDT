@@ -372,7 +372,15 @@ export function init(page) {
     try {
       const data = await authFetch('/api/email/send-otp', { method: 'POST', body: JSON.stringify({ email }) });
       if (data.error) throw new Error(data.error);
-      toast(data.message || 'Verification code sent to your email!', 'success');
+
+      // If email delivery failed but we got a demo code, auto-fill it
+      if (data.demoCode) {
+        const otpInput = document.getElementById('bind-email-code');
+        if (otpInput) otpInput.value = data.demoCode;
+        toast(`📋 Demo mode: Code ${data.demoCode} auto-filled. Click Confirm to bind.`, 'info');
+      } else {
+        toast(data.message || 'Verification code sent to your email!', 'success');
+      }
 
       let sec = 60;
       const timer = setInterval(() => {

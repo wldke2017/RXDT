@@ -59,35 +59,44 @@ app.get('*', (req, res) => {
 });
 
 // Start Server & Connect Database (only start listening if run directly)
-export let dbInitializedPromise = null;
+// On Vercel: init DB in background, don't block incoming requests
+let dbInitPromise = null;
 
-async function startServer() {
-  let retries = 5;
-  while (retries > 0) {
-    try {
-      dbInitializedPromise = initDatabase();
-      await dbInitializedPromise;
-      if (process.env.VERCEL !== '1' && !process.env.VERCEL_ENV) {
+function ensureDbInit() {
+  if (!dbInitPromise) {
+    dbInitPromise = initDatabase().catch(err => {
+      console.error('Database connection error in Vercel function:', err);
+      dbInitPromise = null; // allow retry on next request
+    });
+  }
+  return dbInitPromise;
+}
+
+// Kick off DB init immediately on cold start
+ensureDbInit();
+
+// For local dev: start listening
+if (process.env.VERCEL !== '1' && !process.env.VERCEL_ENV) {
+  const startLocal = async () => {
+    let retries = 3;
+    while (retries > 0) {
+      try {
+        await ensureDbInit();
         app.listen(PORT, () => {
           console.log(`\n🚀 RXDT Exchange Backend Server running on http://localhost:${PORT}`);
           console.log(`🐘 Connected to Neon PostgreSQL Database`);
         });
+        break;
+      } catch (err) {
+        console.error(`⚠️ DB connection failed (${retries} retries left):`, err.message);
+        retries--;
+        dbInitPromise = null;
+        if (retries === 0) { console.error('❌ Failed to start server.'); process.exit(1); }
+        await new Promise(r => setTimeout(r, 3000));
       }
-      break;
-    } catch (err) {
-      console.error(`⚠️ Database connection attempt failed (${retries} retries left):`, err.message);
-      retries--;
-      if (retries === 0 && process.env.VERCEL !== '1') {
-        console.error('❌ Failed to start server after multiple retries.');
-        process.exit(1);
-      }
-      await new Promise(res => setTimeout(res, 3000));
     }
-  }
+  };
+  startLocal();
 }
 
-startServer();
-
 export default app;
-
-
