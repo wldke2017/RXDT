@@ -53,7 +53,7 @@ router.post('/register', async (req, res) => {
 
     const newUser = await query(`
       INSERT INTO users (id, name, phone, email, password_hash, invite_code, referred_by, total_assets, available_balance, frozen_balance, total_earnings)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, 100.00, 100.00, 0.00, 0.00)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, 0.00, 0.00, 0.00, 0.00)
       RETURNING id, name, phone, email, total_assets, available_balance, frozen_balance, total_earnings, invite_code, referred_by, kyc_status, membership_tier;
     `, [userId, userName, effectivePhone, email || null, hash, userInviteCode, referrerId]);
 
