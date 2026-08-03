@@ -3,11 +3,9 @@ import { query } from '../db.js';
 
 const router = express.Router();
 
-// Simple admin secret check middleware
 function requireAdminSecret(req, res, next) {
   const adminSecret = req.headers['x-admin-secret'] || req.query.admin_secret;
   const expectedSecret = process.env.ADMIN_SECRET || 'rxdt_admin_secret_key_2026';
-
   if (!adminSecret || adminSecret !== expectedSecret) {
     return res.status(403).json({ error: 'Access denied: Invalid Admin Secret' });
   }
@@ -15,34 +13,49 @@ function requireAdminSecret(req, res, next) {
 }
 
 // ----------------------------------------------------
-// 1. LIST ALL PENDING DEPOSITS & WITHDRAWALS
+// STATS OVERVIEW
+// ----------------------------------------------------
+router.get('/stats', requireAdminSecret, async (req, res) => {
+  try {
+    const [users, deposits, withdrawals, kyc, signals] = await Promise.all([
+      query(`SELECT COUNT(*) as count, SUM(available_balance) as total_balance FROM users`),
+      query(`SELECT COUNT(*) as count FROM deposits WHERE audit_status = 'pending'`),
+      query(`SELECT COUNT(*) as count FROM withdrawals WHERE audit_status = 'pending'`),
+      query(`SELECT COUNT(*) as count FROM kyc_records WHERE status = 'pending'`),
+      query(`SELECT COUNT(*) as count, SUM(profit) as total_profit FROM signal_trades`).catch(() => ({ rows: [{ count: 0, total_profit: 0 }] })),
+    ]);
+    res.json({
+      totalUsers: parseInt(users.rows[0].count),
+      totalBalance: parseFloat(users.rows[0].total_balance || 0),
+      pendingDeposits: parseInt(deposits.rows[0].count),
+      pendingWithdrawals: parseInt(withdrawals.rows[0].count),
+      pendingKyc: parseInt(kyc.rows[0].count),
+      totalSignalTrades: parseInt(signals.rows[0].count),
+      totalSignalProfit: parseFloat(signals.rows[0].total_profit || 0),
+    });
+  } catch (err) {
+    console.error('Admin stats error:', err);
+    res.status(500).json({ error: 'Failed to fetch stats' });
+  }
+});
+
+// ----------------------------------------------------
+// PENDING (deposits, withdrawals, KYC)
 // ----------------------------------------------------
 router.get('/pending', requireAdminSecret, async (req, res) => {
   try {
     const deposits = await query(`
       SELECT d.*, u.phone as user_phone, u.name as user_name 
-      FROM deposits d 
-      LEFT JOIN users u ON d.user_id = u.id 
-      WHERE d.audit_status = 'pending' 
-      ORDER BY d.created_at DESC;
-    `);
-
+      FROM deposits d LEFT JOIN users u ON d.user_id = u.id 
+      WHERE d.audit_status = 'pending' ORDER BY d.created_at DESC`);
     const withdrawals = await query(`
       SELECT w.*, u.phone as user_phone, u.name as user_name 
-      FROM withdrawals w 
-      LEFT JOIN users u ON w.user_id = u.id 
-      WHERE w.audit_status = 'pending' 
-      ORDER BY w.created_at DESC;
-    `);
-
+      FROM withdrawals w LEFT JOIN users u ON w.user_id = u.id 
+      WHERE w.audit_status = 'pending' ORDER BY w.created_at DESC`);
     const kycRecords = await query(`
       SELECT k.*, u.phone as user_phone, u.name as user_name 
-      FROM kyc_records k 
-      LEFT JOIN users u ON k.user_id = u.id 
-      WHERE k.status = 'pending' 
-      ORDER BY k.created_at DESC;
-    `);
-
+      FROM kyc_records k LEFT JOIN users u ON k.user_id = u.id 
+      WHERE k.status = 'pending' ORDER BY k.created_at DESC`);
     res.json({
       pendingDeposits: deposits.rows,
       pendingWithdrawals: withdrawals.rows,
@@ -55,49 +68,90 @@ router.get('/pending', requireAdminSecret, async (req, res) => {
 });
 
 // ----------------------------------------------------
-// 1B. APPROVE KYC
+// USERS LIST + BALANCE ADJUST
+// ----------------------------------------------------
+router.get('/users', requireAdminSecret, async (req, res) => {
+  try {
+    const result = await query(`
+      SELECT id, name, phone, email, available_balance, total_assets, total_earnings,
+             kyc_status, invite_code, created_at
+      FROM users ORDER BY created_at DESC LIMIT 200`);
+    res.json({ users: result.rows });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch users' });
+  }
+});
+
+router.post('/users/balance', requireAdminSecret, async (req, res) => {
+  try {
+    const { userId, amount, remark } = req.body;
+    if (!userId || amount === undefined) return res.status(400).json({ error: 'userId and amount required' });
+    const amt = parseFloat(amount);
+    const userRes = await query(
+      `UPDATE users SET available_balance = available_balance + $1, total_assets = total_assets + $1
+       WHERE id = $2 RETURNING id, name, available_balance, total_assets`,
+      [amt, userId]
+    );
+    if (!userRes.rows.length) return res.status(404).json({ error: 'User not found' });
+    const u = userRes.rows[0];
+    await query(
+      `INSERT INTO account_changes (id, user_id, type, amount, balance_after, remark) VALUES ($1,$2,$3,$4,$5,$6)`,
+      ['AC' + Date.now(), userId, 'admin_adjustment', amt, u.available_balance, remark || 'Admin balance adjustment']
+    );
+    res.json({ message: `Balance updated for ${u.name}. New balance: $${parseFloat(u.available_balance).toFixed(2)}`, user: u });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to update balance' });
+  }
+});
+
+// ----------------------------------------------------
+// SIGNAL TRADES LIST
+// ----------------------------------------------------
+router.get('/signal-trades', requireAdminSecret, async (req, res) => {
+  try {
+    const result = await query(`
+      SELECT st.*, u.name as user_name, u.phone as user_phone
+      FROM signal_trades st LEFT JOIN users u ON st.user_id = u.id
+      ORDER BY st.created_at DESC LIMIT 200
+    `).catch(() => ({ rows: [] }));
+    res.json({ trades: result.rows });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch signal trades', trades: [] });
+  }
+});
+
+// ----------------------------------------------------
+// KYC APPROVE / REJECT
 // ----------------------------------------------------
 router.post('/kyc/approve', requireAdminSecret, async (req, res) => {
   try {
     const { kycId } = req.body;
     if (!kycId) return res.status(400).json({ error: 'kycId is required' });
-
     await query('BEGIN');
-    const kycRes = await query(`UPDATE kyc_records SET status = 'pass' WHERE id = $1 RETURNING *;`, [kycId]);
-    if (kycRes.rows.length === 0) {
-      await query('ROLLBACK');
-      return res.status(404).json({ error: 'KYC record not found' });
-    }
-    const k = kycRes.rows[0];
-    await query(`UPDATE users SET kyc_status = 'pass' WHERE id = $1;`, [k.user_id]);
+    const kycRes = await query(`UPDATE kyc_records SET status = 'pass' WHERE id = $1 RETURNING *`, [kycId]);
+    if (!kycRes.rows.length) { await query('ROLLBACK'); return res.status(404).json({ error: 'KYC not found' }); }
+    await query(`UPDATE users SET kyc_status = 'pass' WHERE id = $1`, [kycRes.rows[0].user_id]);
     await query('COMMIT');
-
-    res.json({ message: `✅ KYC record for user ${k.real_name} approved successfully!` });
+    res.json({ message: `KYC for ${kycRes.rows[0].real_name} approved!` });
   } catch (err) {
     await query('ROLLBACK');
     res.status(500).json({ error: 'Failed to approve KYC' });
   }
 });
 
-// ----------------------------------------------------
-// 1C. REJECT KYC
-// ----------------------------------------------------
 router.post('/kyc/reject', requireAdminSecret, async (req, res) => {
   try {
     const { kycId, reason } = req.body;
     if (!kycId) return res.status(400).json({ error: 'kycId is required' });
-
     await query('BEGIN');
-    const kycRes = await query(`UPDATE kyc_records SET status = 'rejected', reject_reason = $2 WHERE id = $1 RETURNING *;`, [kycId, reason || 'Unclear documents']);
-    if (kycRes.rows.length === 0) {
-      await query('ROLLBACK');
-      return res.status(404).json({ error: 'KYC record not found' });
-    }
-    const k = kycRes.rows[0];
-    await query(`UPDATE users SET kyc_status = 'rejected' WHERE id = $1;`, [k.user_id]);
+    const kycRes = await query(
+      `UPDATE kyc_records SET status = 'rejected', reject_reason = $2 WHERE id = $1 RETURNING *`,
+      [kycId, reason || 'Unclear documents']
+    );
+    if (!kycRes.rows.length) { await query('ROLLBACK'); return res.status(404).json({ error: 'KYC not found' }); }
+    await query(`UPDATE users SET kyc_status = 'rejected' WHERE id = $1`, [kycRes.rows[0].user_id]);
     await query('COMMIT');
-
-    res.json({ message: `❌ KYC record for user ${k.real_name} rejected.` });
+    res.json({ message: `KYC for ${kycRes.rows[0].real_name} rejected.` });
   } catch (err) {
     await query('ROLLBACK');
     res.status(500).json({ error: 'Failed to reject KYC' });
@@ -105,178 +159,92 @@ router.post('/kyc/reject', requireAdminSecret, async (req, res) => {
 });
 
 // ----------------------------------------------------
-// 2. APPROVE DEPOSIT
+// DEPOSITS APPROVE / REJECT
 // ----------------------------------------------------
 router.post('/deposits/approve', requireAdminSecret, async (req, res) => {
   try {
     const { depositId } = req.body;
     if (!depositId) return res.status(400).json({ error: 'depositId is required' });
-
     await query('BEGIN');
-
-    const depRes = await query(`SELECT * FROM deposits WHERE id = $1 FOR UPDATE;`, [depositId]);
-    if (depRes.rows.length === 0) {
-      await query('ROLLBACK');
-      return res.status(404).json({ error: 'Deposit record not found' });
-    }
-
+    const depRes = await query(`SELECT * FROM deposits WHERE id = $1 FOR UPDATE`, [depositId]);
+    if (!depRes.rows.length) { await query('ROLLBACK'); return res.status(404).json({ error: 'Deposit not found' }); }
     const dep = depRes.rows[0];
-    if (dep.audit_status !== 'pending') {
-      await query('ROLLBACK');
-      return res.status(400).json({ error: `Deposit is already ${dep.audit_status}` });
-    }
-
+    if (dep.audit_status !== 'pending') { await query('ROLLBACK'); return res.status(400).json({ error: `Already ${dep.audit_status}` }); }
     const amount = parseFloat(dep.amount);
-
-    // Update deposit status
-    await query(`
-      UPDATE deposits 
-      SET status = 'success', audit_status = 'approved' 
-      WHERE id = $1;
-    `, [depositId]);
-
-    // Credit user's available balance and total assets
-    const userRes = await query(`
-      UPDATE users 
-      SET available_balance = available_balance + $1, 
-          total_assets = total_assets + $1 
-      WHERE id = $2 
-      RETURNING available_balance, total_assets;
-    `, [amount, dep.user_id]);
-
-    // Log account change
-    await query(`
-      INSERT INTO account_changes (id, user_id, type, amount, balance_after, remark)
-      VALUES ($1, $2, 'Crypto Deposit Approved', $3, $4, $5);
-    `, ['AC' + Date.now(), dep.user_id, amount, userRes.rows[0].available_balance, `Deposit approved: ${dep.order_number}`]);
-
+    await query(`UPDATE deposits SET status = 'success', audit_status = 'approved' WHERE id = $1`, [depositId]);
+    const userRes = await query(
+      `UPDATE users SET available_balance = available_balance + $1, total_assets = total_assets + $1 WHERE id = $2 RETURNING available_balance`,
+      [amount, dep.user_id]
+    );
+    await query(
+      `INSERT INTO account_changes (id, user_id, type, amount, balance_after, remark) VALUES ($1,$2,$3,$4,$5,$6)`,
+      ['AC' + Date.now(), dep.user_id, 'deposit', amount, userRes.rows[0].available_balance, `Deposit approved: ${dep.order_number}`]
+    );
     await query('COMMIT');
-
-    res.json({
-      message: `✅ Deposit ${dep.order_number} ($${amount}) approved and user balance credited!`,
-      newBalance: parseFloat(userRes.rows[0].available_balance)
-    });
+    res.json({ message: `Deposit ${dep.order_number} ($${amount}) approved!`, newBalance: parseFloat(userRes.rows[0].available_balance) });
   } catch (err) {
     await query('ROLLBACK');
-    console.error('Approve deposit error:', err);
     res.status(500).json({ error: 'Failed to approve deposit' });
   }
 });
 
-// ----------------------------------------------------
-// 3. REJECT DEPOSIT
-// ----------------------------------------------------
 router.post('/deposits/reject', requireAdminSecret, async (req, res) => {
   try {
-    const { depositId, reason } = req.body;
+    const { depositId } = req.body;
     if (!depositId) return res.status(400).json({ error: 'depositId is required' });
-
-    const depRes = await query(`
-      UPDATE deposits 
-      SET status = 'failed', audit_status = 'rejected' 
-      WHERE id = $1 AND audit_status = 'pending' 
-      RETURNING *;
-    `, [depositId]);
-
-    if (depRes.rows.length === 0) {
-      return res.status(400).json({ error: 'Deposit record not found or already processed' });
-    }
-
-    res.json({
-      message: `❌ Deposit ${depRes.rows[0].order_number} rejected.`,
-      reason: reason || 'Audit rejected'
-    });
+    const depRes = await query(
+      `UPDATE deposits SET status = 'failed', audit_status = 'rejected' WHERE id = $1 AND audit_status = 'pending' RETURNING *`,
+      [depositId]
+    );
+    if (!depRes.rows.length) return res.status(400).json({ error: 'Not found or already processed' });
+    res.json({ message: `Deposit ${depRes.rows[0].order_number} rejected.` });
   } catch (err) {
-    console.error('Reject deposit error:', err);
     res.status(500).json({ error: 'Failed to reject deposit' });
   }
 });
 
 // ----------------------------------------------------
-// 4. APPROVE WITHDRAWAL
+// WITHDRAWALS APPROVE / REJECT
 // ----------------------------------------------------
 router.post('/withdrawals/approve', requireAdminSecret, async (req, res) => {
   try {
-    const { withdrawalId, txHash } = req.body;
+    const { withdrawalId } = req.body;
     if (!withdrawalId) return res.status(400).json({ error: 'withdrawalId is required' });
-
-    const witRes = await query(`
-      UPDATE withdrawals 
-      SET status = 'completed', audit_status = 'approved' 
-      WHERE id = $1 AND audit_status = 'pending' 
-      RETURNING *;
-    `, [withdrawalId]);
-
-    if (witRes.rows.length === 0) {
-      return res.status(400).json({ error: 'Withdrawal record not found or already processed' });
-    }
-
+    const witRes = await query(
+      `UPDATE withdrawals SET status = 'completed', audit_status = 'approved' WHERE id = $1 AND audit_status = 'pending' RETURNING *`,
+      [withdrawalId]
+    );
+    if (!witRes.rows.length) return res.status(400).json({ error: 'Not found or already processed' });
     const w = witRes.rows[0];
-    res.json({
-      message: `✅ Withdrawal ${w.order_number} ($${w.amount}) approved and marked completed!`,
-      txHash: txHash || 'Processed'
-    });
+    res.json({ message: `Withdrawal ${w.order_number} ($${w.amount}) approved!` });
   } catch (err) {
-    console.error('Approve withdrawal error:', err);
     res.status(500).json({ error: 'Failed to approve withdrawal' });
   }
 });
 
-// ----------------------------------------------------
-// 5. REJECT WITHDRAWAL (REFUND USER BALANCE)
-// ----------------------------------------------------
 router.post('/withdrawals/reject', requireAdminSecret, async (req, res) => {
   try {
     const { withdrawalId, reason } = req.body;
     if (!withdrawalId) return res.status(400).json({ error: 'withdrawalId is required' });
-
     await query('BEGIN');
-
-    const witRes = await query(`SELECT * FROM withdrawals WHERE id = $1 FOR UPDATE;`, [withdrawalId]);
-    if (witRes.rows.length === 0) {
-      await query('ROLLBACK');
-      return res.status(404).json({ error: 'Withdrawal record not found' });
-    }
-
+    const witRes = await query(`SELECT * FROM withdrawals WHERE id = $1 FOR UPDATE`, [withdrawalId]);
+    if (!witRes.rows.length) { await query('ROLLBACK'); return res.status(404).json({ error: 'Withdrawal not found' }); }
     const w = witRes.rows[0];
-    if (w.audit_status !== 'pending') {
-      await query('ROLLBACK');
-      return res.status(400).json({ error: `Withdrawal is already ${w.audit_status}` });
-    }
-
+    if (w.audit_status !== 'pending') { await query('ROLLBACK'); return res.status(400).json({ error: `Already ${w.audit_status}` }); }
     const amount = parseFloat(w.amount);
-
-    // Update withdrawal status
-    await query(`
-      UPDATE withdrawals 
-      SET status = 'failed', audit_status = 'rejected' 
-      WHERE id = $1;
-    `, [withdrawalId]);
-
-    // Refund user balance
-    const userRes = await query(`
-      UPDATE users 
-      SET available_balance = available_balance + $1, 
-          total_assets = total_assets + $1 
-      WHERE id = $2 
-      RETURNING available_balance;
-    `, [amount, w.user_id]);
-
-    // Log account change
-    await query(`
-      INSERT INTO account_changes (id, user_id, type, amount, balance_after, remark)
-      VALUES ($1, $2, 'Withdrawal Refund', $3, $4, $5);
-    `, ['AC' + Date.now(), w.user_id, amount, userRes.rows[0].available_balance, `Withdrawal rejected & refunded: ${reason || 'Audit failed'}`]);
-
+    await query(`UPDATE withdrawals SET status = 'failed', audit_status = 'rejected' WHERE id = $1`, [withdrawalId]);
+    const userRes = await query(
+      `UPDATE users SET available_balance = available_balance + $1, total_assets = total_assets + $1 WHERE id = $2 RETURNING available_balance`,
+      [amount, w.user_id]
+    );
+    await query(
+      `INSERT INTO account_changes (id, user_id, type, amount, balance_after, remark) VALUES ($1,$2,$3,$4,$5,$6)`,
+      ['AC' + Date.now(), w.user_id, 'withdrawal_refund', amount, userRes.rows[0].available_balance, `Withdrawal rejected & refunded: ${reason || 'Audit failed'}`]
+    );
     await query('COMMIT');
-
-    res.json({
-      message: `❌ Withdrawal ${w.order_number} ($${amount}) rejected and refunded to user account!`,
-      refundedAmount: amount
-    });
+    res.json({ message: `Withdrawal ${w.order_number} rejected & $${amount} refunded!` });
   } catch (err) {
     await query('ROLLBACK');
-    console.error('Reject withdrawal error:', err);
     res.status(500).json({ error: 'Failed to reject withdrawal' });
   }
 });
