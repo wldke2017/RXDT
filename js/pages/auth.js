@@ -44,7 +44,7 @@ function renderLogin() {
 
       <div id="login-phone-group" class="form-group">
         <label class="form-label">Phone Number</label>
-        <input type="tel" id="login-phone" class="form-control" placeholder="Please enter your phone number" value="9133038028"/>
+        <input type="tel" id="login-phone" class="form-control" placeholder="Please enter your phone number"/>
       </div>
       <div id="login-email-group" class="form-group" style="display:none;">
         <label class="form-label">Email Address</label>
@@ -53,7 +53,7 @@ function renderLogin() {
       <div class="form-group">
         <label class="form-label">Password</label>
         <div class="input-suffix">
-          <input type="password" id="login-password" class="form-control" placeholder="Please enter your password" value="Raju@8028"/>
+          <input type="password" id="login-password" class="form-control" placeholder="Please enter your password"/>
           <button class="pwd-toggle" onclick="togglePwd('login-password')">👁</button>
         </div>
       </div>

@@ -20,8 +20,8 @@ export function render(page) {
 // ---- INVITE FRIENDS ----
 function renderInvite() {
   const user = store.getUser();
-  const origin = window.location.origin;
-  const inviteLink = `${origin}/#/register?invite=${user?.inviteCode || 'RXDT'}`;
+  const domain = (window.location.hostname.includes('rxdt.site') || window.location.hostname === 'localhost') ? window.location.origin : 'https://rxdt.site';
+  const inviteLink = `${domain}/#/register?invite=${user?.inviteCode || 'RXDT'}`;
 
   return `
   <div>
