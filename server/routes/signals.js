@@ -79,7 +79,41 @@ function getTier(balance) {
   return null;
 }
 
+let forceActiveSignalUntil = null;
+let forceActiveSignalId = 1;
+
+export function setTestSignalWindow(durationMinutes = 15, signalId = 1) {
+  forceActiveSignalId = signalId;
+  forceActiveSignalUntil = new Date(Date.now() + durationMinutes * 60 * 1000);
+}
+
+export function clearTestSignalWindow() {
+  forceActiveSignalUntil = null;
+}
+
+export function getTestSignalStatus() {
+  if (!forceActiveSignalUntil) return null;
+  if (new Date() > forceActiveSignalUntil) {
+    forceActiveSignalUntil = null;
+    return null;
+  }
+  const minsLeft = Math.ceil((forceActiveSignalUntil.getTime() - Date.now()) / 60000);
+  return {
+    signalId: forceActiveSignalId,
+    tradingPair: 'BTC/USDT',
+    pairSymbol: 'BTCUSDT',
+    purchaseDuration: '30 seconds',
+    openTime: new Date().toISOString(),
+    closeTime: forceActiveSignalUntil.toISOString(),
+    minutesRemaining: minsLeft,
+    isTestMode: true,
+  };
+}
+
 function getActiveSignal() {
+  const testSignal = getTestSignalStatus();
+  if (testSignal) return testSignal;
+
   const now = new Date();
   const utcHour = now.getUTCHours();
   const utcMin  = now.getUTCMinutes();

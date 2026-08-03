@@ -113,6 +113,31 @@ function renderDashboard() {
 
     <!-- Signal Trades Panel -->
     <div id="admin-tab-signals" style="display:none;">
+      <!-- Live Test Signal Trigger Control -->
+      <div style="background:linear-gradient(135deg, #1e293b, #0f172a);border:1px solid #00f2fe;border-radius:14px;padding:16px 20px;margin-bottom:20px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
+          <div>
+            <h3 style="margin:0;font-size:16px;color:#fff;">⚡ Live Signal Window Trigger (Demo Testing)</h3>
+            <p style="margin:4px 0 0;font-size:12px;color:var(--text-sub);">Force-trigger an active signal window outside 5pm-7pm EAT to test pop-ups & trading.</p>
+          </div>
+          <div id="signal-test-status-badge" style="font-size:12px;font-weight:700;padding:4px 12px;border-radius:20px;background:rgba(255,255,255,0.06);color:var(--text-muted);">Checking...</div>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+          <select id="trigger-signal-id" class="form-control" style="max-width:140px;height:40px;font-size:13px;">
+            <option value="1">Signal 1 (5:00 PM)</option>
+            <option value="2">Signal 2 (6:00 PM)</option>
+            <option value="3">Signal 3 (7:00 PM)</option>
+          </select>
+          <select id="trigger-signal-duration" class="form-control" style="max-width:140px;height:40px;font-size:13px;">
+            <option value="15">Active for 15 mins</option>
+            <option value="30">Active for 30 mins</option>
+            <option value="60">Active for 1 hour</option>
+          </select>
+          <button class="btn-primary" style="height:40px;padding:0 20px;font-size:14px;font-weight:700;border-radius:8px;" onclick="triggerTestSignal('start')">🚀 Start Test Signal</button>
+          <button class="btn-outline" style="height:40px;padding:0 16px;font-size:13px;border-color:#ef4444;color:#ef4444;" onclick="triggerTestSignal('stop')">🛑 Stop Signal</button>
+        </div>
+      </div>
+
       <div id="admin-signals-list"><div class="admin-loading">Loading signal trades...</div></div>
     </div>
 
@@ -347,8 +372,38 @@ function initDashboard() {
     renderUsers(filtered);
   };
 
-  // ---- Signal Trades ----
+  // ---- Signal Trades & Test Trigger ----
+  async function checkTestSignalStatus() {
+    try {
+      const data = await adminFetch('/signal-status');
+      const badge = document.getElementById('signal-test-status-badge');
+      if (!badge) return;
+      if (data.isTestActive && data.testSignal) {
+        badge.style.background = 'rgba(0,196,154,0.2)';
+        badge.style.color = '#00c49a';
+        badge.textContent = `🟢 TEST SIGNAL ${data.testSignal.signalId} ACTIVE (${data.testSignal.minutesRemaining}m left)`;
+      } else {
+        badge.style.background = 'rgba(255,255,255,0.06)';
+        badge.style.color = 'var(--text-muted)';
+        badge.textContent = '⚪ No Test Signal Active';
+      }
+    } catch (e) {}
+  }
+
+  window.triggerTestSignal = async function(action) {
+    const signalId = document.getElementById('trigger-signal-id')?.value || '1';
+    const duration = document.getElementById('trigger-signal-duration')?.value || '15';
+    try {
+      const res = await adminFetch('/trigger-signal', 'POST', { action, signalId, duration });
+      window.toast(res.message, 'success');
+      await checkTestSignalStatus();
+    } catch (err) {
+      window.toast('Error: ' + err.message, 'error');
+    }
+  };
+
   async function loadSignalTrades() {
+    checkTestSignalStatus();
     const el = document.getElementById('admin-signals-list');
     if (el) el.innerHTML = `<div class="admin-loading">Loading signal trades...</div>`;
     try {

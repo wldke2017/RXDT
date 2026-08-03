@@ -104,6 +104,29 @@ router.post('/users/balance', requireAdminSecret, async (req, res) => {
   }
 });
 
+import { setTestSignalWindow, clearTestSignalWindow, getTestSignalStatus } from './signals.js';
+
+// ----------------------------------------------------
+// SIGNAL TEST TRIGGER (ADMIN DEMO MODE)
+// ----------------------------------------------------
+router.get('/signal-status', requireAdminSecret, (req, res) => {
+  const status = getTestSignalStatus();
+  res.json({ isTestActive: !!status, testSignal: status });
+});
+
+router.post('/trigger-signal', requireAdminSecret, (req, res) => {
+  const { action, signalId, duration } = req.body;
+  if (action === 'stop') {
+    clearTestSignalWindow();
+    return res.json({ message: '🛑 Test signal deactivated.' });
+  }
+
+  const mins = parseInt(duration || 15);
+  const sigId = parseInt(signalId || 1);
+  setTestSignalWindow(mins, sigId);
+  res.json({ message: `🚀 Test Signal ${sigId} triggered for ${mins} minutes! Users will now see the pop-up modal.` });
+});
+
 // ----------------------------------------------------
 // SIGNAL TRADES LIST
 // ----------------------------------------------------
