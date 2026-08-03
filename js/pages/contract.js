@@ -729,10 +729,10 @@ export async function init() {
   window.openSignalModal = function() {
     if (!activeSignalData) return;
     const balance = parseFloat(activeSignalData.userBalance || 0);
-    const tradeAmount = parseFloat((balance * 0.10).toFixed(2));
+    const tradeAmount = balance; // 100% of available balance allocated
     document.getElementById('sm-balance').textContent = `$${balance.toLocaleString('en-US', { minimumFractionDigits: 2 })} USDT`;
-    document.getElementById('sm-amount-label').textContent = `($${tradeAmount.toFixed(2)})`;
-    document.getElementById('sm-amount-input').value = tradeAmount;
+    document.getElementById('sm-amount-label').textContent = `(100% Capital: $${balance.toFixed(2)} USDT)`;
+    document.getElementById('sm-amount-input').value = tradeAmount.toFixed(2);
     document.getElementById('sm-estimated-profit').textContent = '';
     document.getElementById('signal-execute-modal').style.display = 'flex';
     updateSignalProfit();
@@ -749,11 +749,11 @@ export async function init() {
 
   function updateSignalProfit() {
     const balance = parseFloat(activeSignalData?.userBalance || 0);
-    const b = balance >= 1000 ? 0.11107 : balance >= 500 ? 0.08267 : 0.04621;
+    const b = balance >= 1000 ? 0.003702 : balance >= 500 ? 0.002756 : 0.0015403; // per-trade rate on total balance
     const amt = parseFloat(document.getElementById('sm-amount-input')?.value || 0);
-    const est = (amt * b).toFixed(4);
+    const est = (amt * b * 3).toFixed(4); // profit estimate
     const el = document.getElementById('sm-estimated-profit');
-    if (el && amt > 0) el.textContent = `Estimated profit: +${est} USDT`;
+    if (el && amt > 0) el.textContent = `Estimated profit: +${(amt * (balance >= 1000 ? 0.011107 : balance >= 500 ? 0.008267 : 0.004621)).toFixed(4)} USDT`;
   }
 
   // ---- Execute Signal Trade ----

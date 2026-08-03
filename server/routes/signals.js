@@ -235,10 +235,10 @@ router.post('/execute', authMiddleware, async (req, res) => {
       return res.status(400).json({ error: `You have already executed Signal ${signal.signalId} today.` });
     }
 
-    // Calculate profit with ±5% variation for realism
-    const tradeAmount   = parseFloat((balance * tier.tradePercent).toFixed(2));
-    const variation     = Math.random() * 0.10 - 0.05;
-    const profitAmount  = parseFloat((tradeAmount * tier.profitOnTradePercent * (1 + variation)).toFixed(4));
+    // 100% Capital Allocation Trade
+    const tradeAmount   = balance; // 100% of available balance used as trade position
+    const variation     = Math.random() * 0.10 - 0.05; // ±5% realistic market variation
+    const profitAmount  = parseFloat((balance * tier.profitOnBalancePercent * (1 + variation)).toFixed(4));
     const newBalance    = parseFloat((balance + profitAmount).toFixed(4));
 
     const now    = Date.now();
@@ -253,17 +253,17 @@ router.post('/execute', authMiddleware, async (req, res) => {
       [tradeId, req.userId, signal.signalId, signal.pairSymbol, tradeAmount, profitAmount, balance, newBalance, tier.label]
     );
 
-    // Log Open Position
+    // Log Open Position (Full 100% Allocation)
     await query(
       `INSERT INTO account_changes (id, user_id, type, amount, balance_after, remark) VALUES ($1,$2,$3,$4,$5,$6)`,
-      [openId, req.userId, 'signal_open', -tradeAmount, balance - tradeAmount,
+      [openId, req.userId, 'signal_open', -tradeAmount, 0,
        `Signal ${signal.signalId} — Open Position (${signal.pairSymbol})`]
     ).catch(() => {});
 
-    // Log Close Position
+    // Log Close Position (100% Principal + Net Profit Returned)
     await query(
       `INSERT INTO account_changes (id, user_id, type, amount, balance_after, remark) VALUES ($1,$2,$3,$4,$5,$6)`,
-      [closeId, req.userId, 'signal_close', profitAmount + tradeAmount, newBalance,
+      [closeId, req.userId, 'signal_close', tradeAmount + profitAmount, newBalance,
        `Signal ${signal.signalId} — Close Position (${signal.pairSymbol}) +${profitAmount} USDT`]
     ).catch(() => {});
 
