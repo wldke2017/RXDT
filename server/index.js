@@ -53,8 +53,17 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// Fallback to index.html for SPA router
+// Global JSON error handler - always return JSON, never HTML
+app.use((err, req, res, next) => {
+  console.error('Unhandled server error:', err.message);
+  res.status(500).json({ error: err.message || 'Internal server error' });
+});
+
+// Fallback to index.html for SPA router (only for non-API routes)
 app.get('*', (req, res) => {
+  if (req.path.startsWith('/api/')) {
+    return res.status(404).json({ error: 'API route not found' });
+  }
   res.sendFile(path.join(rootDir, 'index.html'));
 });
 
