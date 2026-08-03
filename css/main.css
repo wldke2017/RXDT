@@ -460,7 +460,12 @@ table.data-table tr:hover {
 
 /* Responsive Rules */
 @media (max-width: 768px) {
-  .navbar { padding: 0 16px; }
+  .navbar { padding: 0 10px; }
+  .navbar .brand { gap: 6px; font-size: 20px; }
+  .navbar .brand img.logo-img { height: 30px; }
+  .navbar .user-actions { gap: 6px; }
+  .navbar .user-actions .btn-primary,
+  .navbar .user-actions .btn-outline { padding: 6px 12px; font-size: 13px; }
   .navbar .nav-links { display: none; }
   .mobile-nav { display: block; z-index: 2000; }
   .page-container { padding: 16px 12px 90px 12px; }

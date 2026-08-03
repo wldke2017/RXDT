@@ -32,7 +32,6 @@ function renderShell() {
       <div class="brand" onclick="navigateTo('home')">
         <img src="assets/images/rxdt_logo.png" alt="RXDT" class="logo-img"/>
         <span style="letter-spacing:1px;">RXDT</span>
-        <span class="logo-tag">AI QUANT</span>
       </div>
 
       <div class="nav-links">
