@@ -69,13 +69,7 @@ router.post('/send-otp', requireAuth, async (req, res) => {
     if (!resendRes.ok) {
       const err = await resendRes.json();
       console.error('Resend error:', err);
-      // Graceful fallback: OTP is already saved in DB.
-      // Return it directly so user can still verify (dev/demo mode when domain not yet verified)
-      return res.json({
-        success: true,
-        message: `Email delivery unavailable. For demo, use this code: ${otp}`,
-        demoCode: otp // frontend shows this if email fails
-      });
+      return res.status(400).json({ error: err.message || 'Failed to send email verification code.' });
     }
 
     res.json({ success: true, message: `Verification code sent to ${email}` });
