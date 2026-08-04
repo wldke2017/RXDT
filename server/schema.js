@@ -26,6 +26,8 @@ export async function initDatabase() {
       email_bound VARCHAR(100),
       email_otp VARCHAR(10),
       email_otp_expires TIMESTAMP WITH TIME ZONE,
+      phone_otp VARCHAR(10),
+      phone_otp_expires TIMESTAMP WITH TIME ZONE,
       transaction_password VARCHAR(255),
       daily_signal_count INT DEFAULT 3,
       avg_daily_return VARCHAR(50) DEFAULT '1.8% - 2.1%',
@@ -40,6 +42,8 @@ export async function initDatabase() {
     ALTER TABLE users ADD COLUMN IF NOT EXISTS email_bound VARCHAR(100);
     ALTER TABLE users ADD COLUMN IF NOT EXISTS email_otp VARCHAR(10);
     ALTER TABLE users ADD COLUMN IF NOT EXISTS email_otp_expires TIMESTAMP WITH TIME ZONE;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS phone_otp VARCHAR(10);
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS phone_otp_expires TIMESTAMP WITH TIME ZONE;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS transaction_password VARCHAR(255);
     ALTER TABLE users ADD COLUMN IF NOT EXISTS referred_by VARCHAR(50);
     ALTER TABLE users ADD COLUMN IF NOT EXISTS spin_chances INT DEFAULT 0;
@@ -243,7 +247,7 @@ export async function initDatabase() {
       created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
     );
   `);
-  await query(`ALTER TABLE signal_trades ADD COLUMN IF NOT EXISTS release_at TIMESTAMP WITH TIME ZONE;`).catch(() => {});
+  await query(`ALTER TABLE signal_trades ADD COLUMN IF NOT EXISTS release_at TIMESTAMP WITH TIME ZONE;`).catch(() => { });
 
   // Create System Settings Table (for persistent test signal override on Vercel serverless)
   await query(`

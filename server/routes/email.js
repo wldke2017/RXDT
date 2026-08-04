@@ -130,6 +130,11 @@ router.post('/change-password', requireAuth, async (req, res) => {
   const { newPassword, otp, type } = req.body; // type: 'login' | 'transaction'
   if (!newPassword || !otp || !type) return res.status(400).json({ error: 'Missing required fields' });
 
+  // Transaction password must be exactly 6 digits
+  if (type === 'transaction' && !/^\d{6}$/.test(newPassword)) {
+    return res.status(400).json({ error: 'Transaction password must be exactly 6 digits.' });
+  }
+
   try {
     const result = await query(
       `SELECT email_bound, email_otp, email_otp_expires FROM users WHERE id = $1`,

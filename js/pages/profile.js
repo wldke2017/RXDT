@@ -1,4 +1,5 @@
 import store from '../store.js';
+import { COUNTRY_DIAL_CODES } from '../countries.js';
 
 function toast(msg, type = 'info') {
   const container = document.getElementById('toast-container');
@@ -121,9 +122,11 @@ function renderSecurity() {
       <div class="security-item">
         <div class="security-item-info">
           <div class="si-title">📱 Phone Verification</div>
-          <div class="si-sub">9133038028 · Used for verification codes</div>
+          <div class="si-sub" id="phone-bind-status-sub">Bind a phone number for account security</div>
         </div>
-        <span class="badge badge-success">Bound</span>
+        <div id="phone-bind-btn-container">
+          <button class="btn-outline" style="padding:7px 16px;font-size:13px;" onclick="openBindPhoneModal()">Bind Phone</button>
+        </div>
       </div>
 
       <div class="security-divider"></div>
@@ -143,9 +146,11 @@ function renderSecurity() {
       <div class="security-item">
         <div class="security-item-info">
           <div class="si-title">🆔 KYC Verification</div>
-          <div class="si-sub">Identity verification status</div>
+          <div class="si-sub" id="kyc-status-sub">Identity verification status</div>
         </div>
-        <span class="badge badge-success">Verified</span>
+        <div id="kyc-status-btn-container">
+          <span class="badge" id="kyc-status-badge" style="background:rgba(255,255,255,0.1);color:var(--text-muted);">Loading...</span>
+        </div>
       </div>
     </div>
 
@@ -171,6 +176,33 @@ function renderSecurity() {
       </div>
     </div>
 
+    <!-- Bind Phone Modal -->
+    <div class="modal-overlay" id="bind-phone-modal">
+      <div class="modal-content" style="max-width:440px;background:var(--bg-card);border-radius:16px;padding:24px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+          <h3 style="margin:0;font-size:18px;font-weight:700;">📱 Bind Phone Number</h3>
+          <button class="btn-outline" style="padding:4px 10px;" onclick="closeBindPhoneModal()">✕</button>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Phone Number</label>
+          <div style="display:flex;gap:8px;">
+            <select id="bind-phone-country-code" class="form-control" style="width:130px;padding:8px;font-size:13px;background:var(--bg-input, #131926);color:var(--text-main,#fff);border:1px solid var(--border-color,rgba(255,255,255,0.15));border-radius:8px;">
+              ${COUNTRY_DIAL_CODES.map(c => `<option value="${c.code}">${c.flag} ${c.code}</option>`).join('')}
+            </select>
+            <input type="tel" id="bind-phone-input" class="form-control" placeholder="Phone number (digits only)" maxlength="15" oninput="this.value = this.value.replace(/[^0-9]/g, '')" style="flex:1;"/>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Verification Code</label>
+          <div class="code-input-group" style="display:flex;gap:8px;">
+            <input type="text" id="bind-phone-code" class="form-control" placeholder="6-digit code"/>
+            <button class="btn-primary" id="bind-phone-send-btn" style="white-space:nowrap;padding:0 16px;" onclick="sendBindPhoneOtp()">Send Code</button>
+          </div>
+        </div>
+        <button class="btn-dark" style="width:100%;height:48px;font-size:16px;margin-top:12px;" onclick="submitBindPhone()">Confirm Phone Binding</button>
+      </div>
+    </div>
+
     <!-- Change Password Modal -->
     <div class="modal-overlay" id="change-pwd-modal">
       <div class="modal-content" style="max-width:440px;background:var(--bg-card);border-radius:16px;padding:24px;">
@@ -181,11 +213,17 @@ function renderSecurity() {
         <input type="hidden" id="sec-pwd-type" value="login"/>
         <div class="form-group">
           <label class="form-label">New Password</label>
-          <input type="password" id="sec-new-pwd" class="form-control" placeholder="Enter new password"/>
+          <div class="input-suffix">
+            <input type="password" id="sec-new-pwd" class="form-control" placeholder="Enter new password"/>
+            <button class="pwd-toggle" onclick="togglePwd('sec-new-pwd')">👁</button>
+          </div>
         </div>
         <div class="form-group">
           <label class="form-label">Confirm New Password</label>
-          <input type="password" id="sec-confirm-pwd" class="form-control" placeholder="Confirm new password"/>
+          <div class="input-suffix">
+            <input type="password" id="sec-confirm-pwd" class="form-control" placeholder="Confirm new password"/>
+            <button class="pwd-toggle" onclick="togglePwd('sec-confirm-pwd')">👁</button>
+          </div>
         </div>
         <div class="form-group">
           <label class="form-label">Email Verification Code</label>
@@ -235,13 +273,13 @@ function renderCustomerService() {
     <div class="card">
       <div class="card-title">Frequently Asked Questions</div>
       ${[
-        ['How do I deposit funds?', 'Go to Assets → Deposit. Select your preferred cryptocurrency (USDT, BTC, ETH, USDC) and network. Copy the deposit address and send funds from your external wallet.'],
-        ['How does copy trading work?', 'Browse our analyst list, select an analyst whose returns match your goals, choose a product, set your investment amount, and confirm. The system automatically mirrors their trades.'],
-        ['How long does withdrawal take?', 'Withdrawal requests are processed within 1-24 hours during business hours (9:00-18:00 UTC-4). Crypto withdrawals typically arrive within 30 minutes of processing.'],
-        ['What is KYC verification?', 'KYC (Know Your Customer) verifies your identity using a government-issued ID. It is required before making withdrawals and is completed in under 5 minutes.'],
-        ['What cryptocurrencies do you support?', 'We support USDT (ERC-20, TRC-20), USDC (ERC-20), BTC, and ETH for deposits and withdrawals.'],
-        ['Is there a minimum investment for copy trading?', 'Minimum investments vary by analyst and product, ranging from $100 to $500. Maximum amounts are listed on each product page.']
-      ].map(([q, a]) => `
+      ['How do I deposit funds?', 'Go to Assets → Deposit. Select your preferred cryptocurrency (USDT, BTC, ETH, USDC) and network. Copy the deposit address and send funds from your external wallet.'],
+      ['How does copy trading work?', 'Browse our analyst list, select an analyst whose returns match your goals, choose a product, set your investment amount, and confirm. The system automatically mirrors their trades.'],
+      ['How long does withdrawal take?', 'Withdrawal requests are processed within 1-24 hours during business hours (9:00-18:00 UTC-4). Crypto withdrawals typically arrive within 30 minutes of processing.'],
+      ['What is KYC verification?', 'KYC (Know Your Customer) verifies your identity using a government-issued ID. It is required before making withdrawals and is completed in under 5 minutes.'],
+      ['What cryptocurrencies do you support?', 'We support USDT (ERC-20, TRC-20), USDC (ERC-20), BTC, and ETH for deposits and withdrawals.'],
+      ['Is there a minimum investment for copy trading?', 'Minimum investments vary by analyst and product, ranging from $100 to $500. Maximum amounts are listed on each product page.']
+    ].map(([q, a]) => `
         <div class="faq-item" onclick="toggleFaq(this)">
           <div class="faq-question">
             <span>${q}</span>
@@ -278,7 +316,7 @@ function renderCustomerService() {
 export function init(page) {
   window.toast = toast;
 
-  window.copyText = function(text, msg) {
+  window.copyText = function (text, msg) {
     navigator.clipboard?.writeText(text).then(() => toast(msg || 'Copied!', 'success'))
       .catch(() => { const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); toast(msg || 'Copied!', 'success'); });
   };
@@ -301,7 +339,7 @@ export function init(page) {
         if (sub) sub.textContent = `Bound: ${data.emailBound}`;
         if (container) container.innerHTML = `<span class="badge badge-success">Bound</span>`;
       }
-    } catch (e) {}
+    } catch (e) { }
   }
   // Load real referral stats from server
   async function loadReferralStats() {
@@ -351,18 +389,128 @@ export function init(page) {
     }
   }
 
-  if (page === 'invite-friends') loadReferralStats();
-  if (page === 'security-settings') checkEmailStatus();
+  // Check phone status on page load
+  async function checkPhoneStatus() {
+    try {
+      const data = await authFetch('/api/auth/phone-status');
+      const sub = document.getElementById('phone-bind-status-sub');
+      const container = document.getElementById('phone-bind-btn-container');
+      if (data.phoneBound) {
+        if (sub) sub.textContent = `Bound: ${data.phoneBound}`;
+        if (container) container.innerHTML = `<span class="badge badge-success">Bound</span>`;
+      }
+    } catch (e) { }
+  }
 
-  window.openBindEmailModal = function() {
+  // Check KYC status on security settings load
+  async function checkKycStatus() {
+    try {
+      const data = await authFetch('/api/kyc/status');
+      const badge = document.getElementById('kyc-status-badge');
+      const container = document.getElementById('kyc-status-btn-container');
+      const sub = document.getElementById('kyc-status-sub');
+      if (!badge || !container) return;
+
+      const status = data.kycStatus || 'unverified';
+      if (status === 'pass') {
+        badge.className = 'badge badge-success';
+        badge.textContent = 'Verified';
+        badge.style = '';
+        if (sub) sub.textContent = 'Your identity has been verified ✓';
+      } else if (status === 'pending') {
+        badge.className = 'badge badge-warning';
+        badge.textContent = 'Pending Review';
+        badge.style = 'background:#f59e0b22;color:#f59e0b;border:1px solid #f59e0b66;';
+        if (sub) sub.textContent = 'KYC submitted — under review';
+      } else {
+        badge.remove();
+        container.innerHTML = `<button class="btn-outline" style="padding:7px 16px;font-size:13px;" onclick="navigateTo('kyc')">Verify Now</button>`;
+        if (sub) sub.textContent = 'Complete identity verification to unlock all features';
+      }
+    } catch (e) {
+      const badge = document.getElementById('kyc-status-badge');
+      if (badge) { badge.textContent = 'N/A'; }
+    }
+  }
+
+  if (page === 'invite-friends') loadReferralStats();
+  if (page === 'security-settings') {
+    checkEmailStatus();
+    checkPhoneStatus();
+    checkKycStatus();
+  }
+
+  window.togglePwd = function (id) {
+    const inp = document.getElementById(id);
+    if (inp) inp.type = inp.type === 'password' ? 'text' : 'password';
+  };
+
+  window.openBindPhoneModal = function () {
+    document.getElementById('bind-phone-modal')?.classList.add('active');
+  };
+
+  window.closeBindPhoneModal = function () {
+    document.getElementById('bind-phone-modal')?.classList.remove('active');
+  };
+
+  window.sendBindPhoneOtp = async function () {
+    const code = document.getElementById('bind-phone-country-code')?.value || '+1';
+    const rawPhone = document.getElementById('bind-phone-input')?.value?.trim() || '';
+    if (!rawPhone || rawPhone.length < 6 || rawPhone.length > 15) {
+      toast('Please enter a valid phone number (6-15 digits)', 'error');
+      return;
+    }
+    const phone = `${code}${rawPhone}`;
+
+    const btn = document.getElementById('bind-phone-send-btn');
+    if (btn) btn.disabled = true;
+
+    try {
+      const data = await authFetch('/api/auth/send-phone-otp', { method: 'POST', body: JSON.stringify({ phone }) });
+      if (data.error) throw new Error(data.error);
+
+      toast(data.message || 'Verification code sent to your phone!', 'success');
+
+      let sec = 60;
+      const timer = setInterval(() => {
+        if (btn) btn.textContent = `${sec}s`;
+        sec--;
+        if (sec < 0) { clearInterval(timer); if (btn) { btn.disabled = false; btn.textContent = 'Send Code'; } }
+      }, 1000);
+    } catch (err) {
+      toast(err.message, 'error');
+      if (btn) btn.disabled = false;
+    }
+  };
+
+  window.submitBindPhone = async function () {
+    const code = document.getElementById('bind-phone-country-code')?.value || '+1';
+    const rawPhone = document.getElementById('bind-phone-input')?.value?.trim() || '';
+    const otp = document.getElementById('bind-phone-code')?.value;
+
+    if (!rawPhone || !otp) { toast('Please enter phone number and verification code', 'error'); return; }
+    const phone = `${code}${rawPhone}`;
+
+    try {
+      const data = await authFetch('/api/auth/bind-phone', { method: 'POST', body: JSON.stringify({ phone, otp }) });
+      if (data.error) throw new Error(data.error);
+      toast('✅ Phone number bound successfully!', 'success');
+      closeBindPhoneModal();
+      checkPhoneStatus();
+    } catch (err) {
+      toast(err.message, 'error');
+    }
+  };
+
+  window.openBindEmailModal = function () {
     document.getElementById('bind-email-modal')?.classList.add('active');
   };
 
-  window.closeBindEmailModal = function() {
+  window.closeBindEmailModal = function () {
     document.getElementById('bind-email-modal')?.classList.remove('active');
   };
 
-  window.sendBindEmailOtp = async function() {
+  window.sendBindEmailOtp = async function () {
     const email = document.getElementById('bind-email-input')?.value;
     if (!email || !email.includes('@')) { toast('Please enter a valid email address', 'error'); return; }
 
@@ -387,7 +535,7 @@ export function init(page) {
     }
   };
 
-  window.submitBindEmail = async function() {
+  window.submitBindEmail = async function () {
     const email = document.getElementById('bind-email-input')?.value;
     const otp = document.getElementById('bind-email-code')?.value;
 
@@ -404,7 +552,7 @@ export function init(page) {
     }
   };
 
-  window.openChangePwd = async function(type) {
+  window.openChangePwd = async function (type) {
     // Check if email is bound first
     try {
       const statusData = await authFetch('/api/email/email-status');
@@ -413,7 +561,7 @@ export function init(page) {
         openBindEmailModal();
         return;
       }
-    } catch (e) {}
+    } catch (e) { }
 
     const titleEl = document.getElementById('change-pwd-title');
     const typeEl = document.getElementById('sec-pwd-type');
@@ -422,7 +570,7 @@ export function init(page) {
     document.getElementById('change-pwd-modal')?.classList.add('active');
   };
 
-  window.sendPwdChangeOtp = async function() {
+  window.sendPwdChangeOtp = async function () {
     const btn = document.getElementById('sec-pwd-send-btn');
     if (btn) btn.disabled = true;
 
@@ -450,7 +598,7 @@ export function init(page) {
     }
   };
 
-  window.submitChangePwd = async function() {
+  window.submitChangePwd = async function () {
     const type = document.getElementById('sec-pwd-type')?.value || 'login';
     const newPassword = document.getElementById('sec-new-pwd')?.value;
     const confirm = document.getElementById('sec-confirm-pwd')?.value;
@@ -458,7 +606,16 @@ export function init(page) {
 
     if (!newPassword || !confirm || !otp) { toast('Please fill all fields', 'error'); return; }
     if (newPassword !== confirm) { toast('Passwords do not match', 'error'); return; }
-    if (newPassword.length < 6) { toast('Password must be at least 6 characters', 'error'); return; }
+
+    // Transaction password must be exactly 6 digits
+    if (type === 'transaction') {
+      if (!/^\d{6}$/.test(newPassword)) {
+        toast('Transaction password must be exactly 6 digits', 'error');
+        return;
+      }
+    } else {
+      if (newPassword.length < 6) { toast('Password must be at least 6 characters', 'error'); return; }
+    }
 
     try {
       const data = await authFetch('/api/email/change-password', {
@@ -474,7 +631,7 @@ export function init(page) {
     }
   };
 
-  window.toggleFaq = function(el) {
+  window.toggleFaq = function (el) {
     const answer = el.querySelector('.faq-answer');
     const arrow = el.querySelector('.faq-arrow');
     if (answer) {
@@ -484,11 +641,11 @@ export function init(page) {
     }
   };
 
-  window.openChat = function() {
+  window.openChat = function () {
     document.getElementById('chat-modal').classList.add('active');
   };
 
-  window.sendChatMsg = function() {
+  window.sendChatMsg = function () {
     const input = document.getElementById('chat-input');
     if (!input || !input.value.trim()) return;
     const msg = input.value.trim();

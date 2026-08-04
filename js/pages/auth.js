@@ -137,11 +137,17 @@ function renderRegister() {
 
       <div class="form-group">
         <label class="form-label">Password</label>
-        <input type="password" id="reg-password" class="form-control" placeholder="Please enter your password"/>
+        <div class="input-suffix">
+          <input type="password" id="reg-password" class="form-control" placeholder="Please enter your password"/>
+          <button class="pwd-toggle" onclick="togglePwd('reg-password')">👁</button>
+        </div>
       </div>
       <div class="form-group">
         <label class="form-label">Confirm Password</label>
-        <input type="password" id="reg-confirm-pwd" class="form-control" placeholder="Please enter your password again"/>
+        <div class="input-suffix">
+          <input type="password" id="reg-confirm-pwd" class="form-control" placeholder="Please enter your password again"/>
+          <button class="pwd-toggle" onclick="togglePwd('reg-confirm-pwd')">👁</button>
+        </div>
       </div>
       <div class="form-group">
         <label class="form-label">Invite Code ${defaultInvite ? '<span style="color:#00f2fe;font-size:12px;">(Auto-filled)</span>' : '(Optional)'}</label>
@@ -189,11 +195,17 @@ function renderForgetPwd() {
       </div>
       <div class="form-group">
         <label class="form-label">New Password</label>
-        <input type="password" id="fp-new-pwd" class="form-control" placeholder="Please enter your new password"/>
+        <div class="input-suffix">
+          <input type="password" id="fp-new-pwd" class="form-control" placeholder="Please enter your new password"/>
+          <button class="pwd-toggle" onclick="togglePwd('fp-new-pwd')">👁</button>
+        </div>
       </div>
       <div class="form-group">
         <label class="form-label">Confirm Password</label>
-        <input type="password" id="fp-confirm-pwd" class="form-control" placeholder="Please enter new password again"/>
+        <div class="input-suffix">
+          <input type="password" id="fp-confirm-pwd" class="form-control" placeholder="Please enter new password again"/>
+          <button class="pwd-toggle" onclick="togglePwd('fp-confirm-pwd')">👁</button>
+        </div>
       </div>
 
       <button class="btn-dark auth-submit" onclick="doResetPwd()">Confirm Reset</button>
@@ -300,26 +312,26 @@ function renderKYC() {
 
 export function init(page) {
   // Expose helpers globally for inline handlers
-  window.switchLoginTab = function(tab) {
+  window.switchLoginTab = function (tab) {
     document.getElementById('tab-phone').classList.toggle('active', tab === 'phone');
     document.getElementById('tab-email').classList.toggle('active', tab === 'email');
     document.getElementById('login-phone-group').style.display = tab === 'phone' ? '' : 'none';
     document.getElementById('login-email-group').style.display = tab === 'email' ? '' : 'none';
   };
 
-  window.switchRegTab = function(tab) {
+  window.switchRegTab = function (tab) {
     document.getElementById('reg-tab-phone').classList.toggle('active', tab === 'phone');
     document.getElementById('reg-tab-email').classList.toggle('active', tab === 'email');
     document.getElementById('reg-phone-group').style.display = tab === 'phone' ? '' : 'none';
     document.getElementById('reg-email-group').style.display = tab === 'email' ? '' : 'none';
   };
 
-  window.togglePwd = function(id) {
+  window.togglePwd = function (id) {
     const inp = document.getElementById(id);
     if (inp) inp.type = inp.type === 'password' ? 'text' : 'password';
   };
 
-  window.doLogin = async function() {
+  window.doLogin = async function () {
     const phoneGroup = document.getElementById('login-phone-group');
     const isPhone = phoneGroup && phoneGroup.style.display !== 'none';
     const code = document.getElementById('login-country-code')?.value || '+1';
@@ -349,7 +361,7 @@ export function init(page) {
 
   let currentCaptchaAns = 0;
 
-  window.generateCaptcha = function() {
+  window.generateCaptcha = function () {
     const a = Math.floor(Math.random() * 10) + 1;
     const b = Math.floor(Math.random() * 10) + 1;
     currentCaptchaAns = a + b;
@@ -362,7 +374,7 @@ export function init(page) {
     setTimeout(() => window.generateCaptcha(), 100);
   }
 
-  window.doRegister = async function() {
+  window.doRegister = async function () {
     const phoneGroup = document.getElementById('reg-phone-group');
     const isPhone = phoneGroup && phoneGroup.style.display !== 'none';
     const code = document.getElementById('reg-country-code')?.value || '+1';
@@ -402,7 +414,7 @@ export function init(page) {
     }
   };
 
-  window.sendFpEmailCode = async function() {
+  window.sendFpEmailCode = async function () {
     const email = document.getElementById('fp-email')?.value;
     if (!email) { toast('Please enter your email address', 'error'); return; }
 
@@ -432,7 +444,7 @@ export function init(page) {
     }
   };
 
-  window.doResetPwd = async function() {
+  window.doResetPwd = async function () {
     const email = document.getElementById('fp-email')?.value;
     const otp = document.getElementById('fp-code')?.value;
     const newPassword = document.getElementById('fp-new-pwd')?.value;
@@ -457,7 +469,7 @@ export function init(page) {
     }
   };
 
-  window.previewUpload = function(input, previewId) {
+  window.previewUpload = function (input, previewId) {
     const file = input.files[0];
     if (!file) return;
     const reader = new FileReader();
@@ -468,12 +480,12 @@ export function init(page) {
     reader.readAsDataURL(file);
   };
 
-  window.showKycCountryDropdown = function() {
+  window.showKycCountryDropdown = function () {
     const dd = document.getElementById('kyc-country-dropdown');
     if (dd) dd.style.display = 'block';
   };
 
-  window.filterKycCountries = function(query) {
+  window.filterKycCountries = function (query) {
     const q = query.toLowerCase();
     const dd = document.getElementById('kyc-country-dropdown');
     if (!dd) return;
@@ -490,7 +502,7 @@ export function init(page) {
     `).join('');
   };
 
-  window.selectKycCountry = function(country) {
+  window.selectKycCountry = function (country) {
     const searchInput = document.getElementById('kyc-country-search');
     const hiddenInput = document.getElementById('kyc-nationality');
     const dd = document.getElementById('kyc-country-dropdown');
@@ -499,7 +511,7 @@ export function init(page) {
     if (dd) dd.style.display = 'none';
   };
 
-  document.addEventListener('click', function(e) {
+  document.addEventListener('click', function (e) {
     const wrapper = e.target.closest('.country-search-wrapper');
     if (!wrapper) {
       const dd = document.getElementById('kyc-country-dropdown');
@@ -507,7 +519,7 @@ export function init(page) {
     }
   });
 
-  window.submitKYC = async function() {
+  window.submitKYC = async function () {
     const idType = document.getElementById('kyc-id-type')?.value;
     const nationality = document.getElementById('kyc-nationality')?.value || document.getElementById('kyc-country-search')?.value;
     const name = document.getElementById('kyc-name')?.value;

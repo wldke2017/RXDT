@@ -2,6 +2,7 @@ import express from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { query } from '../db.js';
+import { requireAuth } from '../middleware/auth.js';
 
 const router = express.Router();
 // JWT_SECRET must be set via environment. No fallback: a leaked default
@@ -53,8 +54,9 @@ router.post('/register', async (req, res) => {
       }
     }
 
-    // If phone is missing (email registration), provide clean fallback phone placeholder if DB table still has NOT NULL constraint
-    const effectivePhone = phone || ('EMAIL_' + userId);
+    // If phone is missing (email registration), store NULL — no fake placeholder.
+    // The user will be required to bind a phone number later.
+    const effectivePhone = phone || null;
 
     const newUser = await query(`
       INSERT INTO users (id, name, phone, email, password_hash, invite_code, referred_by, total_assets, available_balance, frozen_balance, total_earnings)
@@ -135,6 +137,103 @@ router.get('/me', async (req, res) => {
     res.json({ user: formatUser(userRes.rows[0]) });
   } catch (err) {
     res.status(401).json({ error: 'Invalid or expired token' });
+  }
+});
+
+// ---- Phone Binding ----
+
+// Send OTP to a phone number for binding
+router.post('/send-phone-otp', requireAuth, async (req, res) => {
+  const { phone } = req.body;
+  if (!phone || !/^\+?[0-9]{6,15}$/.test(phone)) {
+    return res.status(400).json({ error: 'Valid phone number required (6-15 digits, optional + prefix)' });
+  }
+
+  try {
+    // Check if phone is already bound to another account
+    const existing = await query(`SELECT id FROM users WHERE phone = $1 AND id != $2`, [phone, req.userId]);
+    if (existing.rows.length > 0) {
+      return res.status(400).json({ error: 'This phone number is already bound to another account.' });
+    }
+
+    // Rate-limit: reject if an OTP was issued within the last 60 seconds
+    const otpCheck = await query(`SELECT phone_otp_expires FROM users WHERE id = $1`, [req.userId]);
+    if (otpCheck.rows[0]?.phone_otp_expires) {
+      const otpIssuedAt = new Date(otpCheck.rows[0].phone_otp_expires).getTime() - 10 * 60 * 1000;
+      if (Date.now() - otpIssuedAt < 60 * 1000) {
+        return res.status(429).json({ error: 'Please wait 60 seconds before requesting a new code.' });
+      }
+    }
+
+    // Generate 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+    // Store OTP in users table
+    await query(
+      `UPDATE users SET phone_otp = $1, phone_otp_expires = $2 WHERE id = $3`,
+      [otp, expires, req.userId]
+    );
+
+    // In production, send via SMS provider (Twilio, etc.)
+    // For now, log the OTP for debugging. The client will NOT receive it.
+    console.log(`[PHONE-OTP] User ${req.userId} → ${phone}: ${otp}`);
+
+    res.json({ success: true, message: `Verification code sent to ${phone}` });
+  } catch (err) {
+    console.error('Send phone OTP error:', err);
+    res.status(500).json({ error: 'Failed to send verification code' });
+  }
+});
+
+// Bind phone — verifies OTP and sets phone
+router.post('/bind-phone', requireAuth, async (req, res) => {
+  const { phone, otp } = req.body;
+  if (!phone || !otp) return res.status(400).json({ error: 'Phone and OTP required' });
+
+  try {
+    const result = await query(
+      `SELECT phone_otp, phone_otp_expires FROM users WHERE id = $1`,
+      [req.userId]
+    );
+    const user = result.rows[0];
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    if (!user.phone_otp || user.phone_otp !== otp) {
+      return res.status(400).json({ error: 'Incorrect verification code' });
+    }
+    if (new Date() > new Date(user.phone_otp_expires)) {
+      return res.status(400).json({ error: 'Verification code has expired. Please request a new one.' });
+    }
+
+    // Check if phone is already bound to another account
+    const existing = await query(`SELECT id FROM users WHERE phone = $1 AND id != $2`, [phone, req.userId]);
+    if (existing.rows.length > 0) {
+      return res.status(400).json({ error: 'This phone number is already bound to another account.' });
+    }
+
+    // Bind the phone and clear OTP
+    await query(
+      `UPDATE users SET phone = $1, phone_otp = NULL, phone_otp_expires = NULL WHERE id = $2`,
+      [phone, req.userId]
+    );
+
+    res.json({ success: true, message: 'Phone number bound successfully', phoneBound: phone });
+  } catch (err) {
+    console.error('Bind phone error:', err);
+    res.status(500).json({ error: 'Failed to bind phone' });
+  }
+});
+
+// Get current user's bound phone status
+router.get('/phone-status', requireAuth, async (req, res) => {
+  try {
+    const result = await query(`SELECT phone FROM users WHERE id = $1`, [req.userId]);
+    const user = result.rows[0];
+    res.json({ phoneBound: user?.phone || null });
+  } catch (err) {
+    console.error('Phone status error:', err.message);
+    res.json({ phoneBound: null });
   }
 });
 

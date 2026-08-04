@@ -1,4 +1,5 @@
 import express from 'express';
+import bcrypt from 'bcryptjs';
 import { query } from '../db.js';
 import { requireAuth } from '../middleware/auth.js';
 
@@ -93,7 +94,7 @@ router.get('/withdrawals', requireAuth, async (req, res) => {
 // Create Withdrawal Request
 router.post('/withdrawals', requireAuth, async (req, res) => {
   try {
-    const { amount, coin, network, address } = req.body;
+    const { amount, coin, network, address, transactionPassword } = req.body;
     const numAmount = parseFloat(amount);
     const fee = 1.00; // $1 USDT network withdrawal fee
 
@@ -105,11 +106,26 @@ router.post('/withdrawals', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'Withdrawal address is required.' });
     }
 
-    const userRes = await query(`SELECT available_balance, total_assets FROM users WHERE id = $1;`, [req.userId]);
+    // Transaction password is required for withdrawals
+    if (!transactionPassword) {
+      return res.status(400).json({ error: 'Transaction password is required for withdrawals.' });
+    }
+
+    const userRes = await query(`SELECT available_balance, total_assets, transaction_password FROM users WHERE id = $1;`, [req.userId]);
     if (userRes.rows.length === 0) return res.status(404).json({ error: 'User not found' });
 
-    const available = parseFloat(userRes.rows[0].available_balance);
-    const totalAssets = parseFloat(userRes.rows[0].total_assets);
+    const user = userRes.rows[0];
+    const available = parseFloat(user.available_balance);
+    const totalAssets = parseFloat(user.total_assets);
+
+    // Verify transaction password
+    if (!user.transaction_password) {
+      return res.status(400).json({ error: 'Please set a transaction password first in Security Settings.' });
+    }
+    const pwdMatch = await bcrypt.compare(transactionPassword, user.transaction_password);
+    if (!pwdMatch) {
+      return res.status(400).json({ error: 'Incorrect transaction password.' });
+    }
 
     if (available < numAmount + fee) {
       return res.status(400).json({ error: `Insufficient available balance. Minimum required including fee: $${(numAmount + fee).toFixed(2)}` });

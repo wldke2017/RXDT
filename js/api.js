@@ -42,6 +42,11 @@ export const api = {
   register: (data) => request('/api/auth/register', { method: 'POST', body: data }),
   getMe: () => request('/api/auth/me'),
 
+  // Phone Binding
+  sendPhoneOtp: (phone) => request('/api/auth/send-phone-otp', { method: 'POST', body: { phone } }),
+  bindPhone: (phone, otp) => request('/api/auth/bind-phone', { method: 'POST', body: { phone, otp } }),
+  getPhoneStatus: () => request('/api/auth/phone-status'),
+
   // Trading / AI Models
   getAiModels: () => request('/api/ai-models'),
   getOrders: () => request('/api/orders'),

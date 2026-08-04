@@ -231,7 +231,7 @@ function renderRecharge() {
 
 function renderNetworkOptions(coinData) {
   return coinData.networks.map((net, i) => `
-    <div class="network-option ${i===0?'active':''}" onclick="selectNetwork('${coinData.coin}','${net.name}',this)">
+    <div class="network-option ${i === 0 ? 'active' : ''}" onclick="selectNetwork('${coinData.coin}','${net.name}',this)">
       <div class="network-name">${net.name}</div>
       <div class="network-meta">~${net.confirmations} confirmations · Rate: ${fmt(net.rate)}</div>
     </div>
@@ -326,6 +326,15 @@ function renderWithdraw() {
       </div>
       <div id="withdraw-fee-calc" style="font-size:13px;color:var(--text-muted);margin-bottom:16px;"></div>
 
+      <div class="form-group">
+        <label class="form-label">Transaction Password</label>
+        <div class="input-suffix">
+          <input type="password" id="withdraw-txn-pwd" class="form-control" placeholder="Enter 6-digit transaction password" maxlength="6" oninput="this.value = this.value.replace(/[^0-9]/g, '')"/>
+          <button class="pwd-toggle" onclick="togglePwd('withdraw-txn-pwd')">👁</button>
+        </div>
+        <div style="font-size:12px;color:var(--text-muted);margin-top:4px;">Required to authorize this withdrawal. Set it in Security Settings if not set.</div>
+      </div>
+
       <button class="btn-dark" style="width:100%;height:48px;font-size:16px;" onclick="submitWithdrawal()">Submit Withdrawal</button>
       <div style="text-align:center;margin-top:12px;">
         <a onclick="navigateTo('bind-address')" class="link" style="font-size:13px;">+ Bind new withdrawal address</a>
@@ -375,9 +384,9 @@ function renderBindAddress() {
           <div class="bind-addr-icon">${a.method === 'crypto' ? '🔗' : '🏦'}</div>
           <div class="bind-addr-info">
             ${a.method === 'crypto'
-              ? `<div class="bai-main">${a.coin} (${a.network})</div><div class="bai-sub">${a.address}</div>`
-              : `<div class="bai-main">${a.bankName} · ${a.branchName}</div><div class="bai-sub">${a.cardNumber}</div>`
-            }
+      ? `<div class="bai-main">${a.coin} (${a.network})</div><div class="bai-sub">${a.address}</div>`
+      : `<div class="bai-main">${a.bankName} · ${a.branchName}</div><div class="bai-sub">${a.cardNumber}</div>`
+    }
           </div>
         </div>
       `).join('')}
@@ -467,7 +476,7 @@ export function init(page) {
       'BEP20': '0xaff3696164faaa572018494701688b8c326c98de',
     },
     'BTC': {
-      'BTC':   '1HaFqtZeHBa99Lvs884vURfTW9TLp7wTBZ',
+      'BTC': '1HaFqtZeHBa99Lvs884vURfTW9TLp7wTBZ',
     },
     'ETH': {
       'BEP20': '0xaff3696164faaa572018494701688b8c326c98de',
@@ -493,7 +502,7 @@ export function init(page) {
     ],
   };
 
-  window.onDepCoinChange = function(coin) {
+  window.onDepCoinChange = function (coin) {
     // Update network options for selected coin
     const netSel = document.getElementById('dep-network-select');
     if (netSel) {
@@ -510,11 +519,11 @@ export function init(page) {
     window.updateDepCryptoApprox(amountVal);
   };
 
-  window.onDepNetworkChange = function(network) {
+  window.onDepNetworkChange = function (network) {
     // nothing extra needed - address will be read on submit
   };
 
-  window.updateDepCryptoApprox = function(val) {
+  window.updateDepCryptoApprox = function (val) {
     const el = document.getElementById('dep-approx-val');
     const coin = document.getElementById('dep-coin-select')?.value || 'USDT';
     const num = parseFloat(val) || 0;
@@ -523,7 +532,7 @@ export function init(page) {
     }
   };
 
-  window.handleDepositSubmit = async function() {
+  window.handleDepositSubmit = async function () {
     const coin = document.getElementById('dep-coin-select')?.value || 'USDT';
     const network = document.getElementById('dep-network-select')?.value || 'TRC20';
     const amount = parseFloat(document.getElementById('dep-amount-input')?.value || 0);
@@ -625,7 +634,7 @@ export function init(page) {
     }
   };
 
-  window.closeCheckoutModal = function() {
+  window.closeCheckoutModal = function () {
     const modal = document.getElementById('checkout-modal');
     if (modal) modal.classList.remove('active');
     if (depositTimerInterval) clearInterval(depositTimerInterval);
@@ -652,12 +661,12 @@ export function init(page) {
     }, 1000);
   }
 
-  window.copyAddress = function(addr) {
+  window.copyAddress = function (addr) {
     navigator.clipboard?.writeText(addr).then(() => toast('Address copied!', 'success'))
       .catch(() => { const ta = document.createElement('textarea'); ta.value = addr; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); toast('Address copied!', 'success'); });
   };
 
-  window.submitDeposit = function() {
+  window.submitDeposit = function () {
     const addr = document.getElementById('dep-from-addr')?.value;
     const amount = parseFloat(document.getElementById('dep-amount')?.value || 0);
     if (!addr) { toast('Please enter your wallet address', 'error'); return; }
@@ -667,14 +676,14 @@ export function init(page) {
     setTimeout(() => window.location.hash = '#/assets', 1000);
   };
 
-  window.switchWithdrawTab = function(tab, btn) {
+  window.switchWithdrawTab = function (tab, btn) {
     document.querySelectorAll('.tabs-header .tab-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     document.getElementById('withdraw-crypto-panel').style.display = tab === 'crypto' ? '' : 'none';
     document.getElementById('withdraw-bank-panel').style.display = tab === 'bank' ? '' : 'none';
   };
 
-  window.calcWithdrawFee = function(val) {
+  window.calcWithdrawFee = function (val) {
     const el = document.getElementById('withdraw-fee-calc');
     if (!el || !val) return;
     const fee = Math.max(2, parseFloat(val) * 0.005);
@@ -682,21 +691,29 @@ export function init(page) {
     el.innerHTML = `Fee: $${fmt(fee)} · You receive: <strong>$${fmt(actual)}</strong>`;
   };
 
-  window.fillWithdrawAddress = function(sel) {
+  window.fillWithdrawAddress = function (sel) {
     const addr = document.getElementById('withdraw-address');
     if (addr) addr.value = sel.value;
   };
 
-  window.submitWithdrawal = async function() {
+  window.togglePwd = function (id) {
+    const inp = document.getElementById(id);
+    if (inp) inp.type = inp.type === 'password' ? 'text' : 'password';
+  };
+
+  window.submitWithdrawal = async function () {
     const user = store.getUser();
     const amount = parseFloat(document.getElementById('withdraw-amount')?.value || 0);
     const address = document.getElementById('withdraw-address')?.value || '';
+    const transactionPassword = document.getElementById('withdraw-txn-pwd')?.value || '';
     if (!amount || amount < 10) { toast('Minimum withdrawal is $10 USDT', 'error'); return; }
     if (amount > user.availableBalance) { toast('Insufficient balance', 'error'); return; }
     if (!address) { toast('Please enter withdrawal address', 'error'); return; }
+    if (!transactionPassword) { toast('Please enter your transaction password', 'error'); return; }
+    if (!/^\d{6}$/.test(transactionPassword)) { toast('Transaction password must be exactly 6 digits', 'error'); return; }
     const fee = 1.00;
     try {
-      await store.addWithdrawal({ coin: 'USDT', network: 'TRC-20', amount, fee, actualAmount: amount - fee, address });
+      await store.addWithdrawal({ coin: 'USDT', network: 'TRC-20', amount, fee, actualAmount: amount - fee, address, transactionPassword });
       toast('Withdrawal submitted! Under review.', 'success');
       setTimeout(() => window.location.hash = '#/assets', 800);
     } catch (err) {
@@ -704,14 +721,14 @@ export function init(page) {
     }
   };
 
-  window.switchBindTab = function(tab, btn) {
+  window.switchBindTab = function (tab, btn) {
     document.querySelectorAll('.tabs-header .tab-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     document.getElementById('bind-crypto-panel').style.display = tab === 'crypto' ? '' : 'none';
     document.getElementById('bind-bank-panel').style.display = tab === 'bank' ? '' : 'none';
   };
 
-  window.submitBindAddress = async function() {
+  window.submitBindAddress = async function () {
     const coin = document.getElementById('bind-coin')?.value || 'USDT';
     const network = document.getElementById('bind-network')?.value || 'TRC-20';
     const address = document.getElementById('bind-address-val')?.value || '';
