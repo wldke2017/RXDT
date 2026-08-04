@@ -1,22 +1,8 @@
 import express from 'express';
 import { query } from '../db.js';
-import jwt from 'jsonwebtoken';
+import { requireAuth } from '../middleware/auth.js';
 
 const router = express.Router();
-const JWT_SECRET = process.env.JWT_SECRET || 'rxdt_exchange_super_secret_jwt_key_2026';
-
-function authenticate(req, res, next) {
-  const authHeader = req.headers.authorization;
-  if (!authHeader) return res.status(401).json({ error: 'Authorization header missing' });
-  const token = authHeader.split(' ')[1];
-  try {
-    const decoded = jwt.verify(token, JWT_SECRET);
-    req.user = decoded;
-    next();
-  } catch (err) {
-    return res.status(401).json({ error: 'Invalid or expired token' });
-  }
-}
 
 const PRIZES = [
   { id: 1, name: '0.88 USDT', value: 0.88, probability: 0.35, icon: '💵' },
@@ -30,7 +16,7 @@ const PRIZES = [
 ];
 
 // Perform Spin
-router.post('/spin', authenticate, async (req, res) => {
+router.post('/spin', requireAuth, async (req, res) => {
   try {
     const userRes = await query(`SELECT name, available_balance, total_assets, spin_chances FROM users WHERE id = $1;`, [req.user.id]);
     if (userRes.rows.length === 0) return res.status(404).json({ error: 'User not found' });

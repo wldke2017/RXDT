@@ -1,21 +1,8 @@
 import express from 'express';
 import { query } from '../db.js';
-import jwt from 'jsonwebtoken';
+import { requireAuth } from '../middleware/auth.js';
 
 const router = express.Router();
-
-// Middleware to verify JWT
-function requireAuth(req, res, next) {
-  const auth = req.headers.authorization;
-  if (!auth || !auth.startsWith('Bearer ')) return res.status(401).json({ error: 'Unauthorized' });
-  try {
-    const decoded = jwt.verify(auth.slice(7), process.env.JWT_SECRET || 'rxdt_jwt_secret_2026');
-    req.userId = decoded.userId;
-    next();
-  } catch {
-    res.status(401).json({ error: 'Invalid token' });
-  }
-}
 
 // Send OTP to a given email address (for binding OR for password change)
 router.post('/send-otp', requireAuth, async (req, res) => {
@@ -25,6 +12,15 @@ router.post('/send-otp', requireAuth, async (req, res) => {
   }
 
   try {
+    // Rate-limit: reject if an OTP was issued within the last 60 seconds
+    const otpCheck = await query(`SELECT email_otp_expires FROM users WHERE id = $1`, [req.userId]);
+    if (otpCheck.rows[0]?.email_otp_expires) {
+      const otpIssuedAt = new Date(otpCheck.rows[0].email_otp_expires).getTime() - 10 * 60 * 1000;
+      if (Date.now() - otpIssuedAt < 60 * 1000) {
+        return res.status(429).json({ error: 'Please wait 60 seconds before requesting a new code.' });
+      }
+    }
+
     // Generate 6-digit OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const expires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
@@ -81,13 +77,11 @@ router.post('/send-otp', requireAuth, async (req, res) => {
       resendErrMsg = e.message;
     }
 
-    // Always respond with success, providing demoCode if Resend couldn't deliver
+    // If Resend couldn't deliver, do NOT leak the OTP to the client.
+    // In production the user must rely on the email. Log for debugging only.
     if (resendFailed) {
-      return res.json({
-        success: true,
-        demoCode: otp,
-        message: `Verification code generated! (Demo code auto-filled: ${otp})`
-      });
+      console.warn(`OTP delivery failed for user ${req.userId}: ${resendErrMsg}`);
+      return res.status(502).json({ success: false, error: 'Failed to send verification email. Please try again later.' });
     }
 
     res.json({ success: true, message: `Verification code sent to ${email}` });
@@ -161,9 +155,11 @@ router.post('/change-password', requireAuth, async (req, res) => {
       updateSql = `UPDATE users SET password_hash = $1, email_otp = NULL, email_otp_expires = NULL WHERE id = $2`;
       params = [hash, req.userId];
     } else {
-      // Transaction password stored as separate field
+      // Transaction password must also be hashed — never store plain text
+      const bcrypt = await import('bcryptjs');
+      const hash = await bcrypt.default.hash(newPassword, 10);
       updateSql = `UPDATE users SET transaction_password = $1, email_otp = NULL, email_otp_expires = NULL WHERE id = $2`;
-      params = [newPassword, req.userId];
+      params = [hash, req.userId];
     }
 
     await query(updateSql, params);
@@ -220,12 +216,21 @@ router.post('/send-otp-public', async (req, res) => {
     const user = result.rows[0];
     if (!user) return res.status(404).json({ error: 'No account found with this email address' });
 
+    // Rate-limit: reject if an OTP was issued within the last 60 seconds
+    const rateCheck = await query(`SELECT email_otp_expires FROM users WHERE id = $1`, [user.id]);
+    if (rateCheck.rows[0]?.email_otp_expires) {
+      const otpIssuedAt = new Date(rateCheck.rows[0].email_otp_expires).getTime() - 10 * 60 * 1000;
+      if (Date.now() - otpIssuedAt < 60 * 1000) {
+        return res.status(429).json({ error: 'Please wait 60 seconds before requesting a new code.' });
+      }
+    }
+
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const expires = new Date(Date.now() + 10 * 60 * 1000);
 
     await query(`UPDATE users SET email_otp = $1, email_otp_expires = $2 WHERE id = $3`, [otp, expires, user.id]);
 
-    await fetch('https://api.resend.com/emails', {
+    const resendRes = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${process.env.RESEND_API_KEY}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -235,6 +240,9 @@ router.post('/send-otp-public', async (req, res) => {
         html: `<div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;padding:32px;background:#0a0e1a;border-radius:16px;border:1px solid #1e2a3a;"><h1 style="color:#00d4ff;">RXDT Exchange</h1><p style="color:#8899aa;">Your password reset code:</p><div style="background:#111827;border:2px solid #00d4ff;border-radius:12px;padding:24px;text-align:center;"><span style="font-size:40px;font-weight:900;letter-spacing:12px;color:#00d4ff;">${otp}</span></div><p style="color:#8899aa;font-size:12px;margin-top:16px;">Expires in 10 minutes. Do not share this code.</p></div>`,
       }),
     });
+    if (!resendRes.ok) {
+      console.warn('Resend password reset send warning:', await resendRes.json().catch(() => ({})));
+    }
 
     res.json({ success: true, message: `Reset code sent to ${email}` });
   } catch (err) {

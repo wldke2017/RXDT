@@ -4,7 +4,12 @@ import jwt from 'jsonwebtoken';
 import { query } from '../db.js';
 
 const router = express.Router();
-const JWT_SECRET = process.env.JWT_SECRET || 'rxdt_exchange_super_secret_jwt_key_2026';
+// JWT_SECRET must be set via environment. No fallback: a leaked default
+// secret would allow attackers to forge tokens for any user.
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  console.error('❌ JWT_SECRET environment variable is required!');
+}
 
 // Register endpoint
 router.post('/register', async (req, res) => {
@@ -17,7 +22,7 @@ router.post('/register', async (req, res) => {
     }
 
     // Ensure phone column allows null (fail-safe migration)
-    await query(`ALTER TABLE users ALTER COLUMN phone DROP NOT NULL;`).catch(() => {});
+    await query(`ALTER TABLE users ALTER COLUMN phone DROP NOT NULL;`).catch(() => { });
 
     // Check if user already exists
     let existing;
@@ -93,8 +98,8 @@ router.post('/login', async (req, res) => {
 
     const user = userRes.rows[0];
     const match = await bcrypt.compare(password, user.password_hash);
-    
-    if (!match && password !== 'password123') {
+
+    if (!match) {
       return res.status(400).json({ error: 'Invalid password.' });
     }
 

@@ -5,7 +5,11 @@ const router = express.Router();
 
 function requireAdminSecret(req, res, next) {
   const adminSecret = req.headers['x-admin-secret'] || req.query.admin_secret;
-  const expectedSecret = process.env.ADMIN_SECRET || 'rxdt_admin_secret_key_2026';
+  const expectedSecret = process.env.ADMIN_SECRET;
+  if (!expectedSecret) {
+    console.error('❌ ADMIN_SECRET environment variable is required for admin routes.');
+    return res.status(503).json({ error: 'Admin routes not configured.' });
+  }
   if (!adminSecret || adminSecret !== expectedSecret) {
     return res.status(403).json({ error: 'Access denied: Invalid Admin Secret' });
   }
@@ -257,18 +261,21 @@ router.post('/withdrawals/reject', requireAdminSecret, async (req, res) => {
     if (!witRes.rows.length) { await query('ROLLBACK'); return res.status(404).json({ error: 'Withdrawal not found' }); }
     const w = witRes.rows[0];
     if (w.audit_status !== 'pending') { await query('ROLLBACK'); return res.status(400).json({ error: `Already ${w.audit_status}` }); }
+    // Refund the full amount plus the $1 fee that was deducted when the withdrawal was created
     const amount = parseFloat(w.amount);
+    const fee = parseFloat(w.fee || 0);
+    const refundTotal = amount + fee;
     await query(`UPDATE withdrawals SET status = 'failed', audit_status = 'rejected' WHERE id = $1`, [withdrawalId]);
     const userRes = await query(
       `UPDATE users SET available_balance = available_balance + $1, total_assets = total_assets + $1 WHERE id = $2 RETURNING available_balance`,
-      [amount, w.user_id]
+      [refundTotal, w.user_id]
     );
     await query(
       `INSERT INTO account_changes (id, user_id, type, amount, balance_after, remark) VALUES ($1,$2,$3,$4,$5,$6)`,
-      ['AC' + Date.now(), w.user_id, 'withdrawal_refund', amount, userRes.rows[0].available_balance, `Withdrawal rejected & refunded: ${reason || 'Audit failed'}`]
+      ['AC' + Date.now(), w.user_id, 'withdrawal_refund', refundTotal, userRes.rows[0].available_balance, `Withdrawal rejected & refunded (incl. fee): ${reason || 'Audit failed'}`]
     );
     await query('COMMIT');
-    res.json({ message: `Withdrawal ${w.order_number} rejected & $${amount} refunded!` });
+    res.json({ message: `Withdrawal ${w.order_number} rejected & $${refundTotal.toFixed(2)} (incl. fee) refunded!` });
   } catch (err) {
     await query('ROLLBACK');
     res.status(500).json({ error: 'Failed to reject withdrawal' });

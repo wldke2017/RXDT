@@ -1,9 +1,8 @@
 import express from 'express';
-import jwt from 'jsonwebtoken';
 import { query } from '../db.js';
+import { requireAuth } from '../middleware/auth.js';
 
 const router = express.Router();
-const JWT_SECRET = process.env.JWT_SECRET || 'rxdt_exchange_super_secret_jwt_key_2026';
 
 // ---- Signal Tier Configuration ----
 // Kenya EAT (UTC+3) signal windows in UTC:
@@ -74,7 +73,7 @@ export async function setTestSignalWindow(durationMinutes = 15, signalId = 1) {
       value TEXT,
       updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
     )
-  `).catch(() => {});
+  `).catch(() => { });
   await query(
     `INSERT INTO system_settings (key, value, updated_at) VALUES ('test_signal', $1, NOW())
      ON CONFLICT (key) DO UPDATE SET value = $1, updated_at = NOW()`,
@@ -83,7 +82,7 @@ export async function setTestSignalWindow(durationMinutes = 15, signalId = 1) {
 }
 
 export async function clearTestSignalWindow() {
-  await query(`DELETE FROM system_settings WHERE key = 'test_signal'`).catch(() => {});
+  await query(`DELETE FROM system_settings WHERE key = 'test_signal'`).catch(() => { });
 }
 
 export async function getTestSignalStatus() {
@@ -93,7 +92,7 @@ export async function getTestSignalStatus() {
     const data = JSON.parse(res.rows[0].value);
     const expiresAt = new Date(data.expiresAt);
     if (new Date() > expiresAt) {
-      clearTestSignalWindow().catch(() => {});
+      clearTestSignalWindow().catch(() => { });
       return null;
     }
     const minsLeft = Math.ceil((expiresAt.getTime() - Date.now()) / 60000);
@@ -118,7 +117,7 @@ async function getActiveSignal() {
 
   const now = new Date();
   const utcHour = now.getUTCHours();
-  const utcMin  = now.getUTCMinutes();
+  const utcMin = now.getUTCMinutes();
 
   for (const w of SIGNAL_WINDOWS) {
     if (utcHour === w.utcHour && utcMin >= w.utcMinStart && utcMin < w.utcMinEnd) {
@@ -140,21 +139,8 @@ async function getActiveSignal() {
   return null;
 }
 
-// ---- Auth Middleware ----
-function authMiddleware(req, res, next) {
-  const token = req.headers['authorization']?.split(' ')[1];
-  if (!token) return res.status(401).json({ error: 'Unauthorized' });
-  try {
-    const decoded = jwt.verify(token, JWT_SECRET);
-    req.userId = decoded.id;
-    next();
-  } catch {
-    return res.status(401).json({ error: 'Invalid or expired token' });
-  }
-}
-
 // ---- GET /api/signals/active ----
-router.get('/active', authMiddleware, async (req, res) => {
+router.get('/active', requireAuth, async (req, res) => {
   try {
     const signal = await getActiveSignal();
     const userRes = await query(
@@ -227,8 +213,8 @@ async function processDueSignalTrades(userId) {
         `INSERT INTO account_changes (id, user_id, type, amount, balance_after, remark)
          VALUES ($1, $2, 'signal_close', $3, $4, $5)`,
         [closeId, userId, 'signal_close', returnTotal, newBal,
-         `Signal ${trade.signal_id} — Close Position (${trade.pair}) +${profit.toFixed(4)} USDT`]
-      ).catch(() => {});
+          `Signal ${trade.signal_id} — Close Position (${trade.pair}) +${profit.toFixed(4)} USDT`]
+      ).catch(() => { });
 
       // 4. Referral Commissions — auto-credit Level 1 (15%) and Level 2 (7.5%)
       try {
@@ -258,8 +244,8 @@ async function processDueSignalTrades(userId) {
               `INSERT INTO account_changes (id, user_id, type, amount, balance_after, remark)
                VALUES ($1, $2, 'commission', $3, $4, $5)`,
               ['AC' + Date.now() + 'R1', referrerId, l1Commission, l1Bal,
-               `L1 Referral Commission — ${trade.pair} trade by referred user +${l1Commission.toFixed(4)} USDT`]
-            ).catch(() => {});
+              `L1 Referral Commission — ${trade.pair} trade by referred user +${l1Commission.toFixed(4)} USDT`]
+            ).catch(() => { });
 
             // --- Level 2: 7.5% of profit to referrer's referrer ---
             const ref2Res = await query(`SELECT referred_by FROM users WHERE id = $1`, [referrerId]);
@@ -286,8 +272,8 @@ async function processDueSignalTrades(userId) {
                   `INSERT INTO account_changes (id, user_id, type, amount, balance_after, remark)
                    VALUES ($1, $2, 'commission', $3, $4, $5)`,
                   ['AC' + Date.now() + 'R2', level2Id, l2Commission, l2Bal,
-                   `L2 Referral Commission — ${trade.pair} trade by L2 referral +${l2Commission.toFixed(4)} USDT`]
-                ).catch(() => {});
+                  `L2 Referral Commission — ${trade.pair} trade by L2 referral +${l2Commission.toFixed(4)} USDT`]
+                ).catch(() => { });
               }
             }
           }
@@ -299,13 +285,13 @@ async function processDueSignalTrades(userId) {
       await query('COMMIT');
     }
   } catch (err) {
-    await query('ROLLBACK').catch(() => {});
+    await query('ROLLBACK').catch(() => { });
     console.error('Error settling due signal trades:', err);
   }
 }
 
 // ---- POST /api/signals/execute ----
-router.post('/execute', authMiddleware, async (req, res) => {
+router.post('/execute', requireAuth, async (req, res) => {
   try {
     await processDueSignalTrades(req.userId);
 
@@ -336,17 +322,17 @@ router.post('/execute', authMiddleware, async (req, res) => {
     }
 
     // 100% Capital Allocation Trade
-    const tradeAmount   = balance; // 100% of available balance used as trade position
-    const variation     = Math.random() * 0.10 - 0.05; // ±5% realistic market variation
-    const profitAmount  = parseFloat((balance * tier.profitOnBalancePercent * (1 + variation)).toFixed(4));
-    const newBalance    = parseFloat((balance + profitAmount).toFixed(4));
+    const tradeAmount = balance; // 100% of available balance used as trade position
+    const variation = Math.random() * 0.10 - 0.05; // ±5% realistic market variation
+    const profitAmount = parseFloat((balance * tier.profitOnBalancePercent * (1 + variation)).toFixed(4));
+    const newBalance = parseFloat((balance + profitAmount).toFixed(4));
 
     // Release at closeTime (e.g. 17:30, 18:30, 19:30 EAT / end of signal window)
     const releaseAt = signal.closeTime ? new Date(signal.closeTime).toISOString() : new Date(Date.now() + 30 * 60 * 1000).toISOString();
 
-    const now    = Date.now();
+    const now = Date.now();
     const tradeId = 'ST' + now;
-    const openId  = 'AC' + now + 'O';
+    const openId = 'AC' + now + 'O';
 
     await query('BEGIN');
 
@@ -392,14 +378,14 @@ router.post('/execute', authMiddleware, async (req, res) => {
       },
     });
   } catch (err) {
-    await query('ROLLBACK').catch(() => {});
+    await query('ROLLBACK').catch(() => { });
     console.error('Signal execute error:', err);
     res.status(500).json({ error: err.message });
   }
 });
 
 // ---- GET /api/signals/history ----
-router.get('/history', authMiddleware, async (req, res) => {
+router.get('/history', requireAuth, async (req, res) => {
   try {
     await processDueSignalTrades(req.userId);
     const result = await query(
@@ -413,7 +399,7 @@ router.get('/history', authMiddleware, async (req, res) => {
 });
 
 // ---- GET /api/signals/consume-record ----
-router.get('/consume-record', authMiddleware, async (req, res) => {
+router.get('/consume-record', requireAuth, async (req, res) => {
   try {
     await processDueSignalTrades(req.userId);
     const result = await query(

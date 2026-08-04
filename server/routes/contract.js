@@ -1,20 +1,8 @@
 import express from 'express';
 import { query } from '../db.js';
-import jwt from 'jsonwebtoken';
+import { requireAuth } from '../middleware/auth.js';
 
 const router = express.Router();
-
-function requireAuth(req, res, next) {
-  const auth = req.headers.authorization;
-  if (!auth || !auth.startsWith('Bearer ')) return res.status(401).json({ error: 'Unauthorized' });
-  try {
-    const decoded = jwt.verify(auth.slice(7), process.env.JWT_SECRET || 'rxdt_jwt_secret_2026');
-    req.userId = decoded.userId;
-    next();
-  } catch {
-    res.status(401).json({ error: 'Invalid token' });
-  }
-}
 
 // Fetch live price from Binance REST API
 async function getBinancePrice(symbol) {

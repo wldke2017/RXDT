@@ -1,27 +1,13 @@
 import express from 'express';
 import { query } from '../db.js';
-import jwt from 'jsonwebtoken';
+import { requireAuth } from '../middleware/auth.js';
 
 const router = express.Router();
-const JWT_SECRET = process.env.JWT_SECRET || 'rxdt_exchange_super_secret_jwt_key_2026';
-
-function authenticate(req, res, next) {
-  const authHeader = req.headers.authorization;
-  if (!authHeader) return res.status(401).json({ error: 'Authorization header missing' });
-  const token = authHeader.split(' ')[1];
-  try {
-    const decoded = jwt.verify(token, JWT_SECRET);
-    req.user = decoded;
-    next();
-  } catch (err) {
-    return res.status(401).json({ error: 'Invalid or expired token' });
-  }
-}
 
 // Get Deposits
-router.get('/deposits', authenticate, async (req, res) => {
+router.get('/deposits', requireAuth, async (req, res) => {
   try {
-    const resDb = await query(`SELECT * FROM deposits WHERE user_id = $1 ORDER BY created_at DESC;`, [req.user.id]);
+    const resDb = await query(`SELECT * FROM deposits WHERE user_id = $1 ORDER BY created_at DESC;`, [req.userId]);
     res.json({
       deposits: resDb.rows.map(d => ({
         id: d.id,
@@ -42,7 +28,7 @@ router.get('/deposits', authenticate, async (req, res) => {
 });
 
 // Create Deposit Request
-router.post('/deposits', authenticate, async (req, res) => {
+router.post('/deposits', requireAuth, async (req, res) => {
   try {
     const { amount, coin, network, txHash } = req.body;
     const numAmount = parseFloat(amount);
@@ -58,7 +44,7 @@ router.post('/deposits', authenticate, async (req, res) => {
       INSERT INTO deposits (id, order_number, user_id, amount, coin, network, tx_hash, status, audit_status)
       VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending', 'pending')
       RETURNING *;
-    `, [id, orderNumber, req.user.id, numAmount, coin || 'USDT', network || 'TRC-20', txHash || '']);
+    `, [id, orderNumber, req.userId, numAmount, coin || 'USDT', network || 'TRC-20', txHash || '']);
 
     const d = insertRes.rows[0];
     res.json({
@@ -82,9 +68,9 @@ router.post('/deposits', authenticate, async (req, res) => {
 });
 
 // Get Withdrawals
-router.get('/withdrawals', authenticate, async (req, res) => {
+router.get('/withdrawals', requireAuth, async (req, res) => {
   try {
-    const resDb = await query(`SELECT * FROM withdrawals WHERE user_id = $1 ORDER BY created_at DESC;`, [req.user.id]);
+    const resDb = await query(`SELECT * FROM withdrawals WHERE user_id = $1 ORDER BY created_at DESC;`, [req.userId]);
     res.json({
       withdrawals: resDb.rows.map(w => ({
         id: w.id,
@@ -105,10 +91,11 @@ router.get('/withdrawals', authenticate, async (req, res) => {
 });
 
 // Create Withdrawal Request
-router.post('/withdrawals', authenticate, async (req, res) => {
+router.post('/withdrawals', requireAuth, async (req, res) => {
   try {
     const { amount, coin, network, address } = req.body;
     const numAmount = parseFloat(amount);
+    const fee = 1.00; // $1 USDT network withdrawal fee
 
     if (!numAmount || numAmount < 10) {
       return res.status(400).json({ error: 'Minimum withdrawal amount is $10 USDT.' });
@@ -118,36 +105,35 @@ router.post('/withdrawals', authenticate, async (req, res) => {
       return res.status(400).json({ error: 'Withdrawal address is required.' });
     }
 
-    const userRes = await query(`SELECT available_balance, total_assets FROM users WHERE id = $1;`, [req.user.id]);
+    const userRes = await query(`SELECT available_balance, total_assets FROM users WHERE id = $1;`, [req.userId]);
     if (userRes.rows.length === 0) return res.status(404).json({ error: 'User not found' });
 
     const available = parseFloat(userRes.rows[0].available_balance);
     const totalAssets = parseFloat(userRes.rows[0].total_assets);
 
-    if (available < numAmount) {
-      return res.status(400).json({ error: 'Insufficient available balance.' });
+    if (available < numAmount + fee) {
+      return res.status(400).json({ error: `Insufficient available balance. Minimum required including fee: $${(numAmount + fee).toFixed(2)}` });
     }
 
     const id = 'W' + Date.now();
     const orderNumber = 'WIT' + Date.now();
-    const fee = 1.00; // $1 USDT network withdrawal fee
-    const newAvailable = available - numAmount;
-    const newTotal = totalAssets - numAmount;
+    const newAvailable = available - numAmount - fee;
+    const newTotal = totalAssets - numAmount - fee;
 
     await query('BEGIN');
 
-    await query(`UPDATE users SET available_balance = $1, total_assets = $2 WHERE id = $3;`, [newAvailable, newTotal, req.user.id]);
+    await query(`UPDATE users SET available_balance = $1, total_assets = $2 WHERE id = $3;`, [newAvailable, newTotal, req.userId]);
 
     const insertRes = await query(`
       INSERT INTO withdrawals (id, order_number, user_id, amount, coin, network, address, fee, status, audit_status)
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'processing', 'pending')
       RETURNING *;
-    `, [id, orderNumber, req.user.id, numAmount, coin || 'USDT', network || 'TRC-20', address, fee]);
+    `, [id, orderNumber, req.userId, numAmount, coin || 'USDT', network || 'TRC-20', address, fee]);
 
     await query(`
       INSERT INTO account_changes (id, user_id, type, amount, balance_after, remark)
       VALUES ($1, $2, 'Crypto Withdrawal', $3, $4, $5);
-    `, ['AC' + Date.now(), req.user.id, -numAmount, newAvailable, `Withdrawal to ${address.slice(0, 8)}...`]);
+    `, ['AC' + Date.now(), req.userId, -(numAmount + fee), newAvailable, `Withdrawal to ${address.slice(0, 8)}... (incl. $${fee.toFixed(2)} fee)`]);
 
     await query('COMMIT');
 
@@ -176,9 +162,9 @@ router.post('/withdrawals', authenticate, async (req, res) => {
 });
 
 // Get Account Changes
-router.get('/account-changes', authenticate, async (req, res) => {
+router.get('/account-changes', requireAuth, async (req, res) => {
   try {
-    const resDb = await query(`SELECT * FROM account_changes WHERE user_id = $1 ORDER BY created_at DESC;`, [req.user.id]);
+    const resDb = await query(`SELECT * FROM account_changes WHERE user_id = $1 ORDER BY created_at DESC;`, [req.userId]);
     res.json({
       changes: resDb.rows.map(c => ({
         id: c.id,
@@ -195,16 +181,16 @@ router.get('/account-changes', authenticate, async (req, res) => {
 });
 
 // Get & Bind Addresses
-router.get('/bind-addresses', authenticate, async (req, res) => {
+router.get('/bind-addresses', requireAuth, async (req, res) => {
   try {
-    const resDb = await query(`SELECT * FROM bind_addresses WHERE user_id = $1 ORDER BY created_at DESC;`, [req.user.id]);
+    const resDb = await query(`SELECT * FROM bind_addresses WHERE user_id = $1 ORDER BY created_at DESC;`, [req.userId]);
     res.json({ addresses: resDb.rows });
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch bind addresses' });
   }
 });
 
-router.post('/bind-addresses', authenticate, async (req, res) => {
+router.post('/bind-addresses', requireAuth, async (req, res) => {
   try {
     const { coin, network, address, label } = req.body;
     if (!address) return res.status(400).json({ error: 'Wallet address is required.' });
@@ -216,7 +202,7 @@ router.post('/bind-addresses', authenticate, async (req, res) => {
     const existingNetwork = await query(`
       SELECT * FROM bind_addresses 
       WHERE user_id = $1 AND coin = $2 AND network = $3;
-    `, [req.user.id, targetCoin, targetNetwork]);
+    `, [req.userId, targetCoin, targetNetwork]);
 
     if (existingNetwork.rows.length > 0) {
       return res.status(400).json({ error: `Wallet address already bound for ${targetCoin} (${targetNetwork}). You can only bind one address per network.` });
@@ -226,7 +212,7 @@ router.post('/bind-addresses', authenticate, async (req, res) => {
     const existingAddress = await query(`
       SELECT * FROM bind_addresses 
       WHERE user_id = $1 AND address = $2;
-    `, [req.user.id, address]);
+    `, [req.userId, address]);
 
     if (existingAddress.rows.length > 0) {
       return res.status(400).json({ error: 'Wallet address already bound to your account.' });
@@ -237,7 +223,7 @@ router.post('/bind-addresses', authenticate, async (req, res) => {
       INSERT INTO bind_addresses (id, user_id, method, coin, network, address, label)
       VALUES ($1, $2, 'crypto', $3, $4, $5, $6)
       RETURNING *;
-    `, [id, req.user.id, targetCoin, targetNetwork, address, label || 'Primary Wallet']);
+    `, [id, req.userId, targetCoin, targetNetwork, address, label || 'Primary Wallet']);
 
     res.json({ message: 'Wallet address bound successfully!', address: resDb.rows[0] });
   } catch (err) {

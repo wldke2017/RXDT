@@ -1,18 +1,25 @@
 // Admin Dashboard Page
 import store from '../store.js';
 
-const ADMIN_SECRET = 'rxdt_admin_secret_key_2026';
-const ADMIN_PASSWORD = 'Lu4373212';
+// Admin secret is entered by the administrator at login and stored only
+// for the current browser session — never hardcoded in client source code.
 const ADMIN_SESSION_KEY = 'rxdt_admin_unlocked';
+const ADMIN_SECRET_KEY = 'rxdt_admin_secret';
 const BASE = '/api/admin';
 
+function getAdminSecret() {
+  return sessionStorage.getItem(ADMIN_SECRET_KEY) || '';
+}
+
 async function adminFetch(endpoint, method = 'GET', body = null) {
-  const url = `${BASE}${endpoint}?admin_secret=${ADMIN_SECRET}`;
+  const secret = getAdminSecret();
+  if (!secret) throw new Error('Admin secret not set. Please log in again.');
+  const url = `${BASE}${endpoint}?admin_secret=${encodeURIComponent(secret)}`;
   const opts = { method, headers: { 'Content-Type': 'application/json' } };
   if (body) opts.body = JSON.stringify(body);
   const res = await fetch(url, opts);
   if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: 'Server error' }));
+    const err = await res.json().catch(() => ({ error: 'Request failed' }));
     throw new Error(err.error || 'Request failed');
   }
   return res.json();
@@ -174,21 +181,39 @@ function renderDashboard() {
 export function init() {
   window.toast = window.toast || ((m, t) => alert(m));
 
-  window.submitAdminPassword = function() {
+  // Validate the entered admin secret against the backend before unlocking.
+  window.submitAdminPassword = async function () {
     const input = document.getElementById('admin-pwd-input');
     const errEl = document.getElementById('admin-pwd-error');
+    const btn = document.querySelector('#admin-pwd-error + .btn-primary');
     if (!input) return;
-    if (input.value === ADMIN_PASSWORD) {
+
+    const secret = input.value.trim();
+    if (!secret) {
+      if (errEl) errEl.textContent = '❌ Please enter the admin secret.';
+      return;
+    }
+
+    if (errEl) errEl.textContent = '';
+    if (btn) { btn.disabled = true; btn.textContent = 'Verifying...'; }
+
+    try {
+      // Set the secret first so adminFetch uses it, then probe the backend.
+      sessionStorage.setItem(ADMIN_SECRET_KEY, secret);
+      await adminFetch('/stats');
       sessionStorage.setItem(ADMIN_SESSION_KEY, 'true');
       const container = document.getElementById('page-content');
       if (container) {
         container.innerHTML = renderDashboard();
         initDashboard();
       }
-    } else {
-      if (errEl) errEl.textContent = '❌ Incorrect password. Try again.';
+    } catch (err) {
+      sessionStorage.removeItem(ADMIN_SECRET_KEY);
+      if (errEl) errEl.textContent = '❌ Invalid admin secret: ' + err.message;
       input.value = '';
       input.focus();
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = 'Unlock Dashboard'; }
     }
   };
 
@@ -201,12 +226,13 @@ let allUsersCache = [];
 function initDashboard() {
   window.toast = window.toast || ((m, t) => alert(m));
 
-  window.adminLogout = function() {
+  window.adminLogout = function () {
     sessionStorage.removeItem(ADMIN_SESSION_KEY);
+    sessionStorage.removeItem(ADMIN_SECRET_KEY);
     window.location.reload();
   };
 
-  window.switchAdminTab = function(tab, btn) {
+  window.switchAdminTab = function (tab, btn) {
     document.querySelectorAll('.tabs-header .tab-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     ['deposits', 'withdrawals', 'kyc', 'users', 'signals'].forEach(t => {
@@ -218,7 +244,7 @@ function initDashboard() {
   };
 
   // ---- Stats ----
-  window.loadAdminStats = async function() {
+  window.loadAdminStats = async function () {
     const btn = document.getElementById('admin-refresh-btn');
     if (btn) { btn.textContent = '⏳ Loading...'; btn.disabled = true; }
     try {
@@ -353,7 +379,7 @@ function initDashboard() {
             <td><span class="kyc-badge ${u.kyc_status === 'pass' ? 'kyc-pass' : u.kyc_status === 'rejected' ? 'kyc-fail' : 'kyc-pending'}">${u.kyc_status || 'none'}</span></td>
             <td style="font-size:11px;">${timeAgo(u.created_at).substring(0, 10)}</td>
             <td>
-              <button class="btn-outline" style="padding:4px 10px;font-size:12px;" onclick="openBalanceModal('${u.id}','${(u.name || '').replace(/'/g,"\\'")}','${fmt(u.available_balance)}')">💰 Balance</button>
+              <button class="btn-outline" style="padding:4px 10px;font-size:12px;" onclick="openBalanceModal('${u.id}','${(u.name || '').replace(/'/g, "\\'")}','${fmt(u.available_balance)}')">💰 Balance</button>
             </td>
           </tr>`).join('')}
         </tbody>
@@ -361,7 +387,7 @@ function initDashboard() {
     </div>`;
   }
 
-  window.filterUsers = function(q) {
+  window.filterUsers = function (q) {
     const lq = q.toLowerCase();
     const filtered = allUsersCache.filter(u =>
       (u.name || '').toLowerCase().includes(lq) ||
@@ -387,10 +413,10 @@ function initDashboard() {
         badge.style.color = 'var(--text-muted)';
         badge.textContent = '⚪ No Test Signal Active';
       }
-    } catch (e) {}
+    } catch (e) { }
   }
 
-  window.triggerTestSignal = async function(action) {
+  window.triggerTestSignal = async function (action) {
     const signalId = document.getElementById('trigger-signal-id')?.value || '1';
     const duration = document.getElementById('trigger-signal-duration')?.value || '15';
     try {
@@ -438,7 +464,7 @@ function initDashboard() {
   }
 
   // ---- Balance Modal ----
-  window.openBalanceModal = function(userId, name, balance) {
+  window.openBalanceModal = function (userId, name, balance) {
     document.getElementById('balance-modal-user-id').value = userId;
     document.getElementById('balance-modal-user-info').innerHTML = `
       <strong>${name}</strong><br/>
@@ -449,11 +475,11 @@ function initDashboard() {
     document.getElementById('balance-modal').classList.add('active');
   };
 
-  window.closeBalanceModal = function() {
+  window.closeBalanceModal = function () {
     document.getElementById('balance-modal')?.classList.remove('active');
   };
 
-  window.submitBalanceAdjust = async function() {
+  window.submitBalanceAdjust = async function () {
     const userId = document.getElementById('balance-modal-user-id').value;
     const amount = parseFloat(document.getElementById('balance-modal-amount').value);
     const remark = document.getElementById('balance-modal-remark').value;
@@ -470,7 +496,7 @@ function initDashboard() {
   };
 
   // ---- Action Handlers ----
-  window.adminApproveDeposit = async function(id) {
+  window.adminApproveDeposit = async function (id) {
     if (!confirm('Approve this deposit and credit user balance?')) return;
     try {
       const res = await adminFetch('/deposits/approve', 'POST', { depositId: id });
@@ -479,7 +505,7 @@ function initDashboard() {
     } catch (err) { window.toast('Error: ' + err.message, 'error'); }
   };
 
-  window.adminRejectDeposit = async function(id) {
+  window.adminRejectDeposit = async function (id) {
     if (!confirm('Reject this deposit?')) return;
     try {
       const res = await adminFetch('/deposits/reject', 'POST', { depositId: id });
@@ -488,7 +514,7 @@ function initDashboard() {
     } catch (err) { window.toast('Error: ' + err.message, 'error'); }
   };
 
-  window.adminApproveWithdrawal = async function(id) {
+  window.adminApproveWithdrawal = async function (id) {
     if (!confirm('Approve this withdrawal?')) return;
     try {
       const res = await adminFetch('/withdrawals/approve', 'POST', { withdrawalId: id });
@@ -497,7 +523,7 @@ function initDashboard() {
     } catch (err) { window.toast('Error: ' + err.message, 'error'); }
   };
 
-  window.adminRejectWithdrawal = async function(id) {
+  window.adminRejectWithdrawal = async function (id) {
     if (!confirm('Reject this withdrawal? Funds will be refunded to user.')) return;
     try {
       const res = await adminFetch('/withdrawals/reject', 'POST', { withdrawalId: id });
@@ -506,7 +532,7 @@ function initDashboard() {
     } catch (err) { window.toast('Error: ' + err.message, 'error'); }
   };
 
-  window.adminApproveKyc = async function(id) {
+  window.adminApproveKyc = async function (id) {
     if (!confirm('Approve this KYC submission?')) return;
     try {
       const res = await adminFetch('/kyc/approve', 'POST', { kycId: id });
@@ -515,7 +541,7 @@ function initDashboard() {
     } catch (err) { window.toast('Error: ' + err.message, 'error'); }
   };
 
-  window.adminRejectKyc = async function(id) {
+  window.adminRejectKyc = async function (id) {
     const reason = prompt('Reason for rejection:') || 'Unclear documents';
     if (reason === null) return;
     try {
@@ -525,7 +551,7 @@ function initDashboard() {
     } catch (err) { window.toast('Error: ' + err.message, 'error'); }
   };
 
-  window.viewKycImages = function(id, encodedData) {
+  window.viewKycImages = function (id, encodedData) {
     const data = JSON.parse(decodeURIComponent(encodedData));
     const modal = document.getElementById('kyc-img-modal');
     const body = document.getElementById('kyc-img-modal-body');
@@ -546,7 +572,7 @@ function initDashboard() {
     modal.classList.add('active');
   };
 
-  window.closeKycImgModal = function() {
+  window.closeKycImgModal = function () {
     document.getElementById('kyc-img-modal')?.classList.remove('active');
   };
 

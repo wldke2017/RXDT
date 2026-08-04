@@ -1,21 +1,8 @@
 import express from 'express';
 import { query } from '../db.js';
-import jwt from 'jsonwebtoken';
+import { requireAuth } from '../middleware/auth.js';
 
 const router = express.Router();
-const JWT_SECRET = process.env.JWT_SECRET || 'rxdt_exchange_super_secret_jwt_key_2026';
-
-function requireAuth(req, res, next) {
-  const auth = req.headers.authorization;
-  if (!auth || !auth.startsWith('Bearer ')) return res.status(401).json({ error: 'Unauthorized' });
-  try {
-    const decoded = jwt.verify(auth.slice(7), JWT_SECRET);
-    req.userId = decoded.id;
-    next();
-  } catch {
-    res.status(401).json({ error: 'Invalid token' });
-  }
-}
 
 // GET /api/referrals/stats — fetch live referral count, direct members, total commission, and referral list
 router.get('/stats', requireAuth, async (req, res) => {

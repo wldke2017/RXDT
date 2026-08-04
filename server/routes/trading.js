@@ -1,22 +1,8 @@
 import express from 'express';
 import { query } from '../db.js';
-import jwt from 'jsonwebtoken';
+import { requireAuth } from '../middleware/auth.js';
 
 const router = express.Router();
-const JWT_SECRET = process.env.JWT_SECRET || 'rxdt_exchange_super_secret_jwt_key_2026';
-
-function authenticate(req, res, next) {
-  const authHeader = req.headers.authorization;
-  if (!authHeader) return res.status(401).json({ error: 'Authorization header missing' });
-  const token = authHeader.split(' ')[1];
-  try {
-    const decoded = jwt.verify(token, JWT_SECRET);
-    req.user = decoded;
-    next();
-  } catch (err) {
-    return res.status(401).json({ error: 'Invalid or expired token' });
-  }
-}
 
 // Get AI Models & Products
 router.get('/ai-models', async (req, res) => {
@@ -68,7 +54,7 @@ router.get('/ai-models', async (req, res) => {
 });
 
 // Get User Follow Orders
-router.get('/orders', authenticate, async (req, res) => {
+router.get('/orders', requireAuth, async (req, res) => {
   try {
     const ordersRes = await query(
       `SELECT * FROM follow_orders WHERE user_id = $1 ORDER BY apply_time DESC;`,
@@ -99,7 +85,7 @@ router.get('/orders', authenticate, async (req, res) => {
 });
 
 // Create Follow Order
-router.post('/orders/create', authenticate, async (req, res) => {
+router.post('/orders/create', requireAuth, async (req, res) => {
   try {
     const { modelId, productName, amount, dailyRate, periodDays } = req.body;
     const numAmount = parseFloat(amount);
@@ -178,7 +164,7 @@ router.post('/orders/create', authenticate, async (req, res) => {
 });
 
 // Toggle Auto Renew
-router.post('/orders/toggle-autorenew', authenticate, async (req, res) => {
+router.post('/orders/toggle-autorenew', requireAuth, async (req, res) => {
   try {
     const { orderId } = req.body;
     const orderRes = await query(`SELECT auto_renew FROM follow_orders WHERE id = $1 AND user_id = $2;`, [orderId, req.user.id]);

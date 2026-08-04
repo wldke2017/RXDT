@@ -27,6 +27,23 @@ const PORT = process.env.PORT || 5000;
 
 // Middleware
 app.use(cors());
+
+// Security headers
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  next();
+});
+
+// Fail fast if the critical JWT secret is missing — do not accept a leaked default
+if (!process.env.JWT_SECRET && !process.env.VERCEL) {
+  console.error('❌ JWT_SECRET environment variable is required. Set it before starting the server.');
+  process.exit(1);
+}
+
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
@@ -57,8 +74,9 @@ app.get('/api/health', (req, res) => {
 
 // Global JSON error handler - always return JSON, never HTML
 app.use((err, req, res, next) => {
+  if (res.headersSent) return next(err);
   console.error('Unhandled server error:', err.message);
-  res.status(500).json({ error: err.message || 'Internal server error' });
+  res.status(err.status || 500).json({ error: err.message || 'Internal server error' });
 });
 
 // Fallback to index.html for SPA router (only for non-API routes)
