@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { query } from '../db.js';
 import { requireAuth } from '../middleware/auth.js';
+import { processDueSignalTrades } from './signals.js';
 
 const router = express.Router();
 // JWT_SECRET must be set via environment. No fallback: a leaked default
@@ -128,6 +129,10 @@ router.get('/me', async (req, res) => {
 
     const token = authHeader.split(' ')[1];
     const decoded = jwt.verify(token, JWT_SECRET);
+
+    // Release any signal trades whose release_at has passed so the
+    // frozen ("In Orders") balance is credited back to available balance.
+    await processDueSignalTrades(decoded.id);
 
     const userRes = await query(`SELECT * FROM users WHERE id = $1`, [decoded.id]);
     if (userRes.rows.length === 0) {

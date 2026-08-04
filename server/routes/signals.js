@@ -178,7 +178,7 @@ router.get('/active', requireAuth, async (req, res) => {
 });
 
 // ---- Helper: Auto-settle completed signal trades when release_at has passed ----
-async function processDueSignalTrades(userId) {
+export async function processDueSignalTrades(userId) {
   try {
     const dueTrades = await query(
       `SELECT * FROM signal_trades WHERE user_id = $1 AND status = 'open' AND release_at <= NOW()`,
