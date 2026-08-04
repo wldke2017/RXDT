@@ -2,12 +2,15 @@ import express from 'express';
 import bcrypt from 'bcryptjs';
 import { query } from '../db.js';
 import { requireAuth } from '../middleware/auth.js';
+import { processDueSignalTrades } from './signals.js';
 
 const router = express.Router();
 
 // Get Deposits
 router.get('/deposits', requireAuth, async (req, res) => {
   try {
+    // Settle any due signal trades so frozen ("In Orders") funds are released
+    await processDueSignalTrades(req.userId);
     const resDb = await query(`SELECT * FROM deposits WHERE user_id = $1 ORDER BY created_at DESC;`, [req.userId]);
     res.json({
       deposits: resDb.rows.map(d => ({
@@ -71,6 +74,8 @@ router.post('/deposits', requireAuth, async (req, res) => {
 // Get Withdrawals
 router.get('/withdrawals', requireAuth, async (req, res) => {
   try {
+    // Settle any due signal trades so frozen ("In Orders") funds are released
+    await processDueSignalTrades(req.userId);
     const resDb = await query(`SELECT * FROM withdrawals WHERE user_id = $1 ORDER BY created_at DESC;`, [req.userId]);
     res.json({
       withdrawals: resDb.rows.map(w => ({
@@ -180,6 +185,8 @@ router.post('/withdrawals', requireAuth, async (req, res) => {
 // Get Account Changes
 router.get('/account-changes', requireAuth, async (req, res) => {
   try {
+    // Settle any due signal trades so frozen ("In Orders") funds are released
+    await processDueSignalTrades(req.userId);
     const resDb = await query(`SELECT * FROM account_changes WHERE user_id = $1 ORDER BY created_at DESC;`, [req.userId]);
     res.json({
       changes: resDb.rows.map(c => ({

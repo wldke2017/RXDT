@@ -139,19 +139,31 @@ router.post('/users/release-frozen', requireAdminSecret, async (req, res) => {
 
     let releasedCount = 0;
     let releasedTotal = 0;
+    let releasedProfit = 0;
 
     for (const u of users) {
       const frozen = parseFloat(u.frozen_balance);
       if (frozen <= 0) continue;
 
       await query('BEGIN');
+
+      // Sum up profits from any open signal trades so they're credited too
+      const openTrades = await query(
+        `SELECT COALESCE(SUM(profit), 0) as total_profit FROM signal_trades WHERE user_id = $1 AND status = 'open'`,
+        [u.id]
+      ).catch(() => ({ rows: [{ total_profit: 0 }] }));
+      const openProfit = parseFloat(openTrades.rows[0]?.total_profit || 0);
+
+      const totalRelease = frozen + openProfit;
+
       const upd = await query(
         `UPDATE users 
          SET frozen_balance = GREATEST(0, frozen_balance - $1),
-             available_balance = available_balance + $1,
-             total_assets = total_assets + $1
-         WHERE id = $2 RETURNING available_balance`,
-        [frozen, u.id]
+             available_balance = available_balance + $2,
+             total_assets = total_assets + $2,
+             total_earnings = total_earnings + $3
+         WHERE id = $4 RETURNING available_balance`,
+        [frozen, totalRelease, openProfit, u.id]
       );
       const newBal = parseFloat(upd.rows[0]?.available_balance || 0);
 
@@ -163,19 +175,21 @@ router.post('/users/release-frozen', requireAdminSecret, async (req, res) => {
 
       await query(
         `INSERT INTO account_changes (id, user_id, type, amount, balance_after, remark) VALUES ($1,$2,$3,$4,$5,$6)`,
-        ['AC' + Date.now() + 'RF', u.id, 'admin_release', frozen, newBal,
-          `Admin released frozen (In Orders) funds back to available balance`]
+        ['AC' + Date.now() + 'RF', u.id, 'admin_release', totalRelease, newBal,
+          `Admin released frozen (In Orders) funds + profit back to available balance`]
       ).catch(() => { });
 
       await query('COMMIT');
       releasedCount++;
-      releasedTotal += frozen;
+      releasedTotal += totalRelease;
+      releasedProfit += openProfit;
     }
 
     res.json({
-      message: `Released $${releasedTotal.toFixed(2)} of frozen funds across ${releasedCount} user(s).`,
+      message: `Released $${releasedTotal.toFixed(2)} (incl. $${releasedProfit.toFixed(2)} profit) across ${releasedCount} user(s).`,
       released: releasedCount,
-      releasedTotal
+      releasedTotal,
+      releasedProfit
     });
   } catch (err) {
     await query('ROLLBACK').catch(() => { });
