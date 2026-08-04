@@ -73,7 +73,8 @@ function renderDashboard() {
         <h1 style="font-size:22px;font-weight:800;margin:0;">🛡️ Admin Dashboard</h1>
         <div style="font-size:13px;color:var(--text-sub);margin-top:4px;">RXDT Exchange — Management Panel</div>
       </div>
-      <div style="display:flex;gap:8px;align-items:center;">
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <button class="btn-outline" onclick="releaseFrozenFunds()" style="padding:8px 16px;font-size:13px;color:#f59e0b;border-color:#f59e0b;">🔓 Release In-Orders Funds</button>
         <button class="btn-outline" onclick="loadAdminStats()" id="admin-refresh-btn" style="padding:8px 16px;font-size:13px;">🔄 Refresh</button>
         <button class="btn-outline" onclick="adminLogout()" style="padding:8px 16px;font-size:13px;color:#ef4444;border-color:#ef4444;">Logout</button>
       </div>
@@ -238,6 +239,19 @@ function initDashboard() {
     sessionStorage.removeItem(ADMIN_SESSION_KEY);
     sessionStorage.removeItem(ADMIN_SECRET_KEY);
     window.location.reload();
+  };
+
+  // Release all users' frozen ("In Orders") funds back to available balance.
+  // Useful for legacy users whose signal trades never auto-settled.
+  window.releaseFrozenFunds = async function () {
+    if (!confirm('Release ALL frozen (In Orders) funds back to available balance for all users? This cannot be undone.')) return;
+    try {
+      const res = await adminFetch('/users/release-frozen', 'POST', {});
+      window.toast('✅ ' + res.message, 'success');
+      await loadAdminStats();
+    } catch (err) {
+      window.toast('Error: ' + err.message, 'error');
+    }
   };
 
   window.switchAdminTab = function (tab, btn) {

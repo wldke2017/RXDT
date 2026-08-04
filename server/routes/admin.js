@@ -108,6 +108,82 @@ router.post('/users/balance', requireAdminSecret, async (req, res) => {
   }
 });
 
+// ----------------------------------------------------
+// RELEASE FROZEN ("IN ORDERS") FUNDS
+// ----------------------------------------------------
+// Releases a user's frozen_balance back to available_balance.
+// Optionally pass { userId } to release for a single user, or omit to
+// release for ALL users with stuck funds (e.g. legacy users whose
+// signal trades never settled).
+router.post('/users/release-frozen', requireAdminSecret, async (req, res) => {
+  try {
+    const { userId } = req.body || {};
+
+    let users;
+    if (userId) {
+      const res = await query(
+        `SELECT id, name, frozen_balance, available_balance FROM users WHERE id = $1 AND frozen_balance > 0`,
+        [userId]
+      );
+      users = res.rows;
+    } else {
+      const res = await query(
+        `SELECT id, name, frozen_balance, available_balance FROM users WHERE frozen_balance > 0`
+      );
+      users = res.rows;
+    }
+
+    if (!users.length) {
+      return res.json({ message: userId ? 'No frozen funds to release for this user.' : 'No users have frozen funds to release.', released: 0 });
+    }
+
+    let releasedCount = 0;
+    let releasedTotal = 0;
+
+    for (const u of users) {
+      const frozen = parseFloat(u.frozen_balance);
+      if (frozen <= 0) continue;
+
+      await query('BEGIN');
+      const upd = await query(
+        `UPDATE users 
+         SET frozen_balance = GREATEST(0, frozen_balance - $1),
+             available_balance = available_balance + $1,
+             total_assets = total_assets + $1
+         WHERE id = $2 RETURNING available_balance`,
+        [frozen, u.id]
+      );
+      const newBal = parseFloat(upd.rows[0]?.available_balance || 0);
+
+      // Mark any open signal trades as completed so they don't re-settle
+      await query(
+        `UPDATE signal_trades SET status = 'completed' WHERE user_id = $1 AND status = 'open'`,
+        [u.id]
+      ).catch(() => { });
+
+      await query(
+        `INSERT INTO account_changes (id, user_id, type, amount, balance_after, remark) VALUES ($1,$2,$3,$4,$5,$6)`,
+        ['AC' + Date.now() + 'RF', u.id, 'admin_release', frozen, newBal,
+          `Admin released frozen (In Orders) funds back to available balance`]
+      ).catch(() => { });
+
+      await query('COMMIT');
+      releasedCount++;
+      releasedTotal += frozen;
+    }
+
+    res.json({
+      message: `Released $${releasedTotal.toFixed(2)} of frozen funds across ${releasedCount} user(s).`,
+      released: releasedCount,
+      releasedTotal
+    });
+  } catch (err) {
+    await query('ROLLBACK').catch(() => { });
+    console.error('Release frozen error:', err);
+    res.status(500).json({ error: 'Failed to release frozen funds' });
+  }
+});
+
 import { setTestSignalWindow, clearTestSignalWindow, getTestSignalStatus } from './signals.js';
 
 // ----------------------------------------------------
