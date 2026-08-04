@@ -1,3 +1,39 @@
+export const COUNTRY_DIAL_CODES = [
+  { name: "Kenya", code: "+254", flag: "🇰🇪" },
+  { name: "United States", code: "+1", flag: "🇺🇸" },
+  { name: "United Kingdom", code: "+44", flag: "🇬🇧" },
+  { name: "India", code: "+91", flag: "🇮🇳" },
+  { name: "Nigeria", code: "+234", flag: "🇳🇬" },
+  { name: "South Africa", code: "+27", flag: "🇿🇦" },
+  { name: "Canada", code: "+1", flag: "🇨🇦" },
+  { name: "Ghana", code: "+233", flag: "🇬🇭" },
+  { name: "Uganda", code: "+256", flag: "🇺🇬" },
+  { name: "Tanzania", code: "+255", flag: "🇹🇿" },
+  { name: "UAE", code: "+971", flag: "🇦🇪" },
+  { name: "Saudi Arabia", code: "+966", flag: "🇸🇦" },
+  { name: "Germany", code: "+49", flag: "🇩🇪" },
+  { name: "France", code: "+33", flag: "🇫🇷" },
+  { name: "Australia", code: "+61", flag: "🇦🇺" },
+  { name: "China", code: "+86", flag: "🇨🇳" },
+  { name: "Brazil", code: "+55", flag: "🇧🇷" },
+  { name: "Pakistan", code: "+92", flag: "🇵🇰" },
+  { name: "Bangladesh", code: "+880", flag: "🇧🇩" },
+  { name: "Philippines", code: "+63", flag: "🇵🇭" },
+  { name: "Indonesia", code: "+62", flag: "🇮🇩" },
+  { name: "Vietnam", code: "+84", flag: "🇻🇳" },
+  { name: "Turkey", code: "+90", flag: "🇹🇷" },
+  { name: "Egypt", code: "+20", flag: "🇪🇬" },
+  { name: "Malaysia", code: "+60", flag: "🇲🇾" },
+  { name: "Singapore", code: "+65", flag: "🇸🇬" },
+  { name: "Japan", code: "+81", flag: "🇯🇵" },
+  { name: "South Korea", code: "+82", flag: "🇰🇷" },
+  { name: "Spain", code: "+34", flag: "🇪🇸" },
+  { name: "Italy", code: "+39", flag: "🇮🇹" },
+  { name: "Mexico", code: "+52", flag: "🇲🇽" },
+  { name: "Argentina", code: "+54", flag: "🇦🇷" },
+  { name: "Colombia", code: "+57", flag: "🇨🇴" }
+];
+
 export const COUNTRIES = [
   "Afghanistan", "Albania", "Algeria", "Andorra", "Angola", "Antigua & Barbuda", "Argentina", "Armenia", 
   "Australia", "Austria", "Azerbaijan", "Bahamas", "Bahrain", "Bangladesh", "Barbados", "Belarus", 
@@ -25,4 +61,5 @@ export const COUNTRIES = [
   "United Kingdom", "United States", "Uruguay", "Uzbekistan", "Vanuatu", "Vatican City", "Venezuela", 
   "Vietnam", "Yemen", "Zambia", "Zimbabwe"
 ];
+
 export default COUNTRIES;

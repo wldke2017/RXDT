@@ -3,9 +3,12 @@ import MOCK_DATA from './mockData.js';
 import api from './api.js';
 
 const hasToken = !!localStorage.getItem('rxdt_token');
+const savedUserRaw = localStorage.getItem('rxdt_user');
+let savedUser = null;
+try { savedUser = savedUserRaw ? JSON.parse(savedUserRaw) : null; } catch(e){}
 
 const state = {
-  user: hasToken ? { ...MOCK_DATA.user } : null,
+  user: hasToken ? (savedUser || { ...MOCK_DATA.user }) : null,
   isLoggedIn: hasToken,
   currentPage: 'home',
   marketData: [...(MOCK_DATA.marketData || [])],
@@ -46,6 +49,7 @@ const store = {
       state.user = res.user;
       state.isLoggedIn = true;
       localStorage.setItem('rxdt_token', res.token);
+      if (res.user) localStorage.setItem('rxdt_user', JSON.stringify(res.user));
       emit('auth', { isLoggedIn: true });
       emit('user', state.user);
       this.syncAllUserData();
@@ -61,6 +65,7 @@ const store = {
       state.user = res.user;
       state.isLoggedIn = true;
       localStorage.setItem('rxdt_token', res.token);
+      if (res.user) localStorage.setItem('rxdt_user', JSON.stringify(res.user));
       emit('auth', { isLoggedIn: true });
       emit('user', state.user);
       return true;
@@ -73,6 +78,7 @@ const store = {
     state.user = null;
     state.isLoggedIn = false;
     localStorage.removeItem('rxdt_token');
+    localStorage.removeItem('rxdt_user');
     emit('auth', { isLoggedIn: false });
     emit('user', null);
   },
@@ -84,6 +90,7 @@ const store = {
         const res = await api.getMe();
         state.user = res.user;
         state.isLoggedIn = true;
+        if (res.user) localStorage.setItem('rxdt_user', JSON.stringify(res.user));
         emit('auth', { isLoggedIn: true });
         emit('user', state.user);
         this.syncAllUserData();
@@ -92,6 +99,7 @@ const store = {
         // Token invalid or backend unreachable - clear stale token
         console.warn('Auth check failed:', err.message);
         localStorage.removeItem('rxdt_token');
+        localStorage.removeItem('rxdt_user');
         state.user = null;
         state.isLoggedIn = false;
         emit('auth', { isLoggedIn: false });

@@ -1,5 +1,5 @@
 import store from '../store.js';
-import COUNTRIES from '../countries.js';
+import { COUNTRIES, COUNTRY_DIAL_CODES } from '../countries.js';
 
 // Utility: Show toast
 function toast(msg, type = 'info') {
@@ -11,6 +11,9 @@ function toast(msg, type = 'info') {
   container.appendChild(el);
   setTimeout(() => el.remove(), 3000);
 }
+
+// Email format regex pattern
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 // Utility: Format number
 function fmt(n, decimals = 2) {
@@ -27,6 +30,8 @@ export function render(page) {
 
 // ---- LOGIN ----
 function renderLogin() {
+  const countryOptions = COUNTRY_DIAL_CODES.map(c => `<option value="${c.code}">${c.flag} ${c.code} (${c.name})</option>`).join('');
+
   return `
   <div class="auth-page">
     <div class="auth-card">
@@ -44,7 +49,12 @@ function renderLogin() {
 
       <div id="login-phone-group" class="form-group">
         <label class="form-label">Phone Number</label>
-        <input type="tel" id="login-phone" class="form-control" placeholder="Please enter your phone number"/>
+        <div style="display:flex;gap:8px;">
+          <select id="login-country-code" class="form-control" style="width:130px;padding:8px;font-size:13px;background:var(--bg-input, #131926);color:var(--text-main,#fff);border:1px solid var(--border-color,rgba(255,255,255,0.15));border-radius:8px;">
+            ${countryOptions}
+          </select>
+          <input type="tel" id="login-phone" class="form-control" placeholder="Phone number (digits only)" maxlength="15" oninput="this.value = this.value.replace(/[^0-9]/g, '')" style="flex:1;"/>
+        </div>
       </div>
       <div id="login-email-group" class="form-group" style="display:none;">
         <label class="form-label">Email Address</label>
@@ -81,10 +91,10 @@ function renderLogin() {
 
 // ---- REGISTER ----
 function renderRegister() {
-  // Parse invite code from URL (e.g. #/register?invite=RX1234 or ?invite=RX1234)
   const hash = window.location.hash || '';
   const match = hash.match(/[?&]invite=([^&]+)/) || window.location.search.match(/[?&]invite=([^&]+)/);
   const defaultInvite = match ? decodeURIComponent(match[1]) : '';
+  const countryOptions = COUNTRY_DIAL_CODES.map(c => `<option value="${c.code}">${c.flag} ${c.code} (${c.name})</option>`).join('');
 
   return `
   <div class="auth-page">
@@ -102,7 +112,12 @@ function renderRegister() {
 
       <div id="reg-phone-group" class="form-group">
         <label class="form-label">Phone Number</label>
-        <input type="tel" id="reg-phone" class="form-control" placeholder="Please enter your phone number"/>
+        <div style="display:flex;gap:8px;">
+          <select id="reg-country-code" class="form-control" style="width:130px;padding:8px;font-size:13px;background:var(--bg-input, #131926);color:var(--text-main,#fff);border:1px solid var(--border-color,rgba(255,255,255,0.15));border-radius:8px;">
+            ${countryOptions}
+          </select>
+          <input type="tel" id="reg-phone" class="form-control" placeholder="Phone number (digits only)" maxlength="15" oninput="this.value = this.value.replace(/[^0-9]/g, '')" style="flex:1;"/>
+        </div>
       </div>
       <div id="reg-email-group" class="form-group" style="display:none;">
         <label class="form-label">Email Address</label>
@@ -307,12 +322,21 @@ export function init(page) {
   window.doLogin = async function() {
     const phoneGroup = document.getElementById('login-phone-group');
     const isPhone = phoneGroup && phoneGroup.style.display !== 'none';
-    const phone = isPhone ? (document.getElementById('login-phone')?.value || '') : '';
-    const email = !isPhone ? (document.getElementById('login-email')?.value || '') : '';
+    const code = document.getElementById('login-country-code')?.value || '+1';
+    const rawPhone = document.getElementById('login-phone')?.value?.trim() || '';
+    const email = !isPhone ? (document.getElementById('login-email')?.value?.trim() || '') : '';
     const pwd = document.getElementById('login-password')?.value || '';
 
-    if (!phone && !email) { toast('Please enter phone or email', 'error'); return; }
+    if (isPhone) {
+      if (!rawPhone) { toast('Please enter your phone number', 'error'); return; }
+      if (rawPhone.length < 6 || rawPhone.length > 15) { toast('Invalid phone number length (must be 6-15 digits)', 'error'); return; }
+    } else {
+      if (!email) { toast('Please enter your email address', 'error'); return; }
+      if (!EMAIL_REGEX.test(email)) { toast('Please enter a valid email address (e.g. user@domain.com)', 'error'); return; }
+    }
     if (!pwd) { toast('Please enter your password', 'error'); return; }
+
+    const phone = isPhone ? `${code}${rawPhone}` : '';
 
     try {
       await store.login({ phone, email, password: pwd });
@@ -341,15 +365,22 @@ export function init(page) {
   window.doRegister = async function() {
     const phoneGroup = document.getElementById('reg-phone-group');
     const isPhone = phoneGroup && phoneGroup.style.display !== 'none';
-    const phone = isPhone ? (document.getElementById('reg-phone')?.value || '') : '';
-    const email = !isPhone ? (document.getElementById('reg-email')?.value || '') : '';
+    const code = document.getElementById('reg-country-code')?.value || '+1';
+    const rawPhone = document.getElementById('reg-phone')?.value?.trim() || '';
+    const email = !isPhone ? (document.getElementById('reg-email')?.value?.trim() || '') : '';
     const captchaAns = parseInt(document.getElementById('reg-captcha-answer')?.value || '-1');
     const pwd = document.getElementById('reg-password')?.value || '';
     const confirm = document.getElementById('reg-confirm-pwd')?.value || '';
     const inviteCode = document.getElementById('reg-invite-code')?.value || '';
 
-    if (isPhone && !phone) { toast('Please enter your phone number', 'error'); return; }
-    if (!isPhone && !email) { toast('Please enter your email address', 'error'); return; }
+    if (isPhone) {
+      if (!rawPhone) { toast('Please enter your phone number', 'error'); return; }
+      if (rawPhone.length < 6 || rawPhone.length > 15) { toast('Invalid phone number length (must be 6-15 digits)', 'error'); return; }
+    } else {
+      if (!email) { toast('Please enter your email address', 'error'); return; }
+      if (!EMAIL_REGEX.test(email)) { toast('Please enter a valid email address (e.g. user@domain.com)', 'error'); return; }
+    }
+
     if (captchaAns !== currentCaptchaAns) {
       toast('❌ Incorrect CAPTCHA answer. Try again.', 'error');
       window.generateCaptcha();
@@ -359,8 +390,10 @@ export function init(page) {
     if (pwd !== confirm) { toast('Passwords do not match', 'error'); return; }
     if (pwd.length < 6) { toast('Password must be at least 6 characters', 'error'); return; }
 
+    const phone = isPhone ? `${code}${rawPhone}` : '';
+
     try {
-      await store.register({ phone, email, password: pwd, inviteCode, name: phone ? `User_${phone.slice(-4)}` : email.split('@')[0] });
+      await store.register({ phone, email, password: pwd, inviteCode, name: isPhone ? `User_${rawPhone.slice(-4)}` : email.split('@')[0] });
       toast('Registration successful! Welcome to RXDT!', 'success');
       setTimeout(() => { window.location.hash = '#/kyc'; }, 500);
     } catch (err) {

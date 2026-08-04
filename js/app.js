@@ -101,10 +101,11 @@ function renderUserActions() {
   const isLoggedIn = store.isLoggedIn();
   if (isLoggedIn) {
     const user = store.getUser();
+    const displayName = user?.name || user?.phone || user?.email || 'User';
     return `
       <div class="user-avatar-btn" onclick="toggleUserMenu()">
-        <div class="user-avatar-circle" style="background:linear-gradient(135deg,#00f2fe,#7928ca);">${(user?.name || 'R')[0]}</div>
-        <span style="font-size:14px;font-weight:600;">${user?.name || 'Raju'}</span>
+        <div class="user-avatar-circle" style="background:linear-gradient(135deg,#00f2fe,#7928ca);">${displayName[0].toUpperCase()}</div>
+        <span style="font-size:14px;font-weight:600;">${displayName}</span>
         <span>▾</span>
       </div>
       <div class="user-dropdown" id="user-dropdown" style="background:#131926;border:1px solid rgba(255,255,255,0.15);">

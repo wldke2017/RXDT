@@ -17,11 +17,27 @@
     #loading-screen {
       position: fixed; top: 0; left: 0; right: 0; bottom: 0;
       background: #090d16; display: flex; align-items: center; justify-content: center;
-      z-index: 9999; flex-direction: column; gap: 16px;
-      transition: opacity 0.4s ease;
+      z-index: 9999; flex-direction: column;
+      transition: opacity 0.5s ease;
     }
-    .loading-logo { font-size: 44px; font-weight: 800; color: #00f2fe; letter-spacing: 3px; text-shadow: 0 0 20px rgba(0,242,254,0.5); }
-    .loading-bar-outer { width: 200px; height: 4px; background: rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden; }
+    .loading-bg {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      object-fit: cover; z-index: 1;
+    }
+    .loading-bg-mobile { display: block; }
+    .loading-bg-desktop { display: none; }
+    @media (min-width: 769px) {
+      .loading-bg-mobile { display: none; }
+      .loading-bg-desktop { display: block; }
+    }
+    .loading-overlay {
+      position: relative; z-index: 2; display: flex; flex-direction: column;
+      align-items: center; justify-content: flex-end; height: 100%; padding-bottom: 60px;
+      gap: 16px; background: linear-gradient(180deg, rgba(9,13,22,0) 40%, rgba(9,13,22,0.85) 100%);
+      width: 100%;
+    }
+    .loading-logo { font-size: 32px; font-weight: 800; color: #00f2fe; letter-spacing: 3px; text-shadow: 0 0 20px rgba(0,242,254,0.6); }
+    .loading-bar-outer { width: 220px; height: 4px; background: rgba(255,255,255,0.2); border-radius: 4px; overflow: hidden; box-shadow: 0 0 10px rgba(0,242,254,0.3); }
     .loading-bar-inner { height: 100%; width: 0; background: linear-gradient(90deg, #00f2fe, #7928ca); border-radius: 4px; animation: loadAnim 1.4s ease forwards; }
     @keyframes loadAnim { to { width: 100%; } }
     #loading-screen.hide { opacity: 0; pointer-events: none; }
@@ -30,10 +46,14 @@
 <body>
   <!-- Animated RXDT Loading Screen -->
   <div id="loading-screen">
-    <img src="assets/images/rxdt_logo.png" alt="RXDT" style="width:70px;height:70px;filter:drop-shadow(0 0 15px #00f2fe);"/>
-    <div class="loading-logo">RXDT EXCHANGE</div>
-    <div style="font-size:13px;color:#94a3b8;letter-spacing:1px;">AI QUANTITATIVE TRADING PLATFORM</div>
-    <div class="loading-bar-outer"><div class="loading-bar-inner"></div></div>
+    <img src="assets/images/rxdt_loading_mobile.png" class="loading-bg loading-bg-mobile" alt="RXDT Mobile Splash"/>
+    <img src="assets/images/rxdt_loading_desktop.png" class="loading-bg loading-bg-desktop" alt="RXDT Desktop Splash"/>
+    <div class="loading-overlay">
+      <img src="assets/images/rxdt_logo.png" alt="RXDT" style="width:60px;height:60px;filter:drop-shadow(0 0 15px #00f2fe);"/>
+      <div class="loading-logo">RXDT EXCHANGE</div>
+      <div style="font-size:12px;color:#94a3b8;letter-spacing:1px;font-weight:600;">AI QUANTITATIVE TRADING PLATFORM</div>
+      <div class="loading-bar-outer"><div class="loading-bar-inner"></div></div>
+    </div>
   </div>
 
   <!-- App Root -->

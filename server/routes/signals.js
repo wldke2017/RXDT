@@ -20,64 +20,49 @@ const SIGNAL_WINDOWS = [
 /**
  * Tier rules and doubling math:
  *
- * TIER 1: $100–$499 → doubles in 50 days (3 signals/day, 150 trades)
- *   Per-trade profit % of balance = 2^(1/150) - 1 ≈ 0.4621%
- *   Trade amount = 10% of balance → return on trade = 4.621%
- *   Daily gain: 3 × 0.4621% = 1.386%/day → ×50 days = 2.0× ✓
+ * TESTING MODE: Capital < $500 → doubles in 34 days (3 signals/day, 102 trades)
+ *   Per-trade profit % of balance = 2^(1/102) - 1 ≈ 0.6817%
+ *   Trade amount = 10% of balance → return on trade = 6.817%
+ *   Daily gain: 3 × 0.6817% compounding ≈ 2.06%/day → ×34 days = 2.0× ✓
  *
- * TIER 2: $500–$999 → doubles in 28 days (3 signals/day, 84 trades)
- *   Per-trade profit % of balance = 2^(1/84) - 1 ≈ 0.8267%
- *   Trade amount = 10% of balance → return on trade = 8.267%
- *   Daily gain: 3 × 0.8267% = 2.48%/day → ×28 days = 2.0× ✓
- *
- * TIER 3: $1000+ → doubles in 21 days (3 signals/day, 63 trades)
- *   Per-trade profit % of balance = 2^(1/63) - 1 ≈ 1.1107%
- *   Trade amount = 10% of balance → return on trade = 11.107%
- *   Daily gain: 3 × 1.1107% = 3.332%/day → ×21 days = 2.0× ✓
+ * STANDARD MODE: Capital ≥ $500 → doubles in 28 days (3 signals/day, 84 trades)
+ *   Per-trade profit % of balance = 2^(1/84) - 1 ≈ 0.8286%
+ *   Trade amount = 10% of balance → return on trade = 8.286%
+ *   Daily gain: 3 × 0.8286% compounding ≈ 2.50%/day → ×28 days = 2.0× ✓
+ * 
+ * Note: Referral commissions and deposit bonuses increase total balance, which scales up
+ * the 10% trade stake and compounds earnings faster for active users!
  */
 
 const SIGNAL_TIERS = {
-  TIER1: {
-    label: 'Starter',
-    minBalance: 100,
+  TESTING_MODE: {
+    label: 'Testing Mode',
+    minBalance: 0,
     maxBalance: 499.99,
-    doubleDays: 50,
+    doubleDays: 34,
     tradePercent: 0.10,
-    profitOnTradePercent: 0.04621,
-    profitOnBalancePercent: 0.004621,
+    profitOnTradePercent: 0.06817,
+    profitOnBalancePercent: 0.006817,
     signals: [1, 2, 3],
-    description: '$100–$499 · Doubles in 50 days',
+    description: 'Capital < $500 · Testing Mode · Doubles in 34 days (3 signals/day)',
   },
-  TIER2: {
-    label: 'Growth',
+  STANDARD_MODE: {
+    label: 'Standard Trader',
     minBalance: 500,
-    maxBalance: 999.99,
+    maxBalance: Infinity,
     doubleDays: 28,
     tradePercent: 0.10,
-    profitOnTradePercent: 0.08267,
-    profitOnBalancePercent: 0.008267,
+    profitOnTradePercent: 0.08286,
+    profitOnBalancePercent: 0.008286,
     signals: [1, 2, 3],
-    description: '$500–$999 · Doubles in 28 days',
-  },
-  TIER3: {
-    label: 'VIP',
-    minBalance: 1000,
-    maxBalance: Infinity,
-    doubleDays: 21,
-    tradePercent: 0.10,
-    profitOnTradePercent: 0.11107,
-    profitOnBalancePercent: 0.011107,
-    signals: [1, 2, 3],
-    description: '$1,000+ · Doubles in 21 days',
+    description: 'Capital ≥ $500 · Standard Tier · Doubles in 28 days (3 signals/day)',
   },
 };
 
 function getTier(balance, isTestMode = false) {
-  if (balance >= 1000) return SIGNAL_TIERS.TIER3;
-  if (balance >= 500)  return SIGNAL_TIERS.TIER2;
-  if (balance >= 100)  return SIGNAL_TIERS.TIER1;
-  if (isTestMode)      return SIGNAL_TIERS.TIER1; // Allow test pop-up even for $0 balance in test mode
-  return null;
+  if (balance >= 500) return SIGNAL_TIERS.STANDARD_MODE;
+  if (balance >= 0 || isTestMode) return SIGNAL_TIERS.TESTING_MODE;
+  return SIGNAL_TIERS.TESTING_MODE;
 }
 
 export async function setTestSignalWindow(durationMinutes = 15, signalId = 1) {

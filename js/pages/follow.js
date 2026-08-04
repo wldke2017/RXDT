@@ -64,25 +64,58 @@ function renderAnalystList() {
       ${aiModels.map(a => renderAnalystCard(a)).join('')}
     </div>
 
-    <!-- Asset Doubling Schedule Table (PDF Pages 11 & 12) -->
-    <div class="card" style="margin-top:24px;">
-      <div class="card-title">📈 Asset Doubling Growth Projection Table (3 Signals / Day)</div>
-      <p style="font-size:13px;color:var(--text-sub);margin-bottom:16px;">Each AI signal yields an average daily return of 1.8% to 2.1%. Below is the exact progressive balance schedule from Day 1 to Day 34:</p>
+    <!-- Asset Doubling Schedule Table & AI Graphic -->
+    <div class="card" style="margin-top:24px;background:linear-gradient(180deg, #131926 0%, #0d121d 100%);border:1px solid rgba(0,242,254,0.2);">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <img src="assets/images/rxdt_logo.png" alt="RXDT Logo" style="width:36px;height:36px;filter:drop-shadow(0 0 8px #00f2fe);"/>
+          <div>
+            <div class="card-title" style="margin:0;font-size:18px;">📈 Asset Doubling Growth Projection Table</div>
+            <div style="font-size:12px;color:#00f2fe;letter-spacing:1px;font-weight:600;">3 SIGNALS DAILY · AI QUANTITATIVE compounding</div>
+          </div>
+        </div>
+        <div style="background:rgba(0,242,254,0.1);border:1px solid #00f2fe;padding:6px 12px;border-radius:20px;font-size:12px;color:#00f2fe;font-weight:600;">
+          ⚡ Referral & Deposit Bonuses Accelerate Stake & Doubling Speed!
+        </div>
+      </div>
+
+      <!-- Banner AI Visual -->
+      <div style="position:relative;border-radius:12px;overflow:hidden;margin-bottom:20px;height:140px;background:url('assets/images/rxdt_home_hero_bg.png') center/cover no-repeat;display:flex;align-items:center;padding:0 24px;box-shadow:inset 0 0 40px rgba(0,0,0,0.8);">
+        <div style="z-index:2;max-width:500px;">
+          <span style="background:#7928ca;color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;">TIER RULES</span>
+          <h4 style="margin:6px 0 4px 0;font-size:16px;color:#fff;font-weight:700;">Capital < $500: Testing Mode (34 Days Doubling)</h4>
+          <p style="margin:0;font-size:13px;color:#cbd5e1;">Capital ≥ $500: Standard Mode (28 Days Doubling). Staking 10% per signal.</p>
+        </div>
+        <img src="assets/images/rxdt_hero_ship.png" alt="AI Trader" style="position:absolute;right:10px;height:160px;opacity:0.85;pointer-events:none;"/>
+      </div>
+
+      <p style="font-size:13px;color:var(--text-sub);margin-bottom:16px;">
+        Each AI signal executes trades using 10% of your account balance. Below is the progressive growth model:
+      </p>
+
       <div class="table-container">
         <table class="data-table">
           <thead>
-            <tr><th>Day</th><th>$520 Starting</th><th>$1,050 Starting</th><th>$2,100 Starting</th><th>$3,180 Starting</th><th>$5,200 Starting</th><th>$10,600 Starting</th></tr>
+            <tr>
+              <th>Day</th>
+              <th>$100 Start <br/><span style="font-size:10px;color:#00f5a0;">(Testing - 34 Days)</span></th>
+              <th>$200 Start <br/><span style="font-size:10px;color:#00f5a0;">(Testing - 34 Days)</span></th>
+              <th>$500 Start <br/><span style="font-size:10px;color:#00f2fe;">(Standard - 28 Days)</span></th>
+              <th>$1,000 Start <br/><span style="font-size:10px;color:#00f2fe;">(Standard - 28 Days)</span></th>
+              <th>$2,000 Start <br/><span style="font-size:10px;color:#00f2fe;">(Standard - 28 Days)</span></th>
+              <th>$5,000 Start <br/><span style="font-size:10px;color:#ff007a;">(Standard - 28 Days)</span></th>
+            </tr>
           </thead>
           <tbody>
             ${doublingData.map(d => `
               <tr>
                 <td><strong>Day ${d.day}</strong></td>
-                <td class="price-up">$${fmt(d.c520)}</td>
-                <td class="price-up">$${fmt(d.c1050)}</td>
-                <td class="price-up">$${fmt(d.c2100)}</td>
-                <td class="price-up">$${fmt(d.c3180)}</td>
-                <td class="price-up">$${fmt(d.c5200)}</td>
-                <td style="font-weight:800;color:var(--el-color-primary);">$${fmt(d.c10600)}</td>
+                <td class="price-up">$${fmt(d.c100 || d.c520)}</td>
+                <td class="price-up">$${fmt(d.c200 || d.c1050)}</td>
+                <td class="price-up">$${fmt(d.c500 || d.c2100)}</td>
+                <td class="price-up">$${fmt(d.c1000 || d.c3180)}</td>
+                <td class="price-up">$${fmt(d.c2000 || d.c5200)}</td>
+                <td style="font-weight:800;color:var(--el-color-primary);">$${fmt(d.c5000 || d.c10600)}</td>
               </tr>
             `).join('')}
           </tbody>
