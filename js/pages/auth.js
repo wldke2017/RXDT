@@ -236,6 +236,21 @@ function renderKYC() {
     </div>`;
   }
 
+  if (status === 'pending') {
+    return `
+    <div class="auth-page">
+      <div class="auth-card">
+        <div style="text-align:center;padding:40px 0;">
+          <div style="font-size:64px;margin-bottom:16px;">⏳</div>
+          <h2 style="font-size:22px;font-weight:600;color:#f59e0b;margin-bottom:8px;">Under Review</h2>
+          <p style="color:var(--text-sub);">Your KYC identity verification has been submitted and is awaiting approval.</p>
+          <p style="color:var(--text-muted);font-size:13px;margin-top:8px;">This usually takes less than 24 hours. You'll be able to withdraw once approved.</p>
+          <button class="btn-primary" style="margin-top:24px;" onclick="navigateTo('assets')">Go to Assets</button>
+        </div>
+      </div>
+    </div>`;
+  }
+
   return `
   <div class="auth-page">
     <div class="auth-card" style="max-width:560px;">
@@ -533,12 +548,17 @@ export function init(page) {
 
     if (!idType || !nationality || !name || !idNum) { toast('Please fill all required fields including Country', 'error'); return; }
 
+    const btn = document.querySelector('.auth-submit');
+    if (btn) { btn.disabled = true; btn.textContent = 'Submitting...'; }
+
     try {
       await store.submitKyc({ documentType: idType, nationality, realName: name, idNumber: idNum, frontImg, backImg, handheldImg });
       toast('KYC submitted! Under review, please wait.', 'success');
-      setTimeout(() => { window.location.hash = '#/assets'; }, 1200);
+      setTimeout(() => { window.location.hash = '#/kyc'; }, 800);
     } catch (err) {
       toast(err.message || 'Failed to submit KYC', 'error');
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = 'Submit Verification'; }
     }
   };
 

@@ -5,7 +5,7 @@ import api from './api.js';
 const hasToken = !!localStorage.getItem('rxdt_token');
 const savedUserRaw = localStorage.getItem('rxdt_user');
 let savedUser = null;
-try { savedUser = savedUserRaw ? JSON.parse(savedUserRaw) : null; } catch(e){}
+try { savedUser = savedUserRaw ? JSON.parse(savedUserRaw) : null; } catch (e) { }
 
 const state = {
   user: hasToken ? (savedUser || { ...MOCK_DATA.user }) : null,
@@ -386,20 +386,13 @@ const store = {
   },
 
   async submitKyc(kycData) {
-    try {
-      const res = await api.submitKyc(kycData);
-      if (state.user) {
-        state.user.kycStatus = 'pending';
-        emit('user', state.user);
-      }
-      return res;
-    } catch (err) {
-      if (state.user) {
-        state.user.kycStatus = 'pending';
-        emit('user', state.user);
-      }
-      return { message: 'KYC submitted' };
+    const res = await api.submitKyc(kycData);
+    if (state.user) {
+      state.user.kycStatus = 'pending';
+      localStorage.setItem('rxdt_user', JSON.stringify(state.user));
+      emit('user', state.user);
     }
+    return res;
   },
 
   navigateTo(page) {
