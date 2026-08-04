@@ -44,8 +44,8 @@ if (!process.env.JWT_SECRET && !process.env.VERCEL) {
   process.exit(1);
 }
 
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Static frontend files
 app.use(express.static(rootDir));

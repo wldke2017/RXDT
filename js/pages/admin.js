@@ -327,10 +327,17 @@ function initDashboard() {
       </div>`).join('');
   }
 
+  // Store KYC image data in a JS map (avoids embedding huge base64 strings in HTML attributes)
+  const kycImagesCache = {};
+
   function renderKyc(kycs) {
     const el = document.getElementById('admin-kyc-list');
     if (!el) return;
     if (!kycs.length) { el.innerHTML = `<div class="empty-state">✅ No pending KYC submissions</div>`; return; }
+    // Cache image data by KYC id so the Photos button only needs the id
+    kycs.forEach(k => {
+      kycImagesCache[k.id] = { front: k.front_img, back: k.back_img, handheld: k.handheld_img, name: k.real_name };
+    });
     el.innerHTML = kycs.map(k => `
       <div class="admin-card" id="kyc-card-${k.id}">
         <div class="admin-card-header">
@@ -340,7 +347,7 @@ function initDashboard() {
             <div class="admin-card-sub">Nationality: <strong>${k.nationality || 'N/A'}</strong> · ID Type: <strong>${k.document_type || 'N/A'}</strong></div>
             <div class="admin-card-sub">ID No: <strong>${k.id_number || 'N/A'}</strong></div>
           </div>
-          <button class="btn-outline" style="padding:6px 14px;font-size:13px;" onclick="viewKycImages('${k.id}', \`${encodeURIComponent(JSON.stringify({ front: k.front_img, back: k.back_img, handheld: k.handheld_img, name: k.real_name }))}\`)">
+          <button class="btn-outline" style="padding:6px 14px;font-size:13px;" onclick="viewKycImages('${k.id}')">
             🖼️ Photos
           </button>
         </div>
@@ -559,13 +566,13 @@ function initDashboard() {
     } catch (err) { window.toast('Error: ' + err.message, 'error'); }
   };
 
-  window.viewKycImages = function (id, encodedData) {
-    const data = JSON.parse(decodeURIComponent(encodedData));
+  window.viewKycImages = function (id) {
+    const data = kycImagesCache[id];
     const modal = document.getElementById('kyc-img-modal');
     const body = document.getElementById('kyc-img-modal-body');
     const title = document.getElementById('kyc-img-modal-title');
     if (!modal || !body) return;
-    if (title) title.textContent = `KYC — ${data.name || 'Unknown'}`;
+    if (title) title.textContent = `KYC — ${(data && data.name) || 'Unknown'}`;
 
     const imgSection = (label, src) => {
       if (!src) return `<div style="color:var(--text-muted);font-size:13px;">📷 ${label}: Not provided</div>`;
@@ -576,7 +583,7 @@ function initDashboard() {
         </div>`;
     };
 
-    body.innerHTML = imgSection('Front of ID', data.front) + imgSection('Back of ID', data.back) + imgSection('Selfie Holding ID', data.handheld);
+    body.innerHTML = imgSection('Front of ID', data && data.front) + imgSection('Back of ID', data && data.back) + imgSection('Selfie Holding ID', data && data.handheld);
     modal.classList.add('active');
   };
 
