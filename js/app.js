@@ -19,7 +19,23 @@ document.addEventListener('DOMContentLoaded', async () => {
   store.subscribe('auth', () => {
     if (store.isLoggedIn()) setTimeout(() => checkSignalWindow(), 1000);
   });
+
+  // ---- Signal Push Notification Poller ----
+  // Polls the backend every 20 seconds while logged in so the signal pop-up
+  // is pushed to users automatically at exactly 5pm, 6pm, and 7pm EAT the
+  // moment the signal window opens — no manual refresh required.
+  startSignalPoller();
 });
+
+// Start polling for active signals to "push" notifications at signal times
+let signalPollTimer = null;
+function startSignalPoller() {
+  if (signalPollTimer) return; // already running
+  signalPollTimer = setInterval(() => {
+    if (!store.isLoggedIn()) return;
+    checkSignalWindow();
+  }, 20 * 1000); // check every 20 seconds
+}
 
 function renderShell() {
   const app = document.getElementById('app');
