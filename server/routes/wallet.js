@@ -101,7 +101,6 @@ router.post('/withdrawals', requireAuth, async (req, res) => {
   try {
     const { amount, coin, network, address, transactionPassword } = req.body;
     const numAmount = parseFloat(amount);
-    const fee = 1.00; // $1 USDT network withdrawal fee
 
     if (!numAmount || numAmount < 10) {
       return res.status(400).json({ error: 'Minimum withdrawal amount is $10 USDT.' });
@@ -116,7 +115,7 @@ router.post('/withdrawals', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'Transaction password is required for withdrawals.' });
     }
 
-    const userRes = await query(`SELECT available_balance, total_assets, transaction_password FROM users WHERE id = $1;`, [req.userId]);
+    const userRes = await query(`SELECT available_balance, total_assets, transaction_password, doubled_capital FROM users WHERE id = $1;`, [req.userId]);
     if (userRes.rows.length === 0) return res.status(404).json({ error: 'User not found' });
 
     const user = userRes.rows[0];
@@ -132,8 +131,15 @@ router.post('/withdrawals', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'Incorrect transaction password.' });
     }
 
+    // Withdrawal transaction fee:
+    // - Users who have NOT yet doubled their invested capital: 25% fee
+    // - Users who HAVE doubled their invested capital: 10% fee
+    const hasDoubled = !!user.doubled_capital;
+    const feeRate = hasDoubled ? 0.10 : 0.25;
+    const fee = parseFloat((numAmount * feeRate).toFixed(2));
+
     if (available < numAmount + fee) {
-      return res.status(400).json({ error: `Insufficient available balance. Minimum required including fee: $${(numAmount + fee).toFixed(2)}` });
+      return res.status(400).json({ error: `Insufficient available balance. Minimum required including ${(feeRate * 100).toFixed(0)}% fee: $${(numAmount + fee).toFixed(2)}` });
     }
 
     const id = 'W' + Date.now();
@@ -154,7 +160,7 @@ router.post('/withdrawals', requireAuth, async (req, res) => {
     await query(`
       INSERT INTO account_changes (id, user_id, type, amount, balance_after, remark)
       VALUES ($1, $2, 'Crypto Withdrawal', $3, $4, $5);
-    `, ['AC' + Date.now(), req.userId, -(numAmount + fee), newAvailable, `Withdrawal to ${address.slice(0, 8)}... (incl. $${fee.toFixed(2)} fee)`]);
+    `, ['AC' + Date.now(), req.userId, -(numAmount + fee), newAvailable, `Withdrawal to ${address.slice(0, 8)}... (incl. ${(feeRate * 100).toFixed(0)}% fee $${fee.toFixed(2)})`]);
 
     await query('COMMIT');
 
@@ -171,7 +177,7 @@ router.post('/withdrawals', requireAuth, async (req, res) => {
         fee: parseFloat(w.fee),
         status: w.status,
         auditStatus: w.audit_status,
-        time: new Date(w.created_at).toISOString().replace('T', ' ').slice(0, 19)
+        time: w.created_at ? new Date(w.created_at).toISOString().replace('T', ' ').slice(0, 19) : ''
       },
       newAvailableBalance: newAvailable
     });

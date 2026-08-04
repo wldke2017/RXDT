@@ -77,11 +77,24 @@ router.post('/register', registerLimiter, async (req, res) => {
     // The user will be required to bind a phone number later.
     const effectivePhone = phone || null;
 
+    // Referral reward: when user A refers user B, BOTH get 1 free trading signal
+    // credit (usable at the 8pm automatic signal). The new user gets 1 credit,
+    // and the referrer gets 1 credit.
+    const newUserFreeCredits = referrerId ? 1 : 0;
+
     const newUser = await query(`
-      INSERT INTO users (id, name, phone, email, password_hash, invite_code, referred_by, total_assets, available_balance, frozen_balance, total_earnings)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, 0.00, 0.00, 0.00, 0.00)
-      RETURNING id, name, phone, email, total_assets, available_balance, frozen_balance, total_earnings, invite_code, referred_by, kyc_status, membership_tier;
-    `, [userId, userName, effectivePhone, email || null, hash, userInviteCode, referrerId]);
+      INSERT INTO users (id, name, phone, email, password_hash, invite_code, referred_by, total_assets, available_balance, frozen_balance, total_earnings, free_signal_credits)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, 0.00, 0.00, 0.00, 0.00, $8)
+      RETURNING id, name, phone, email, total_assets, available_balance, frozen_balance, total_earnings, invite_code, referred_by, kyc_status, membership_tier, free_signal_credits;
+    `, [userId, userName, effectivePhone, email || null, hash, userInviteCode, referrerId, newUserFreeCredits]);
+
+    // If the new user was referred, also grant the referrer 1 free signal credit
+    if (referrerId) {
+      await query(
+        `UPDATE users SET free_signal_credits = free_signal_credits + 1 WHERE id = $1`,
+        [referrerId]
+      );
+    }
 
     const user = newUser.rows[0];
     const token = jwt.sign({ id: user.id, phone: user.phone || '', email: user.email || '' }, JWT_SECRET, { expiresIn: '7d' });
@@ -328,7 +341,11 @@ function formatUser(u) {
     spinChances: u.spin_chances !== undefined && u.spin_chances !== null ? parseInt(u.spin_chances) : 1,
     dailySignalCount: u.daily_signal_count || 3,
     avgDailyReturn: u.avg_daily_return || '1.8% - 2.1%',
-    doublingDays: 34
+    doublingDays: 34,
+    totalDeposits: parseFloat(u.total_deposits || 0),
+    initialDeposit: parseFloat(u.initial_deposit || 0),
+    freeSignalCredits: parseInt(u.free_signal_credits || 0),
+    doubledCapital: !!u.doubled_capital
   };
 }
 

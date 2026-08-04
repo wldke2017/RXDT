@@ -9,59 +9,70 @@ const router = express.Router();
 // Signal 1: 14:00-14:30 UTC (5pm-5:30pm EAT)
 // Signal 2: 15:00-15:30 UTC (6pm-6:30pm EAT)
 // Signal 3: 16:00-16:30 UTC (7pm-7:30pm EAT)
+// Signal 4 (FREE referral signal): 17:00-17:05 UTC (8pm-8:05pm EAT) — 5 minutes only
 
 const SIGNAL_WINDOWS = [
   { id: 1, utcHour: 14, utcMinStart: 0, utcMinEnd: 30 },
   { id: 2, utcHour: 15, utcMinStart: 0, utcMinEnd: 30 },
   { id: 3, utcHour: 16, utcMinStart: 0, utcMinEnd: 30 },
+  { id: 4, utcHour: 17, utcMinStart: 0, utcMinEnd: 5, isFreeSignal: true },
 ];
 
 /**
- * Tier rules and doubling math:
+ * Deposit-based tier rules (based on TOTAL DEPOSITS, not available balance):
  *
- * TESTING MODE: Capital < $500 → doubles in 34 days (3 signals/day, 102 trades)
- *   Per-trade profit % of balance = 2^(1/102) - 1 ≈ 0.6817%
- *   Trade amount = 10% of balance → return on trade = 6.817%
- *   Daily gain: 3 × 0.6817% compounding ≈ 2.06%/day → ×34 days = 2.0× ✓
+ * TIER 1: Total deposits $100–$299 → 1 signal/day (Signal 1) · 1.4% daily profit
+ * TIER 2: Total deposits $300–$999 → 2 signals/day (Signals 1 & 2) · 2.4% daily profit
+ * TIER 3: Total deposits $1000+    → 3 signals/day (Signals 1, 2 & 3) · 3.1% daily profit
  *
- * STANDARD MODE: Capital ≥ $500 → doubles in 28 days (3 signals/day, 84 trades)
- *   Per-trade profit % of balance = 2^(1/84) - 1 ≈ 0.8286%
- *   Trade amount = 10% of balance → return on trade = 8.286%
- *   Daily gain: 3 × 0.8286% compounding ≈ 2.50%/day → ×28 days = 2.0× ✓
- * 
- * Note: Referral commissions and deposit bonuses increase total balance, which scales up
- * the 10% trade stake and compounds earnings faster for active users!
+ * Daily profit is split evenly across the user's entitled signals:
+ *   Tier 1: 1 signal → 1.4% per signal
+ *   Tier 2: 2 signals → 1.2% per signal (2.4% / 2)
+ *   Tier 3: 3 signals → ~1.0333% per signal (3.1% / 3)
+ *
+ * Signal 4 (8pm free referral signal) is available to any user with
+ * free_signal_credits > 0 (earned by referring a new user). It is fully
+ * automatic and lasts 5 minutes.
  */
 
 const SIGNAL_TIERS = {
-  TESTING_MODE: {
-    label: 'Testing Mode',
-    minBalance: 0,
-    maxBalance: 499.99,
-    doubleDays: 34,
-    tradePercent: 0.10,
-    profitOnTradePercent: 0.06817,
-    profitOnBalancePercent: 0.006817,
-    signals: [1, 2, 3],
-    description: 'Capital < $500 · Testing Mode · Doubles in 34 days (3 signals/day)',
+  TIER_1: {
+    label: 'Tier 1',
+    minDeposit: 100,
+    maxDeposit: 299.99,
+    dailyProfitPercent: 0.014, // 1.4% per day
+    signals: [1],
+    description: 'Deposit $100–$299 · 1 signal/day · 1.4% daily profit',
   },
-  STANDARD_MODE: {
-    label: 'Standard Trader',
-    minBalance: 500,
-    maxBalance: Infinity,
-    doubleDays: 28,
-    tradePercent: 0.10,
-    profitOnTradePercent: 0.08286,
-    profitOnBalancePercent: 0.008286,
+  TIER_2: {
+    label: 'Tier 2',
+    minDeposit: 300,
+    maxDeposit: 999.99,
+    dailyProfitPercent: 0.024, // 2.4% per day
+    signals: [1, 2],
+    description: 'Deposit $300–$999 · 2 signals/day · 2.4% daily profit',
+  },
+  TIER_3: {
+    label: 'Tier 3',
+    minDeposit: 1000,
+    maxDeposit: Infinity,
+    dailyProfitPercent: 0.031, // 3.1% per day
     signals: [1, 2, 3],
-    description: 'Capital ≥ $500 · Standard Tier · Doubles in 28 days (3 signals/day)',
+    description: 'Deposit $1000+ · 3 signals/day · 3.1% daily profit',
   },
 };
 
-function getTier(balance, isTestMode = false) {
-  if (balance >= 500) return SIGNAL_TIERS.STANDARD_MODE;
-  if (balance >= 0 || isTestMode) return SIGNAL_TIERS.TESTING_MODE;
-  return SIGNAL_TIERS.TESTING_MODE;
+// Per-signal profit % of balance = dailyProfitPercent / number of signals
+function getTier(totalDeposits) {
+  if (totalDeposits >= 1000) return SIGNAL_TIERS.TIER_3;
+  if (totalDeposits >= 300) return SIGNAL_TIERS.TIER_2;
+  if (totalDeposits >= 100) return SIGNAL_TIERS.TIER_1;
+  return null; // No tier — user must deposit at least $100
+}
+
+// Per-signal profit rate for a tier (daily rate split across entitled signals)
+function getPerSignalProfitRate(tier) {
+  return tier.dailyProfitPercent / tier.signals.length;
 }
 
 export async function setTestSignalWindow(durationMinutes = 15, signalId = 1) {
@@ -123,8 +134,9 @@ export async function getActiveSignal() {
     if (utcHour === w.utcHour && utcMin >= w.utcMinStart && utcMin < w.utcMinEnd) {
       const openTime = new Date(now);
       openTime.setUTCHours(w.utcHour, w.utcMinStart, 0, 0);
-      const closeTime = new Date(openTime);
-      closeTime.setUTCMinutes(closeTime.getUTCMinutes() + 30);
+      const closeTime = new Date(now);
+      closeTime.setUTCHours(w.utcHour, w.utcMinEnd, 0, 0);
+      const durationMins = w.utcMinEnd - w.utcMinStart;
       return {
         signalId: w.id,
         tradingPair: 'BTC/USDT',
@@ -132,7 +144,8 @@ export async function getActiveSignal() {
         purchaseDuration: '30 seconds',
         openTime: openTime.toISOString(),
         closeTime: closeTime.toISOString(),
-        minutesRemaining: 30 - (utcMin - w.utcMinStart),
+        minutesRemaining: durationMins - (utcMin - w.utcMinStart),
+        isFreeSignal: !!w.isFreeSignal,
       };
     }
   }
@@ -144,11 +157,27 @@ router.get('/active', requireAuth, async (req, res) => {
   try {
     const signal = await getActiveSignal();
     const userRes = await query(
-      `SELECT available_balance FROM users WHERE id = $1`,
+      `SELECT available_balance, total_deposits, free_signal_credits FROM users WHERE id = $1`,
       [req.userId]
     );
-    const balance = parseFloat(userRes.rows[0]?.available_balance || 0);
-    const tier = getTier(balance, !!signal?.isTestMode);
+    const user = userRes.rows[0];
+    const balance = parseFloat(user?.available_balance || 0);
+    const totalDeposits = parseFloat(user?.total_deposits || 0);
+    const freeSignalCredits = parseInt(user?.free_signal_credits || 0);
+
+    // Tier is based on TOTAL DEPOSITS (not available balance)
+    const tier = getTier(totalDeposits);
+
+    // For the free 8pm referral signal (Signal 4), eligibility is based on
+    // having free_signal_credits > 0, not on the deposit tier.
+    let qualified = false;
+    if (signal) {
+      if (signal.isFreeSignal) {
+        qualified = freeSignalCredits > 0;
+      } else {
+        qualified = !!tier && tier.signals.includes(signal.signalId);
+      }
+    }
 
     let alreadyExecuted = false;
     if (signal) {
@@ -163,12 +192,15 @@ router.get('/active', requireAuth, async (req, res) => {
     res.json({
       activeSignal: signal,
       userBalance: balance,
+      totalDeposits,
+      freeSignalCredits,
       tier: tier ? {
         label: tier.label,
         description: tier.description,
-        doubleDays: tier.doubleDays,
+        dailyProfitPercent: tier.dailyProfitPercent,
+        signals: tier.signals,
       } : null,
-      qualified: !!tier && !!signal,
+      qualified,
       alreadyExecuted,
     });
   } catch (err) {
@@ -207,6 +239,22 @@ export async function processDueSignalTrades(userId) {
       // 2. Mark trade completed
       await query(`UPDATE signal_trades SET status = 'completed' WHERE id = $1`, [trade.id]);
 
+      // 2b. Check if the user has now doubled their invested capital.
+      //     If total_earnings >= initial_deposit, mark doubled_capital = true
+      //     (this unlocks the lower 10% withdrawal fee).
+      const capRes = await query(
+        `SELECT initial_deposit, total_earnings FROM users WHERE id = $1`,
+        [userId]
+      );
+      const cap = capRes.rows[0];
+      if (cap) {
+        const initialDeposit = parseFloat(cap.initial_deposit || 0);
+        const totalEarnings = parseFloat(cap.total_earnings || 0);
+        if (initialDeposit > 0 && totalEarnings >= initialDeposit) {
+          await query(`UPDATE users SET doubled_capital = TRUE WHERE id = $1`, [userId]);
+        }
+      }
+
       // 3. Log Close Position in account_changes
       const closeId = 'AC' + Date.now() + 'C';
       await query(
@@ -216,66 +264,54 @@ export async function processDueSignalTrades(userId) {
           `Signal ${trade.signal_id} — Close Position (${trade.pair}) +${profit.toFixed(4)} USDT`]
       ).catch(() => { });
 
-      // 4. Referral Commissions — auto-credit Level 1 (15%) and Level 2 (7.5%)
+      // 4. Referral Commissions — halving chain model.
+      //    Level 1 (direct referrer): 7.5% of profit
+      //    Level 2: 3.75% (half of L1)
+      //    Level 3: 1.875% (half of L2)
+      //    ... continues halving up the chain until the commission rounds to 0.
       try {
-        const refRes = await query(`SELECT referred_by FROM users WHERE id = $1`, [userId]);
-        const referrerId = refRes.rows[0]?.referred_by;
+        if (profit > 0) {
+          let currentUserId = userId;
+          let commissionRate = 0.075; // Level 1 starts at 7.5%
+          let level = 1;
 
-        if (referrerId && profit > 0) {
-          // --- Level 1: 15% of profit to direct referrer ---
-          const l1Commission = parseFloat((profit * 0.15).toFixed(4));
-          if (l1Commission > 0) {
-            const l1Id = 'RC' + Date.now() + 'L1';
+          // Walk up the referral chain, halving the rate each level.
+          // Stop when the rate becomes negligible (rounds to 0) or no more referrers.
+          while (commissionRate > 0.0001) {
+            const refRes = await query(`SELECT referred_by FROM users WHERE id = $1`, [currentUserId]);
+            const referrerId = refRes.rows[0]?.referred_by;
+            if (!referrerId) break; // top of chain reached
+
+            const commission = parseFloat((profit * commissionRate).toFixed(4));
+            if (commission <= 0) break;
+
+            const rcId = 'RC' + Date.now() + 'L' + level;
             await query(
               `INSERT INTO referral_commissions (id, referrer_id, referred_user_id, level, trade_amount, amount)
-               VALUES ($1, $2, $3, 1, $4, $5)`,
-              [l1Id, referrerId, userId, tradeAmount, l1Commission]
+               VALUES ($1, $2, $3, $4, $5, $6)`,
+              [rcId, referrerId, userId, level, tradeAmount, commission]
             );
-            const l1BalRes = await query(
+
+            const balRes = await query(
               `UPDATE users 
                SET available_balance = available_balance + $1,
                    total_assets = total_assets + $1,
                    total_earnings = total_earnings + $1
                WHERE id = $2 RETURNING available_balance`,
-              [l1Commission, referrerId]
+              [commission, referrerId]
             );
-            const l1Bal = parseFloat(l1BalRes.rows[0]?.available_balance || 0);
+            const newBal = parseFloat(balRes.rows[0]?.available_balance || 0);
             await query(
               `INSERT INTO account_changes (id, user_id, type, amount, balance_after, remark)
                VALUES ($1, $2, 'commission', $3, $4, $5)`,
-              ['AC' + Date.now() + 'R1', referrerId, l1Commission, l1Bal,
-              `L1 Referral Commission — ${trade.pair} trade by referred user +${l1Commission.toFixed(4)} USDT`]
+              ['AC' + Date.now() + 'R' + level, referrerId, commission, newBal,
+              `L${level} Referral Commission — ${trade.pair} trade by referred user +${commission.toFixed(4)} USDT`]
             ).catch(() => { });
 
-            // --- Level 2: 7.5% of profit to referrer's referrer ---
-            const ref2Res = await query(`SELECT referred_by FROM users WHERE id = $1`, [referrerId]);
-            const level2Id = ref2Res.rows[0]?.referred_by;
-            if (level2Id) {
-              const l2Commission = parseFloat((profit * 0.075).toFixed(4));
-              if (l2Commission > 0) {
-                const l2RcId = 'RC' + Date.now() + 'L2';
-                await query(
-                  `INSERT INTO referral_commissions (id, referrer_id, referred_user_id, level, trade_amount, amount)
-                   VALUES ($1, $2, $3, 2, $4, $5)`,
-                  [l2RcId, level2Id, userId, tradeAmount, l2Commission]
-                );
-                const l2BalRes = await query(
-                  `UPDATE users 
-                   SET available_balance = available_balance + $1,
-                       total_assets = total_assets + $1,
-                       total_earnings = total_earnings + $1
-                   WHERE id = $2 RETURNING available_balance`,
-                  [l2Commission, level2Id]
-                );
-                const l2Bal = parseFloat(l2BalRes.rows[0]?.available_balance || 0);
-                await query(
-                  `INSERT INTO account_changes (id, user_id, type, amount, balance_after, remark)
-                   VALUES ($1, $2, 'commission', $3, $4, $5)`,
-                  ['AC' + Date.now() + 'R2', level2Id, l2Commission, l2Bal,
-                  `L2 Referral Commission — ${trade.pair} trade by L2 referral +${l2Commission.toFixed(4)} USDT`]
-                ).catch(() => { });
-              }
-            }
+            // Move up the chain and halve the rate
+            currentUserId = referrerId;
+            commissionRate = commissionRate / 2;
+            level++;
           }
         }
       } catch (commErr) {
@@ -305,10 +341,31 @@ router.post('/execute', requireAuth, async (req, res) => {
     if (!user) return res.status(404).json({ error: 'User not found' });
 
     const balance = parseFloat(user.available_balance);
-    const tier = getTier(balance, !!signal.isTestMode);
+    const totalDeposits = parseFloat(user.total_deposits || 0);
+    const freeSignalCredits = parseInt(user.free_signal_credits || 0);
 
-    if (!tier) {
-      return res.status(400).json({ error: 'Minimum balance of $100 required to participate in copy trading signals.' });
+    // Pre-check: block copy trade if the account balance is zero
+    if (balance <= 0) {
+      return res.status(400).json({ error: 'Insufficient balance to join copy trade' });
+    }
+
+    // Determine tier & eligibility
+    let tier = null;
+    let isFreeSignalTrade = false;
+    if (signal.isFreeSignal) {
+      // Free 8pm referral signal — requires a free signal credit
+      if (freeSignalCredits <= 0) {
+        return res.status(400).json({ error: 'No free signal credits available. Refer a friend to earn a free 8pm signal.' });
+      }
+      isFreeSignalTrade = true;
+    } else {
+      tier = getTier(totalDeposits);
+      if (!tier) {
+        return res.status(400).json({ error: 'Minimum deposit of $100 required to participate in copy trading signals.' });
+      }
+      if (!tier.signals.includes(signal.signalId)) {
+        return res.status(400).json({ error: `Your tier (${tier.label}) does not include Signal ${signal.signalId}.` });
+      }
     }
 
     // Prevent duplicate execution today
@@ -324,11 +381,25 @@ router.post('/execute', requireAuth, async (req, res) => {
     // 100% Capital Allocation Trade
     const tradeAmount = balance; // 100% of available balance used as trade position
     const variation = Math.random() * 0.10 - 0.05; // ±5% realistic market variation
-    const profitAmount = parseFloat((balance * tier.profitOnBalancePercent * (1 + variation)).toFixed(4));
-    const newBalance = parseFloat((balance + profitAmount).toFixed(4));
 
-    // Release at closeTime (e.g. 17:30, 18:30, 19:30 EAT / end of signal window)
-    const releaseAt = signal.closeTime ? new Date(signal.closeTime).toISOString() : new Date(Date.now() + 30 * 60 * 1000).toISOString();
+    // Profit rate: free signal uses Tier 1's per-signal rate (1.4%),
+    // otherwise the tier's per-signal rate (daily rate split across signals).
+    const profitRate = isFreeSignalTrade
+      ? getPerSignalProfitRate(SIGNAL_TIERS.TIER_1)
+      : getPerSignalProfitRate(tier);
+    const profitAmount = parseFloat((balance * profitRate * (1 + variation)).toFixed(4));
+    const newBalance = parseFloat((balance + profitAmount).toFixed(4));
+    const tierLabel = isFreeSignalTrade ? 'Free Signal' : tier.label;
+
+    // Release at closeTime (e.g. 17:30, 18:30, 19:30 EAT / end of signal window).
+    // This is the GLOBAL scheduled end of the 30-minute window — NOT the user's
+    // entry time. A user who joins 5 minutes before the window closes gets the
+    // exact same release_at as every other participant, so all assets unlock
+    // and release concurrently when the global 30-minute window expires.
+    if (!signal.closeTime) {
+      return res.status(400).json({ error: 'Signal close time is unavailable. Please try again.' });
+    }
+    const releaseAt = new Date(signal.closeTime).toISOString();
 
     const now = Date.now();
     const tradeId = 'ST' + now;
@@ -345,11 +416,19 @@ router.post('/execute', requireAuth, async (req, res) => {
       [tradeAmount, req.userId]
     );
 
+    // 1b. If this is a free 8pm referral signal, consume one free signal credit
+    if (isFreeSignalTrade) {
+      await query(
+        `UPDATE users SET free_signal_credits = GREATEST(0, free_signal_credits - 1) WHERE id = $1`,
+        [req.userId]
+      );
+    }
+
     // 2. Insert signal trade record (status = 'open')
     await query(
       `INSERT INTO signal_trades (id, user_id, signal_id, pair, trade_amount, profit, balance_before, balance_after, tier_label, status, release_at)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'open', $10)`,
-      [tradeId, req.userId, signal.signalId, signal.pairSymbol, tradeAmount, profitAmount, balance, newBalance, tier.label, releaseAt]
+      [tradeId, req.userId, signal.signalId, signal.pairSymbol, tradeAmount, profitAmount, balance, newBalance, tierLabel, releaseAt]
     );
 
     // 3. Log Open Position (Full 100% Allocation into Order)
@@ -372,7 +451,7 @@ router.post('/execute', requireAuth, async (req, res) => {
         profit: profitAmount,
         balanceBefore: balance,
         balanceAfter: newBalance,
-        tier: tier.label,
+        tier: tierLabel,
         status: 'open',
         releaseAt,
       },

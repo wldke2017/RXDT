@@ -302,18 +302,69 @@ router.post('/deposits/approve', requireAdminSecret, async (req, res) => {
     awardedSpins = Math.min(awardedSpins, 10);
 
     await query(`UPDATE deposits SET status = 'success', audit_status = 'approved' WHERE id = $1`, [depositId]);
+
+    // Fetch user's current deposit state to determine if this is their FIRST deposit
+    const depUserRes = await query(
+      `SELECT total_deposits, initial_deposit, has_received_deposit_bonus, referred_by FROM users WHERE id = $1`,
+      [dep.user_id]
+    );
+    const depUser = depUserRes.rows[0];
+    const prevTotalDeposits = parseFloat(depUser?.total_deposits || 0);
+    const isFirstDeposit = prevTotalDeposits <= 0;
+
     // Set last_deposit_amount and reset spin_winnings_used so the new deposit
     // establishes a fresh 1%-10% win cap for the Lucky Wheel.
+    // Also track total_deposits and initial_deposit for tier & doubling logic.
     const userRes = await query(
-      `UPDATE users SET available_balance = available_balance + $1, total_assets = total_assets + $1, spin_chances = spin_chances + $2, last_deposit_amount = $1, spin_winnings_used = 0 WHERE id = $3 RETURNING available_balance, spin_chances`,
+      `UPDATE users SET 
+         available_balance = available_balance + $1, 
+         total_assets = total_assets + $1, 
+         spin_chances = spin_chances + $2, 
+         last_deposit_amount = $1, 
+         spin_winnings_used = 0,
+         total_deposits = total_deposits + $1,
+         initial_deposit = CASE WHEN initial_deposit = 0 THEN $1 ELSE initial_deposit END
+       WHERE id = $3 RETURNING available_balance, spin_chances, total_deposits, initial_deposit`,
       [amount, awardedSpins, dep.user_id]
     );
+
+    // 4% first-deposit bonus: credited to the depositor AND their referrer
+    let bonusMessage = '';
+    if (isFirstDeposit) {
+      const bonus = parseFloat((amount * 0.04).toFixed(2));
+      if (bonus > 0) {
+        // --- Bonus to the depositor ---
+        const bonusUserRes = await query(
+          `UPDATE users SET available_balance = available_balance + $1, total_assets = total_assets + $1, has_received_deposit_bonus = TRUE WHERE id = $2 RETURNING available_balance`,
+          [bonus, dep.user_id]
+        );
+        await query(
+          `INSERT INTO account_changes (id, user_id, type, amount, balance_after, remark) VALUES ($1,$2,$3,$4,$5,$6)`,
+          ['AC' + Date.now() + 'B1', dep.user_id, 'deposit_bonus', bonus, bonusUserRes.rows[0].available_balance, `4% First Deposit Bonus +$${bonus.toFixed(2)} USDT`]
+        ).catch(() => { });
+
+        // --- Bonus to the referrer (if any) ---
+        if (depUser?.referred_by) {
+          const refBonusRes = await query(
+            `UPDATE users SET available_balance = available_balance + $1, total_assets = total_assets + $1 WHERE id = $2 RETURNING available_balance`,
+            [bonus, depUser.referred_by]
+          );
+          await query(
+            `INSERT INTO account_changes (id, user_id, type, amount, balance_after, remark) VALUES ($1,$2,$3,$4,$5,$6)`,
+            ['AC' + Date.now() + 'B2', depUser.referred_by, 'referral_bonus', bonus, refBonusRes.rows[0].available_balance, `4% Referral Bonus from referred user's first deposit +$${bonus.toFixed(2)} USDT`]
+          ).catch(() => { });
+        }
+
+        bonusMessage = ` + 4% First Deposit Bonus ($${bonus.toFixed(2)}) to user & referrer`;
+      }
+    }
+
     await query(
       `INSERT INTO account_changes (id, user_id, type, amount, balance_after, remark) VALUES ($1,$2,$3,$4,$5,$6)`,
       ['AC' + Date.now(), dep.user_id, 'deposit', amount, userRes.rows[0].available_balance, `Deposit approved: ${dep.order_number} (+${awardedSpins} Lucky Spin Chances)`]
     );
     await query('COMMIT');
-    res.json({ message: `Deposit ${dep.order_number} ($${amount}) approved! Granted ${awardedSpins} spin chance(s).`, newBalance: parseFloat(userRes.rows[0].available_balance), spinChances: parseInt(userRes.rows[0].spin_chances) });
+    res.json({ message: `Deposit ${dep.order_number} ($${amount}) approved! Granted ${awardedSpins} spin chance(s).${bonusMessage}`, newBalance: parseFloat(userRes.rows[0].available_balance), spinChances: parseInt(userRes.rows[0].spin_chances) });
   } catch (err) {
     await query('ROLLBACK');
     res.status(500).json({ error: 'Failed to approve deposit' });

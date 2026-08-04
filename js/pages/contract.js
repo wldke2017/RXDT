@@ -705,31 +705,41 @@ export async function init() {
       const tier = data.tier;
       const qualified = data.qualified;
       const alreadyExecuted = data.alreadyExecuted;
+      const freeSignalCredits = data.freeSignalCredits || 0;
       const openTime = new Date(signal.openTime);
       const timeStr = openTime.toISOString().replace('T', ' ').substring(0, 19);
       const minsLeft = signal.minutesRemaining;
+      const isFreeSignal = !!signal.isFreeSignal;
+
+      // Determine the operate button / message
+      let operateHtml;
+      if (alreadyExecuted) {
+        operateHtml = `<span style="color:#00c49a;font-weight:700;">✅ Completed today</span>`;
+      } else if (qualified) {
+        operateHtml = `<button class="signal-confirm-cta" onclick="openSignalModal()">${isFreeSignal ? 'Join Free Signal' : 'Confirm Copy Trade'}</button>`;
+      } else if (isFreeSignal) {
+        operateHtml = `<span style="color:#ff4d4d;font-size:13px;">⚠️ No free signal credits. Refer a friend to earn a free 8pm signal.</span>`;
+      } else if (!tier) {
+        operateHtml = `<span style="color:#ff4d4d;font-size:13px;">⚠️ Minimum $100 deposit required for copy trading</span>`;
+      } else {
+        operateHtml = `<span style="color:#ff4d4d;font-size:13px;">⚠️ Signal ${signal.signalId} not included in your tier (${tier.label})</span>`;
+      }
 
       card.innerHTML = `
       <div class="signal-card">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-          <span style="font-size:12px;font-weight:700;color:#f59e0b;background:rgba(245,158,11,0.15);padding:4px 10px;border-radius:20px;">🟡 LIVE SIGNAL</span>
+          <span style="font-size:12px;font-weight:700;color:#f59e0b;background:rgba(245,158,11,0.15);padding:4px 10px;border-radius:20px;">${isFreeSignal ? '🎁 FREE SIGNAL' : '🟡 LIVE SIGNAL'}</span>
           <span style="font-size:12px;color:var(--text-muted);">⏱ ${minsLeft} min left</span>
         </div>
-        <div class="signal-detail-row"><span class="sd-label">Title</span><span class="sd-val">Signal ${signal.signalId}</span></div>
+        <div class="signal-detail-row"><span class="sd-label">Title</span><span class="sd-val">Signal ${signal.signalId}${isFreeSignal ? ' (Free)' : ''}</span></div>
         <div class="signal-detail-row"><span class="sd-label">Trading pair</span><span class="sd-val">${signal.tradingPair}</span></div>
         <div class="signal-detail-row"><span class="sd-label">Purchase Duration</span><span class="sd-val">${signal.purchaseDuration}</span></div>
         <div class="signal-detail-row"><span class="sd-label">Opening time</span><span class="sd-val">${timeStr}</span></div>
         ${tier ? `<div class="signal-detail-row"><span class="sd-label">Your Tier</span><span class="sd-val" style="color:#00f2fe;">${tier.label} · ${tier.description}</span></div>` : ''}
+        ${isFreeSignal ? `<div class="signal-detail-row"><span class="sd-label">Free Credits</span><span class="sd-val" style="color:#00f2fe;">${freeSignalCredits} available</span></div>` : ''}
         <div class="signal-detail-row">
           <span class="sd-label">Operate</span>
-          <span>
-            ${alreadyExecuted
-          ? `<span style="color:#00c49a;font-weight:700;">✅ Completed today</span>`
-          : qualified
-            ? `<button class="signal-confirm-cta" onclick="openSignalModal()">Confirm Copy Trade</button>`
-            : `<span style="color:#ff4d4d;font-size:13px;">⚠️ Minimum $100 balance required</span>`
-        }
-          </span>
+          <span>${operateHtml}</span>
         </div>
       </div>`;
     } catch (e) {
@@ -741,6 +751,13 @@ export async function init() {
   window.openSignalModal = function () {
     if (!activeSignalData) return;
     const balance = parseFloat(activeSignalData.userBalance || 0);
+
+    // Pre-check: block copy trade if the account balance is zero
+    if (balance <= 0) {
+      toast('Insufficient balance to join copy trade', 'error');
+      return;
+    }
+
     const tradeAmount = balance; // 100% of available balance allocated
     document.getElementById('sm-balance').textContent = `$${balance.toLocaleString('en-US', { minimumFractionDigits: 2 })} USDT`;
     document.getElementById('sm-amount-label').textContent = `(100% Capital: $${balance.toFixed(2)} USDT)`;
@@ -761,15 +778,37 @@ export async function init() {
 
   function updateSignalProfit() {
     const balance = parseFloat(activeSignalData?.userBalance || 0);
-    const b = balance >= 1000 ? 0.003702 : balance >= 500 ? 0.002756 : 0.0015403; // per-trade rate on total balance
     const amt = parseFloat(document.getElementById('sm-amount-input')?.value || 0);
-    const est = (amt * b * 3).toFixed(4); // profit estimate
     const el = document.getElementById('sm-estimated-profit');
-    if (el && amt > 0) el.textContent = `Estimated profit: +${(amt * (balance >= 1000 ? 0.011107 : balance >= 500 ? 0.008267 : 0.004621)).toFixed(4)} USDT`;
+    if (!el || amt <= 0) return;
+
+    // Use the tier's per-signal profit rate from the server response
+    const tier = activeSignalData?.tier;
+    const isFreeSignal = !!activeSignalData?.activeSignal?.isFreeSignal;
+    let perSignalRate;
+    if (isFreeSignal) {
+      perSignalRate = 0.014; // Free signal uses Tier 1 rate (1.4%)
+    } else if (tier && tier.dailyProfitPercent) {
+      const signalCount = (tier.signals && tier.signals.length) || 1;
+      perSignalRate = tier.dailyProfitPercent / signalCount;
+    } else {
+      perSignalRate = 0.014; // fallback to Tier 1
+    }
+
+    const estProfit = amt * perSignalRate;
+    el.textContent = `Estimated profit: +${estProfit.toFixed(4)} USDT (${(perSignalRate * 100).toFixed(2)}% per signal)`;
   }
 
   // ---- Execute Signal Trade ----
   window.executeSignalTrade = async function () {
+    // Pre-check before submitting: block if account balance is zero
+    const balance = parseFloat(activeSignalData?.userBalance || 0);
+    if (balance <= 0) {
+      toast('Insufficient balance to join copy trade', 'error');
+      document.getElementById('signal-execute-modal').style.display = 'none';
+      return;
+    }
+
     const btn = document.getElementById('sm-confirm-btn');
     if (btn) { btn.disabled = true; btn.textContent = 'Submitting Order...'; }
 

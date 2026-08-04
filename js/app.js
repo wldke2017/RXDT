@@ -1,6 +1,16 @@
 import store from './store.js';
 import router from './router.js';
 
+// Session flag: once the user clicks "Join Copy Trading", suppress the
+// aggressive signal popup for the remainder of the session (until refresh).
+// Using an in-memory flag (not localStorage) means it resets on page refresh.
+let copyTradeDismissed = false;
+
+// Set the dismissal flag from anywhere (used by the Join Copy Trading button)
+window.dismissCopyTradePopup = function () {
+  copyTradeDismissed = true;
+};
+
 // Initialize app on DOM ready
 document.addEventListener('DOMContentLoaded', async () => {
   renderShell();
@@ -195,6 +205,8 @@ function startMarketUpdates() {
 // ---- Signal Window Pop-Up ----
 async function checkSignalWindow() {
   if (!store.isLoggedIn()) return;
+  // User already clicked "Join Copy Trading" — suppress popup for this session
+  if (copyTradeDismissed) return;
   if (document.getElementById('rxdt-signal-popup')) return; // already shown
 
   const TOKEN = localStorage.getItem('rxdt_token');
@@ -233,7 +245,7 @@ function showSignalPopup(signalData) {
     </div>
     <div class="rxdt-signal-footer">
       <span class="rxdt-signal-join-text">Join Copy Trading</span>
-      <button class="rxdt-signal-join-btn" onclick="document.getElementById('rxdt-signal-popup').remove();navigateTo('contract');setTimeout(()=>{const t=document.getElementById('tab-invited');if(t)t.click();},600);">
+      <button class="rxdt-signal-join-btn" onclick="document.getElementById('rxdt-signal-popup').remove();dismissCopyTradePopup();navigateTo('contract');setTimeout(()=>{const t=document.getElementById('tab-invited');if(t)t.click();},600);">
         <svg viewBox="0 0 24 24" width="20" height="20"><path d="M8 5v14l11-7z" fill="currentColor"/></svg>
       </button>
     </div>
