@@ -48,7 +48,7 @@ function renderShell() {
     </nav>
 
     <!-- Main Page Content -->
-    <main>
+    <main class="bg-grid-pattern">
       <div class="page-container" id="page-content">
         <!-- Router renders here -->
       </div>
@@ -131,24 +131,24 @@ function updateUserNav() {
   if (area) area.innerHTML = renderUserActions();
 }
 
-window.toggleUserMenu = function() {
+window.toggleUserMenu = function () {
   const dd = document.getElementById('user-dropdown');
   if (dd) dd.classList.toggle('open');
 };
 
-window.closeUserMenu = function() {
+window.closeUserMenu = function () {
   const dd = document.getElementById('user-dropdown');
   if (dd) dd.classList.remove('open');
 };
 
-window.doLogout = function() {
+window.doLogout = function () {
   if (confirm('Are you sure you want to logout?')) {
     store.logout();
     window.location.hash = '#/home';
   }
 };
 
-document.addEventListener('click', function(e) {
+document.addEventListener('click', function (e) {
   const dd = document.getElementById('user-dropdown');
   if (dd && !e.target.closest('.user-avatar-btn')) {
     dd.classList.remove('open');

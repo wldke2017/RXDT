@@ -73,9 +73,13 @@ router.post('/open', requireAuth, async (req, res) => {
     const id = `CO${Date.now()}`;
     const orderNumber = `CTR${Date.now()}`;
 
-    // Deduct margin from balance
+    // Move margin from available_balance to frozen_balance ("In Orders")
+    // so total_assets = available_balance + frozen_balance always holds
     await query(
-      `UPDATE users SET available_balance = available_balance - $1 WHERE id = $2`,
+      `UPDATE users 
+       SET available_balance = available_balance - $1,
+           frozen_balance = frozen_balance + $1
+       WHERE id = $2`,
       [amount, req.userId]
     );
 
@@ -139,10 +143,16 @@ router.post('/close/:id', requireAuth, async (req, res) => {
       [finalPnl, closePrice, id]
     );
 
-    // Credit return amount back to user balance
+    // Release frozen margin and credit return amount back to available_balance.
+    // total_assets is adjusted by the P&L (finalPnl) so the invariant
+    // total_assets = available_balance + frozen_balance is preserved.
     await query(
-      `UPDATE users SET available_balance = available_balance + $1 WHERE id = $2`,
-      [returnAmount, req.userId]
+      `UPDATE users 
+       SET frozen_balance = GREATEST(0, frozen_balance - $1),
+           available_balance = available_balance + $2,
+           total_assets = total_assets + $3
+       WHERE id = $4`,
+      [pos.amount, returnAmount, finalPnl, req.userId]
     );
 
     // Log account change

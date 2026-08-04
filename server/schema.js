@@ -259,7 +259,47 @@ export async function initDatabase() {
   `);
 
   await seedInitialData();
+  await reconcileBalances();
   console.log('✅ Database setup and initialization completed successfully.');
+}
+
+/**
+ * Reconcile user balances so the invariant
+ *   total_assets = available_balance + frozen_balance
+ * always holds.
+ *
+ * Legacy bug: contract positions deducted from available_balance but never
+ * moved into frozen_balance, causing total_assets to be higher than
+ * available + frozen. This fixes existing users' data.
+ */
+async function reconcileBalances() {
+  try {
+    // 1. For users with open contract positions, ensure their margin is
+    //    reflected in frozen_balance (it was previously only deducted from
+    //    available_balance, never tracked as "In Orders").
+    await query(`
+      UPDATE users u
+      SET frozen_balance = COALESCE((
+        SELECT SUM(c.amount) FROM contract_orders c
+        WHERE c.user_id = u.id AND c.status = 'open'
+      ), 0)
+      WHERE EXISTS (
+        SELECT 1 FROM contract_orders c
+        WHERE c.user_id = u.id AND c.status = 'open'
+      )
+    `).catch(() => { });
+
+    // 2. Reconcile total_assets for ALL users so it equals
+    //    available_balance + frozen_balance (fixes any drift).
+    await query(`
+      UPDATE users
+      SET total_assets = available_balance + frozen_balance
+    `).catch(() => { });
+
+    console.log('✅ Balance reconciliation completed.');
+  } catch (err) {
+    console.error('Balance reconciliation error (non-fatal):', err.message);
+  }
 }
 
 async function seedInitialData() {

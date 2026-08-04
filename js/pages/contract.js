@@ -240,7 +240,7 @@ export async function init() {
         secondsVisible: false,
         tickMarkFormatter: (time) => {
           const d = new Date(time * 1000);
-          return `${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}`;
+          return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
         },
       },
       handleScroll: true,
@@ -351,7 +351,7 @@ export async function init() {
   }
 
   // ---- Switch Timeframe ----
-  window.switchChartTF = function(tf, btn) {
+  window.switchChartTF = function (tf, btn) {
     currentTF = tf;
     document.querySelectorAll('.tf-tab').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
@@ -390,7 +390,7 @@ export async function init() {
   }
 
   // ---- Pair Selection ----
-  window.selectPair = function(symbol) {
+  window.selectPair = function (symbol) {
     currentPair = symbol;
     const base = symbol.replace('USDT', '');
     const labelEl = document.getElementById('contract-pair-label');
@@ -408,12 +408,12 @@ export async function init() {
     updateCalc();
   };
 
-  window.togglePairDropdown = function() {
+  window.togglePairDropdown = function () {
     const dd = document.getElementById('pair-dropdown');
     if (dd) dd.style.display = dd.style.display === 'none' ? 'block' : 'none';
   };
 
-  window.filterPairs = function(q) {
+  window.filterPairs = function (q) {
     const filtered = allPairs.filter(p =>
       p.symbol.toLowerCase().includes(q.toLowerCase()) ||
       p.base.toLowerCase().includes(q.toLowerCase())
@@ -422,7 +422,7 @@ export async function init() {
   };
 
   // ---- Leverage Selection ----
-  window.selectLeverage = function(lev) {
+  window.selectLeverage = function (lev) {
     currentLeverage = lev;
     document.querySelectorAll('.lev-btn').forEach(b => {
       b.classList.toggle('active', parseInt(b.dataset.lev) === lev);
@@ -431,13 +431,13 @@ export async function init() {
   };
 
   // ---- Quick Amount ----
-  window.setQuickAmount = function(amount) {
+  window.setQuickAmount = function (amount) {
     const inp = document.getElementById('contract-amount');
     if (inp) { inp.value = amount; updateCalc(); }
   };
 
   // ---- Calc Update ----
-  window.updateCalc = function() {
+  window.updateCalc = function () {
     const amount = parseFloat(document.getElementById('contract-amount')?.value || '0');
     if (!amount || !currentPrice) return;
 
@@ -452,11 +452,11 @@ export async function init() {
 
     if (notEl) notEl.textContent = `$${fmt(notional)} USDT`;
     if (pnlEl) pnlEl.textContent = `±$${fmt(estPnL)}`;
-    if (liqEl) liqEl.textContent = `L:$${fmt(liqLong,2)} | S:$${fmt(liqShort,2)}`;
+    if (liqEl) liqEl.textContent = `L:$${fmt(liqLong, 2)} | S:$${fmt(liqShort, 2)}`;
   };
 
   // ---- Open Position ----
-  window.openPosition = async function(direction) {
+  window.openPosition = async function (direction) {
     if (!store.isLoggedIn()) { toast('Please login first', 'error'); window.location.hash = '#/login'; return; }
     const amount = parseFloat(document.getElementById('contract-amount')?.value || '0');
     if (!amount || amount < 10) { toast('Minimum position size is $10 USDT', 'error'); return; }
@@ -475,6 +475,8 @@ export async function init() {
       if (!res.ok) throw new Error(data.error || 'Failed to open position');
       toast(`✅ ${data.message}`, 'success');
       document.getElementById('contract-amount').value = '';
+      // Refresh user balance so available/frozen reflect the new position
+      if (store.checkAuth) store.checkAuth();
       loadPositions();
     } catch (err) {
       toast(err.message, 'error');
@@ -487,7 +489,7 @@ export async function init() {
   };
 
   // ---- Close Position ----
-  window.closePosition = async function(id) {
+  window.closePosition = async function (id) {
     if (!confirm('Close this position at current market price?')) return;
     try {
       const res = await fetch(`/api/contract/close/${id}`, { method: 'POST', headers: authHeaders });
@@ -495,6 +497,8 @@ export async function init() {
       if (!res.ok) throw new Error(data.error || 'Failed to close');
       const sign = data.pnl >= 0 ? '+' : '';
       toast(`✅ ${sign}$${data.pnl.toFixed(2)} P&L settled`, data.pnl >= 0 ? 'success' : 'error');
+      // Refresh user balance so available/frozen reflect the closed position
+      if (store.checkAuth) store.checkAuth();
       loadPositions();
       loadHistory();
     } catch (err) {
@@ -573,7 +577,7 @@ export async function init() {
           <span class="${pnl >= 0 ? 'color-up' : 'color-down'}" style="font-weight:700;">${pnl >= 0 ? '+' : ''}$${fmt(pnl)}</span>
         </div>`;
       }).join('');
-    } catch (e) {}
+    } catch (e) { }
   }
 
   // ---- Close dropdown on outside click ----
@@ -587,7 +591,7 @@ export async function init() {
   // ---- Signal Tab Switching ----
   let activeSignalData = null;
 
-  window.switchSignalTab = function(tab) {
+  window.switchSignalTab = function (tab) {
     document.getElementById('signal-panel-consume').style.display = tab === 'consume' ? 'block' : 'none';
     document.getElementById('signal-panel-invited').style.display = tab === 'invited' ? 'block' : 'none';
     document.getElementById('tab-consume').classList.toggle('active', tab === 'consume');
@@ -596,7 +600,7 @@ export async function init() {
     if (tab === 'consume') loadConsumeRecord();
   };
 
-  window.switchSignalSubTab = function(sub) {
+  window.switchSignalSubTab = function (sub) {
     document.getElementById('signal-current-panel').style.display = sub === 'current' ? 'block' : 'none';
     document.getElementById('signal-history-panel').style.display = sub === 'history' ? 'block' : 'none';
     document.getElementById('subtab-current').classList.toggle('active', sub === 'current');
@@ -712,11 +716,11 @@ export async function init() {
           <span class="sd-label">Operate</span>
           <span>
             ${alreadyExecuted
-              ? `<span style="color:#00c49a;font-weight:700;">✅ Completed today</span>`
-              : qualified
-                ? `<button class="signal-confirm-cta" onclick="openSignalModal()">Confirm Copy Trade</button>`
-                : `<span style="color:#ff4d4d;font-size:13px;">⚠️ Minimum $100 balance required</span>`
-            }
+          ? `<span style="color:#00c49a;font-weight:700;">✅ Completed today</span>`
+          : qualified
+            ? `<button class="signal-confirm-cta" onclick="openSignalModal()">Confirm Copy Trade</button>`
+            : `<span style="color:#ff4d4d;font-size:13px;">⚠️ Minimum $100 balance required</span>`
+        }
           </span>
         </div>
       </div>`;
@@ -726,7 +730,7 @@ export async function init() {
   }
 
   // ---- Open Confirm Modal ----
-  window.openSignalModal = function() {
+  window.openSignalModal = function () {
     if (!activeSignalData) return;
     const balance = parseFloat(activeSignalData.userBalance || 0);
     const tradeAmount = balance; // 100% of available balance allocated
@@ -738,12 +742,12 @@ export async function init() {
     updateSignalProfit();
   };
 
-  window.closeSignalModal = function() {
+  window.closeSignalModal = function () {
     document.getElementById('signal-execute-modal').style.display = 'none';
   };
 
   // Listen to input changes to update estimated profit
-  document.addEventListener('input', function(e) {
+  document.addEventListener('input', function (e) {
     if (e.target && e.target.id === 'sm-amount-input') updateSignalProfit();
   });
 
@@ -757,7 +761,7 @@ export async function init() {
   }
 
   // ---- Execute Signal Trade ----
-  window.executeSignalTrade = async function() {
+  window.executeSignalTrade = async function () {
     const btn = document.getElementById('sm-confirm-btn');
     if (btn) { btn.disabled = true; btn.textContent = 'Submitting Order...'; }
 

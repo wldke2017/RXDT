@@ -94,11 +94,14 @@ export function render() {
     
     <div class="grid-2" style="gap:16px;">
       ${aiModels.slice(0, 2).map(a => `
-        <div class="card-glass" style="padding:16px;border-radius:12px;border:1px solid var(--border-color);display:flex;gap:12px;align-items:center;">
-          <div style="font-size:36px;width:54px;height:54px;display:flex;align-items:center;justify-content:center;background:rgba(0,242,254,0.1);border-radius:50%;border:1px solid var(--border-color);">${a.avatar}</div>
+        <div class="card-glass" style="padding:16px;border-radius:12px;border:1px solid var(--border-color);display:flex;gap:12px;align-items:center;transition:border-color 0.2s, transform 0.2s;">
+          <div style="font-size:36px;width:54px;height:54px;display:flex;align-items:center;justify-content:center;background:rgba(0,242,254,0.1);border-radius:50%;border:1px solid rgba(0,242,254,0.2);">${a.avatar}</div>
           <div style="flex:1;">
             <div style="font-weight:700;font-size:16px;color:var(--el-color-primary);">${a.name}</div>
-            <div style="font-size:13px;color:var(--text-sub);">Win Rate: <strong class="price-up">${a.winRate}%</strong> · 1D Return: <strong class="price-up">+${a.oneDayReturnRate.toFixed(2)}%</strong></div>
+            <div style="font-size:13px;color:var(--text-sub);margin-top:4px;">
+              <span class="chip chip-green" style="margin-right:6px;">Win ${a.winRate}%</span>
+              <span class="chip chip-cyan">1D +${a.oneDayReturnRate.toFixed(2)}%</span>
+            </div>
           </div>
           <button class="btn-primary" style="padding:6px 14px;font-size:13px;" onclick="navigateTo('follow')">Follow</button>
         </div>
@@ -126,6 +129,31 @@ export function render() {
     </div>
   </div>
 
+  <!-- Platform Stats -->
+  <div class="grid-3" style="gap:12px;margin-bottom:20px;">
+    <div class="stat-card-icon">
+      <div class="sci-icon">💹</div>
+      <div class="sci-info">
+        <div class="sci-label">Daily AI Return</div>
+        <div class="sci-value" style="color:var(--color-up);">1.8% – 2.8%</div>
+      </div>
+    </div>
+    <div class="stat-card-icon">
+      <div class="sci-icon">⚡</div>
+      <div class="sci-info">
+        <div class="sci-label">Doubling Cycle</div>
+        <div class="sci-value" style="color:var(--el-color-primary);">26–34 Days</div>
+      </div>
+    </div>
+    <div class="stat-card-icon">
+      <div class="sci-icon">🛡️</div>
+      <div class="sci-info">
+        <div class="sci-label">Compliance</div>
+        <div class="sci-value" style="color:#a78bfa;font-size:14px;">Colorado Entity ID: 20261325716</div>
+      </div>
+    </div>
+  </div>
+
   <!-- Institutional Background Teaser -->
   <div class="card" style="background:linear-gradient(135deg,#0d1322,#161e31);border:1px solid rgba(0,242,254,0.3);">
     <div style="display:flex;gap:20px;align-items:center;flex-wrap:wrap;">
@@ -142,4 +170,4 @@ export function render() {
   `;
 }
 
-export function init() {}
+export function init() { }
