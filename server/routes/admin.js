@@ -194,17 +194,20 @@ router.post('/deposits/approve', requireAdminSecret, async (req, res) => {
     const dep = depRes.rows[0];
     if (dep.audit_status !== 'pending') { await query('ROLLBACK'); return res.status(400).json({ error: `Already ${dep.audit_status}` }); }
     const amount = parseFloat(dep.amount);
+    // Award 1 lucky spin chance per $50 deposited (minimum 1 spin per approved deposit)
+    const awardedSpins = Math.max(1, Math.floor(amount / 50));
+
     await query(`UPDATE deposits SET status = 'success', audit_status = 'approved' WHERE id = $1`, [depositId]);
     const userRes = await query(
-      `UPDATE users SET available_balance = available_balance + $1, total_assets = total_assets + $1 WHERE id = $2 RETURNING available_balance`,
-      [amount, dep.user_id]
+      `UPDATE users SET available_balance = available_balance + $1, total_assets = total_assets + $1, spin_chances = spin_chances + $2 WHERE id = $3 RETURNING available_balance, spin_chances`,
+      [amount, awardedSpins, dep.user_id]
     );
     await query(
       `INSERT INTO account_changes (id, user_id, type, amount, balance_after, remark) VALUES ($1,$2,$3,$4,$5,$6)`,
-      ['AC' + Date.now(), dep.user_id, 'deposit', amount, userRes.rows[0].available_balance, `Deposit approved: ${dep.order_number}`]
+      ['AC' + Date.now(), dep.user_id, 'deposit', amount, userRes.rows[0].available_balance, `Deposit approved: ${dep.order_number} (+${awardedSpins} Lucky Spin Chances)`]
     );
     await query('COMMIT');
-    res.json({ message: `Deposit ${dep.order_number} ($${amount}) approved!`, newBalance: parseFloat(userRes.rows[0].available_balance) });
+    res.json({ message: `Deposit ${dep.order_number} ($${amount}) approved! Granted ${awardedSpins} spin chance(s).`, newBalance: parseFloat(userRes.rows[0].available_balance), spinChances: parseInt(userRes.rows[0].spin_chances) });
   } catch (err) {
     await query('ROLLBACK');
     res.status(500).json({ error: 'Failed to approve deposit' });

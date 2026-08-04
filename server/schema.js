@@ -29,6 +29,7 @@ export async function initDatabase() {
       transaction_password VARCHAR(255),
       daily_signal_count INT DEFAULT 3,
       avg_daily_return VARCHAR(50) DEFAULT '1.8% - 2.1%',
+      spin_chances INT DEFAULT 0,
       referred_by VARCHAR(50),
       created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
     );
@@ -41,6 +42,7 @@ export async function initDatabase() {
     ALTER TABLE users ADD COLUMN IF NOT EXISTS email_otp_expires TIMESTAMP WITH TIME ZONE;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS transaction_password VARCHAR(255);
     ALTER TABLE users ADD COLUMN IF NOT EXISTS referred_by VARCHAR(50);
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS spin_chances INT DEFAULT 0;
     ALTER TABLE users ALTER COLUMN phone DROP NOT NULL;
   `).catch(err => console.log('User schema migration notice:', err.message));
 

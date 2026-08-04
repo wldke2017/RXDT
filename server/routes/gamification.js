@@ -32,10 +32,14 @@ const PRIZES = [
 // Perform Spin
 router.post('/spin', authenticate, async (req, res) => {
   try {
-    const userRes = await query(`SELECT name, available_balance, total_assets FROM users WHERE id = $1;`, [req.user.id]);
+    const userRes = await query(`SELECT name, available_balance, total_assets, spin_chances FROM users WHERE id = $1;`, [req.user.id]);
     if (userRes.rows.length === 0) return res.status(404).json({ error: 'User not found' });
 
     const user = userRes.rows[0];
+    const currentSpins = parseInt(user.spin_chances || 0);
+    if (currentSpins <= 0) {
+      return res.status(400).json({ error: 'No remaining spin chances! Make a deposit to earn more spins.' });
+    }
 
     // Server side weighted prize calculation
     let rand = Math.random();
@@ -53,11 +57,13 @@ router.post('/spin', authenticate, async (req, res) => {
     const prizeValue = parseFloat(won.value);
     const newAvailable = parseFloat(user.available_balance) + prizeValue;
     const newTotal = parseFloat(user.total_assets) + prizeValue;
+    const remainingSpins = currentSpins - 1;
 
     await query('BEGIN');
 
+    await query(`UPDATE users SET available_balance = $1, total_assets = $2, spin_chances = $3 WHERE id = $4;`, [newAvailable, newTotal, remainingSpins, req.user.id]);
+
     if (prizeValue > 0) {
-      await query(`UPDATE users SET available_balance = $1, total_assets = $2 WHERE id = $3;`, [newAvailable, newTotal, req.user.id]);
       await query(`
         INSERT INTO account_changes (id, user_id, type, amount, balance_after, remark)
         VALUES ($1, $2, 'Lucky Wheel Prize', $3, $4, $5);
@@ -74,7 +80,8 @@ router.post('/spin', authenticate, async (req, res) => {
 
     res.json({
       prize: won,
-      newAvailableBalance: newAvailable
+      newAvailableBalance: newAvailable,
+      remainingSpins: remainingSpins
     });
 
   } catch (err) {

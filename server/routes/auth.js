@@ -146,6 +146,7 @@ function formatUser(u) {
     inviteCode: u.invite_code,
     kycStatus: u.kyc_status,
     membershipTier: u.membership_tier,
+    spinChances: u.spin_chances !== undefined && u.spin_chances !== null ? parseInt(u.spin_chances) : 1,
     dailySignalCount: u.daily_signal_count || 3,
     avgDailyReturn: u.avg_daily_return || '1.8% - 2.1%',
     doublingDays: 34

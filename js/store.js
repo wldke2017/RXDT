@@ -336,13 +336,20 @@ const store = {
   },
 
   async spendLuckyWheelChance() {
-    if (state.luckyWheel.remainingChances <= 0) return null;
-    state.luckyWheel.remainingChances--;
+    if (state.user && state.user.spinChances !== undefined) {
+      if (state.user.spinChances <= 0) return null;
+      state.user.spinChances--;
+    } else {
+      if (state.luckyWheel.remainingChances <= 0) return null;
+      state.luckyWheel.remainingChances--;
+    }
     try {
       const res = await api.spinLuckyWheel();
       const won = res.prize;
-      if (state.user && res.newAvailableBalance !== undefined) {
-        state.user.availableBalance = res.newAvailableBalance;
+      if (state.user) {
+        if (res.newAvailableBalance !== undefined) state.user.availableBalance = res.newAvailableBalance;
+        if (res.remainingSpins !== undefined) state.user.spinChances = res.remainingSpins;
+        localStorage.setItem('rxdt_user', JSON.stringify(state.user));
         emit('user', state.user);
       }
       state.luckyWheel.winLog.unshift({
@@ -363,11 +370,14 @@ const store = {
       }
       state.luckyWheel.winLog.unshift({
         prize: won.name,
-        user: 'You',
+        user: state.user?.name || 'You',
         time: new Date().toISOString().replace('T', ' ').slice(0, 19)
       });
       if (won.value > 0 && state.user) {
         state.user.availableBalance += won.value;
+      }
+      if (state.user) {
+        localStorage.setItem('rxdt_user', JSON.stringify(state.user));
         emit('user', state.user);
       }
       emit('luckyWheel', state.luckyWheel);

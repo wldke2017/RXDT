@@ -15,14 +15,21 @@ let spinDeg = 0;
 
 export function render() {
   const wheel = store.getLuckyWheel();
+  const user = store.getUser();
+  const remainingSpins = user && user.spinChances !== undefined ? user.spinChances : wheel.remainingChances;
   return `
   <div>
     <h1 class="page-title" style="text-align:center;">🎡 Lucky Wheel</h1>
 
     <div class="lucky-wheel-container">
+      <!-- Deposit Qualification Banner -->
+      <div style="background:linear-gradient(135deg,rgba(0,242,254,0.15),rgba(121,40,202,0.2));border:1px solid #00f2fe;border-radius:12px;padding:12px 18px;margin-bottom:16px;text-align:center;font-size:13px;color:#fff;">
+        🎁 <strong>Deposit Reward:</strong> Every approved deposit automatically unlocks <strong>Lucky Wheel Spin Chances</strong> (1 Spin per $50 deposited)!
+      </div>
+
       <!-- Prize Ring Info -->
       <div class="prize-banner">
-        <span>Remaining Spins: <strong>${wheel.remainingChances}</strong></span>
+        <span>Remaining Spins: <strong id="remaining-spins-count">${remainingSpins}</strong></span>
       </div>
 
       <!-- Wheel Canvas -->
@@ -87,11 +94,13 @@ export function init() {
   const wheel = store.getLuckyWheel();
   drawWheel(wheel.prizes);
 
-  window.spinWheel = function() {
-    const currentWheel = store.getLuckyWheel();
+  window.spinWheel = async function() {
+    const user = store.getUser();
+    const wheel = store.getLuckyWheel();
+    const availableSpins = user && user.spinChances !== undefined ? user.spinChances : wheel.remainingChances;
     if (isSpinning) return;
-    if (currentWheel.remainingChances <= 0) {
-      toast('No remaining spins. Earn more by depositing or inviting friends!', 'error');
+    if (availableSpins <= 0) {
+      toast('No remaining spin chances! Make a deposit to unlock more spins.', 'error');
       return;
     }
     isSpinning = true;
@@ -109,7 +118,7 @@ export function init() {
       return 1 - Math.pow(1 - t, 4);
     }
 
-    function animate(ts) {
+    async function animate(ts) {
       if (!start) start = ts;
       const elapsed = ts - start;
       const progress = Math.min(elapsed / duration, 1);
@@ -123,12 +132,14 @@ export function init() {
         spinDeg = targetDeg % 360;
         isSpinning = false;
 
-        // Get result
-        const won = store.spendLuckyWheelChance();
+        // Get result from backend/store
+        const won = await store.spendLuckyWheelChance();
 
         // Update remaining spins display
-        const banner = document.querySelector('.prize-banner strong');
-        if (banner) banner.textContent = store.getLuckyWheel().remainingChances;
+        const updatedUser = store.getUser();
+        const newCount = updatedUser && updatedUser.spinChances !== undefined ? updatedUser.spinChances : store.getLuckyWheel().remainingChances;
+        const banner = document.getElementById('remaining-spins-count');
+        if (banner) banner.textContent = newCount;
 
         // Update win log
         const logEl = document.getElementById('win-log-list');
