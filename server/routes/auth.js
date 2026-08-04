@@ -243,6 +243,7 @@ function formatUser(u) {
     name: u.name,
     phone: u.phone,
     email: u.email || '',
+    emailBound: u.email_bound || null,
     totalAssets: parseFloat(u.total_assets || 0),
     availableBalance: parseFloat(u.available_balance || 0),
     frozenBalance: parseFloat(u.frozen_balance || 0),

@@ -305,7 +305,9 @@ function renderKYC() {
         </div>
       </div>
 
-      <button class="btn-dark auth-submit" onclick="submitKYC()">Submit</button>
+      <button class="btn-dark auth-submit" onclick="submitKYC()">Submit Verification</button>
+      <button class="btn-outline" style="width:100%;height:44px;font-size:14px;margin-top:10px;border-radius:10px;color:var(--text-sub);border-color:rgba(255,255,255,0.15);" onclick="navigateTo('assets')">Skip for now →</button>
+      <p style="text-align:center;font-size:11px;color:var(--text-muted);margin-top:10px;">You can complete identity verification later from Security Settings.</p>
     </div>
   </div>`;
 }

@@ -42,9 +42,12 @@ function renderLockScreen() {
       <div style="font-size:52px;margin-bottom:16px;">🔐</div>
       <h2 style="font-size:20px;font-weight:800;margin:0 0 6px;">Admin Access</h2>
       <p style="font-size:14px;color:var(--text-sub);margin:0 0 24px;">RXDT Exchange — Restricted Area</p>
-      <input type="password" id="admin-pwd-input" class="form-control" placeholder="Enter admin password"
-        style="margin-bottom:16px;text-align:center;font-size:16px;letter-spacing:2px;"
-        onkeydown="if(event.key==='Enter') submitAdminPassword()"/>
+      <div class="input-suffix" style="margin-bottom:16px;">
+        <input type="password" id="admin-pwd-input" class="form-control" placeholder="Enter admin password"
+          style="text-align:center;font-size:16px;letter-spacing:2px;"
+          onkeydown="if(event.key==='Enter') submitAdminPassword()"/>
+        <button class="pwd-toggle" onclick="togglePwd('admin-pwd-input')">👁</button>
+      </div>
       <div id="admin-pwd-error" style="color:#ef4444;font-size:13px;margin-bottom:12px;min-height:18px;"></div>
       <button class="btn-primary" style="width:100%;height:48px;font-size:16px;font-weight:800;border-radius:10px;" onclick="submitAdminPassword()">
         Unlock Dashboard
@@ -180,6 +183,11 @@ function renderDashboard() {
 
 export function init() {
   window.toast = window.toast || ((m, t) => alert(m));
+
+  window.togglePwd = function (id) {
+    const inp = document.getElementById(id);
+    if (inp) inp.type = inp.type === 'password' ? 'text' : 'password';
+  };
 
   // Validate the entered admin secret against the backend before unlocking.
   window.submitAdminPassword = async function () {
