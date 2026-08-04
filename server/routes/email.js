@@ -42,7 +42,7 @@ router.post('/send-otp', requireAuth, async (req, res) => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          from: 'RXDT Exchange <onboarding@resend.dev>',
+          from: 'RXDT Exchange <noreply@rxdt.site>',
           to: [email],
           subject: 'Your RXDT Verification Code',
           html: `
@@ -234,7 +234,7 @@ router.post('/send-otp-public', async (req, res) => {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${process.env.RESEND_API_KEY}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        from: 'RXDT Exchange <onboarding@resend.dev>',
+        from: 'RXDT Exchange <noreply@rxdt.site>',
         to: [email],
         subject: 'Your RXDT Password Reset Code',
         html: `<div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;padding:32px;background:#0a0e1a;border-radius:16px;border:1px solid #1e2a3a;"><h1 style="color:#00d4ff;">RXDT Exchange</h1><p style="color:#8899aa;">Your password reset code:</p><div style="background:#111827;border:2px solid #00d4ff;border-radius:12px;padding:24px;text-align:center;"><span style="font-size:40px;font-weight:900;letter-spacing:12px;color:#00d4ff;">${otp}</span></div><p style="color:#8899aa;font-size:12px;margin-top:16px;">Expires in 10 minutes. Do not share this code.</p></div>`,
