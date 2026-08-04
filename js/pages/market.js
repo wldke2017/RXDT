@@ -33,6 +33,14 @@ export function render() {
       </div>
     </div>
 
+    <!-- Popular Coins Quick Row -->
+    <div class="popular-coins-row" id="popular-coins-row">
+      <span class="popular-coins-label">🔥 Popular:</span>
+      <div class="popular-coins-list" id="popular-coins-list">
+        <span style="color:var(--text-muted);font-size:12px;">Loading...</span>
+      </div>
+    </div>
+
     <!-- Tabs -->
     <div class="market-tabs">
       <button class="mkt-tab active" data-tab="all" onclick="switchMktTab('all',this)">⭐ All</button>
@@ -141,12 +149,12 @@ function renderSparkline(prices, color) {
   return `
   <svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" style="display:block;">
     <defs>
-      <linearGradient id="sg-${color.replace('#','')}" x1="0" y1="0" x2="0" y2="1">
+      <linearGradient id="sg-${color.replace('#', '')}" x1="0" y1="0" x2="0" y2="1">
         <stop offset="0%" stop-color="${color}" stop-opacity="0.35"/>
         <stop offset="100%" stop-color="${color}" stop-opacity="0"/>
       </linearGradient>
     </defs>
-    <polygon points="${fillPts}" fill="url(#sg-${color.replace('#','')})" />
+    <polygon points="${fillPts}" fill="url(#sg-${color.replace('#', '')})" />
     <polyline points="${pts}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>
   </svg>`;
 }
@@ -167,7 +175,7 @@ function renderCoinLogo(base, color, size = 38) {
     class="coin-logo-img"
     onerror="this.onerror=null;this.src='${fallback1}';this.onerror=function(){this.style.display='none';this.nextElementSibling.style.display='flex';}"
     style="border-radius:50%;object-fit:cover;"
-  /><span class="coin-logo-fallback" style="display:none;width:${size}px;height:${size}px;border-radius:50%;background:${color}22;color:${color};border:1px solid ${color}44;align-items:center;justify-content:center;font-size:${Math.round(size*0.45)}px;font-weight:900;">${letter}</span>`;
+  /><span class="coin-logo-fallback" style="display:none;width:${size}px;height:${size}px;border-radius:50%;background:${color}22;color:${color};border:1px solid ${color}44;align-items:center;justify-content:center;font-size:${Math.round(size * 0.45)}px;font-weight:900;">${letter}</span>`;
 }
 
 
@@ -179,8 +187,8 @@ function renderMarketRow(pair) {
   const priceStr = pair.price < 0.01
     ? pair.price.toFixed(8)
     : pair.price < 1
-    ? pair.price.toFixed(4)
-    : pair.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      ? pair.price.toFixed(4)
+      : pair.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   return `
   <div class="mkt-row" onclick="openCoinDetail('${pair.symbol}')">
@@ -390,7 +398,7 @@ async function initDetailChart(symbol, interval) {
       close: parseFloat(k[4]),
     })));
     detailChart.timeScale().fitContent();
-  } catch (e) {}
+  } catch (e) { }
 
   const ro = new ResizeObserver(() => {
     if (detailChart && container) detailChart.applyOptions({ width: container.clientWidth });
@@ -452,6 +460,25 @@ function getCoinIcon(base) {
   return icons[base] || base[0];
 }
 
+// ---- Popular Coins ----
+const POPULAR_COINS = ['BTC', 'ETH', 'BNB', 'SOL', 'XRP', 'DOGE', 'ADA', 'TRX', 'AVAX', 'LINK', 'DOT', 'MATIC'];
+
+function renderPopularCoins() {
+  const listEl = document.getElementById('popular-coins-list');
+  if (!listEl) return;
+  const popular = allPairs.filter(p => POPULAR_COINS.includes(p.base));
+  if (!popular.length) {
+    listEl.innerHTML = `<span style="color:var(--text-muted);font-size:12px;">Loading...</span>`;
+    return;
+  }
+  listEl.innerHTML = popular.map(p => `
+    <div class="popular-coin-chip" onclick="openCoinDetail('${p.symbol}')" title="${p.name}">
+      ${renderCoinLogo(p.base, p.color, 24)}
+      <span>${p.base}</span>
+    </div>
+  `).join('');
+}
+
 // ---- Sort State ----
 let sortKey = 'volume';
 let sortDir = -1;
@@ -460,7 +487,7 @@ export function init() {
   window.toast = toast;
 
   // Filter
-  window.filterMarket = function(q) {
+  window.filterMarket = function (q) {
     const ql = q.toLowerCase();
     filteredPairs = allPairs.filter(p =>
       p.base.toLowerCase().includes(ql) || p.name.toLowerCase().includes(ql)
@@ -470,7 +497,7 @@ export function init() {
   };
 
   // Tab switch
-  window.switchMktTab = function(tab, btn) {
+  window.switchMktTab = function (tab, btn) {
     currentTab = tab;
     document.querySelectorAll('.mkt-tab').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
@@ -488,7 +515,7 @@ export function init() {
   }
 
   // Sort
-  window.sortMarket = function(key) {
+  window.sortMarket = function (key) {
     if (sortKey === key) sortDir *= -1;
     else { sortKey = key; sortDir = -1; }
     const keyMap = { name: 'base', price: 'price', change: 'change', volume: 'volume' };
@@ -499,14 +526,14 @@ export function init() {
   // Coin detail
   window.openCoinDetail = openCoinDetail;
 
-  window.closeCoinDetail = function() {
+  window.closeCoinDetail = function () {
     const modal = document.getElementById('coin-detail-modal');
     if (modal) modal.classList.remove('active');
     if (detailWs) { detailWs.close(); detailWs = null; }
     if (detailChart) { detailChart.remove(); detailChart = null; }
   };
 
-  window.switchDetailTF = function(tf, btn) {
+  window.switchDetailTF = function (tf, btn) {
     document.querySelectorAll('#coin-detail-content .tf-tab').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     // Find the symbol from the detail header
@@ -515,20 +542,20 @@ export function init() {
   };
 
   // Contract from market
-  window.openContractFromMarket = function(symbol) {
-    if (!store.checkAuth()) { window.location.hash = '#/login'; return; }
+  window.openContractFromMarket = function (symbol) {
+    if (!store.isLoggedIn()) { window.location.hash = '#/login'; return; }
     if (!symbol.endsWith('USDT')) { toast('Contract only available for USDT pairs', 'error'); return; }
     window.location.hash = '#/contract';
     setTimeout(() => { if (typeof window.selectPair === 'function') window.selectPair(symbol); }, 400);
   };
 
-  window.openFollowFromMarket = function() {
-    if (!store.checkAuth()) { window.location.hash = '#/login'; return; }
+  window.openFollowFromMarket = function () {
+    if (!store.isLoggedIn()) { window.location.hash = '#/login'; return; }
     window.location.hash = '#/follow';
   };
 
   // Close modal on overlay click
-  document.getElementById('coin-detail-modal')?.addEventListener('click', function(e) {
+  document.getElementById('coin-detail-modal')?.addEventListener('click', function (e) {
     if (e.target === this) window.closeCoinDetail();
   });
 
@@ -540,6 +567,7 @@ export function init() {
       allPairs = await fetchBinancePairs();
       filteredPairs = [...allPairs];
       renderMarketList(filteredPairs);
+      renderPopularCoins();
       updateCount();
       connectMarketWS();
     } catch (e) {
@@ -548,10 +576,16 @@ export function init() {
     }
   }
 
-  // Cleanup on navigate away
-  window.addEventListener('hashchange', () => {
-    if (marketTickerWs) { marketTickerWs.onclose = null; marketTickerWs.close(); }
-    if (detailWs) { detailWs.onclose = null; detailWs.close(); }
-    if (detailChart) { detailChart.remove(); detailChart = null; }
-  }, { once: true });
+  // Cleanup on navigate away — persistent listener that only cleans up
+  // when leaving the market page, so returning to market reconnects fresh.
+  window.addEventListener('hashchange', function cleanupMarket() {
+    const hash = window.location.hash.replace('#/', '') || 'home';
+    if (!hash.startsWith('market')) {
+      if (marketTickerWs) { marketTickerWs.onclose = null; marketTickerWs.close(); marketTickerWs = null; }
+      if (detailWs) { detailWs.onclose = null; detailWs.close(); detailWs = null; }
+      if (detailChart) { detailChart.remove(); detailChart = null; }
+      // Remove this listener so it doesn't accumulate
+      window.removeEventListener('hashchange', cleanupMarket);
+    }
+  });
 }

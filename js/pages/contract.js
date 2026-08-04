@@ -122,6 +122,14 @@ export function render() {
       </div>
     </div>
 
+    <!-- Position History -->
+    <div class="card" style="margin-bottom:0;">
+      <div class="card-title">📜 Position History</div>
+      <div id="history-list">
+        <div style="text-align:center;padding:24px;color:var(--text-muted);font-size:14px;">Loading history...</div>
+      </div>
+    </div>
+
     <!-- Consume Record / Invited Me Tabs -->
     <div class="card signal-tabs-card">
       <div class="signal-main-tabs">
@@ -476,7 +484,7 @@ export async function init() {
       toast(`✅ ${data.message}`, 'success');
       document.getElementById('contract-amount').value = '';
       // Refresh user balance so available/frozen reflect the new position
-      if (store.checkAuth) store.checkAuth();
+      if (store.checkAuth) await store.checkAuth();
       loadPositions();
     } catch (err) {
       toast(err.message, 'error');
@@ -498,7 +506,7 @@ export async function init() {
       const sign = data.pnl >= 0 ? '+' : '';
       toast(`✅ ${sign}$${data.pnl.toFixed(2)} P&L settled`, data.pnl >= 0 ? 'success' : 'error');
       // Refresh user balance so available/frozen reflect the closed position
-      if (store.checkAuth) store.checkAuth();
+      if (store.checkAuth) await store.checkAuth();
       loadPositions();
       loadHistory();
     } catch (err) {
@@ -774,7 +782,7 @@ export async function init() {
       toast(`✅ Order Submitted! Capital is In Order and will release at signal close with profit.`, 'success');
 
       // Refresh user balance & tabs
-      if (store.checkAuth) store.checkAuth();
+      if (store.checkAuth) await store.checkAuth();
       loadSignalCard();
       loadConsumeRecord();
     } catch (err) {

@@ -1,11 +1,29 @@
 import express from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import rateLimit from 'express-rate-limit';
 import { query } from '../db.js';
 import { requireAuth } from '../middleware/auth.js';
 import { processDueSignalTrades } from './signals.js';
 
 const router = express.Router();
+
+// Rate limiting to prevent brute-force attacks
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 20, // max 20 login attempts per 15 min per IP
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many login attempts. Please try again after 15 minutes.' }
+});
+
+const registerLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 10, // max 10 registrations per hour per IP
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many registration attempts. Please try again later.' }
+});
 // JWT_SECRET must be set via environment. No fallback: a leaked default
 // secret would allow attackers to forge tokens for any user.
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -14,7 +32,7 @@ if (!JWT_SECRET) {
 }
 
 // Register endpoint
-router.post('/register', async (req, res) => {
+router.post('/register', registerLimiter, async (req, res) => {
   try {
     const { name, phone, email, password, inviteCode } = req.body;
     const identifier = phone || email;
@@ -80,7 +98,7 @@ router.post('/register', async (req, res) => {
 });
 
 // Login endpoint
-router.post('/login', async (req, res) => {
+router.post('/login', loginLimiter, async (req, res) => {
   try {
     const { phone, email, password } = req.body;
 
@@ -180,11 +198,62 @@ router.post('/send-phone-otp', requireAuth, async (req, res) => {
       [otp, expires, req.userId]
     );
 
-    // In production, send via SMS provider (Twilio, etc.)
-    // For now, log the OTP for debugging. The client will NOT receive it.
-    console.log(`[PHONE-OTP] User ${req.userId} → ${phone}: ${otp}`);
+    // Get the user's bound email to send the OTP there
+    const emailRes = await query(`SELECT email_bound, email FROM users WHERE id = $1`, [req.userId]);
+    const userEmail = emailRes.rows[0]?.email_bound || emailRes.rows[0]?.email;
 
-    res.json({ success: true, message: `Verification code sent to ${phone}` });
+    if (!userEmail) {
+      return res.status(400).json({ error: 'Please bind an email address first before verifying your phone number.' });
+    }
+
+    // Send the OTP to the user's bound email via Resend
+    let emailSent = false;
+    try {
+      const resendRes = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          from: 'RXDT Exchange <noreply@rxdt.site>',
+          to: [userEmail],
+          subject: 'Your RXDT Phone Verification Code',
+          html: `
+            <div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;padding:32px;background:#0a0e1a;border-radius:16px;border:1px solid #1e2a3a;">
+              <div style="text-align:center;margin-bottom:24px;">
+                <h1 style="color:#00d4ff;font-size:28px;margin:0;">RXDT Exchange</h1>
+                <p style="color:#8899aa;font-size:14px;margin-top:4px;">AI Quantitative Crypto Trading</p>
+              </div>
+              <h2 style="color:#ffffff;font-size:18px;margin-bottom:8px;">Phone Verification Code</h2>
+              <p style="color:#8899aa;font-size:14px;margin-bottom:24px;">Use the code below to verify your phone number <strong style="color:#ffffff;">${phone}</strong>. It expires in <strong style="color:#ffffff;">10 minutes</strong>.</p>
+              <div style="background:#111827;border:2px solid #00d4ff;border-radius:12px;padding:24px;text-align:center;margin-bottom:24px;">
+                <span style="font-size:40px;font-weight:900;letter-spacing:12px;color:#00d4ff;">${otp}</span>
+              </div>
+              <p style="color:#8899aa;font-size:12px;">If you did not request this code, please ignore this email. Never share your verification code with anyone.</p>
+              <div style="margin-top:24px;padding-top:16px;border-top:1px solid #1e2a3a;text-align:center;">
+                <p style="color:#556677;font-size:11px;">© 2026 RXDT Exchange · rxdtex.com</p>
+              </div>
+            </div>
+          `,
+        }),
+      });
+
+      if (resendRes.ok) {
+        emailSent = true;
+      } else {
+        const err = await resendRes.json().catch(() => ({}));
+        console.warn('Resend phone OTP send warning:', err);
+      }
+    } catch (e) {
+      console.warn('Resend phone OTP fetch failed:', e.message);
+    }
+
+    if (!emailSent) {
+      return res.status(502).json({ error: 'Failed to send verification code. Please try again later.' });
+    }
+
+    res.json({ success: true, message: `Verification code sent to your email (${userEmail})` });
   } catch (err) {
     console.error('Send phone OTP error:', err);
     res.status(500).json({ error: 'Failed to send verification code' });

@@ -18,7 +18,10 @@ const PRIZES = [
 // Perform Spin
 router.post('/spin', requireAuth, async (req, res) => {
   try {
-    const userRes = await query(`SELECT name, available_balance, total_assets, spin_chances FROM users WHERE id = $1;`, [req.user.id]);
+    const userRes = await query(
+      `SELECT name, available_balance, total_assets, spin_chances, last_deposit_amount, spin_winnings_used FROM users WHERE id = $1;`,
+      [req.user.id]
+    );
     if (userRes.rows.length === 0) return res.status(404).json({ error: 'User not found' });
 
     const user = userRes.rows[0];
@@ -26,6 +29,13 @@ router.post('/spin', requireAuth, async (req, res) => {
     if (currentSpins <= 0) {
       return res.status(400).json({ error: 'No remaining spin chances! Make a deposit to earn more spins.' });
     }
+
+    // Win cap logic: total winnings from spins must be between 1% and 10% of last deposit
+    const lastDeposit = parseFloat(user.last_deposit_amount || 0);
+    const winningsUsed = parseFloat(user.spin_winnings_used || 0);
+    const maxWinCap = lastDeposit * 0.10; // 10% of deposit
+    const minWinCap = lastDeposit * 0.01; // 1% of deposit
+    const remainingCap = Math.max(0, maxWinCap - winningsUsed);
 
     // Server side weighted prize calculation
     let rand = Math.random();
@@ -40,14 +50,41 @@ router.post('/spin', requireAuth, async (req, res) => {
       }
     }
 
-    const prizeValue = parseFloat(won.value);
+    let prizeValue = parseFloat(won.value);
+
+    // If no deposit has been made, fall back to fixed prize values (no cap)
+    if (lastDeposit > 0) {
+      // If the win cap has been reached, user gets "Thanks for Playing"
+      if (remainingCap <= 0) {
+        won = PRIZES[PRIZES.length - 1]; // 'Thanks for Playing'
+        prizeValue = 0;
+      } else {
+        // Cap the prize at the remaining cap (10% of deposit minus winnings already used)
+        if (prizeValue > remainingCap) {
+          prizeValue = Math.max(0, remainingCap);
+        }
+        // Ensure minimum win of 1% of deposit if the user actually wins something
+        if (prizeValue > 0 && prizeValue < minWinCap) {
+          prizeValue = Math.min(minWinCap, remainingCap);
+        }
+        // Update the won prize name to reflect the actual value
+        if (prizeValue > 0 && prizeValue !== parseFloat(won.value)) {
+          won = { ...won, name: `${prizeValue.toFixed(2)} USDT`, value: prizeValue };
+        }
+      }
+    }
+
     const newAvailable = parseFloat(user.available_balance) + prizeValue;
     const newTotal = parseFloat(user.total_assets) + prizeValue;
+    const newWinningsUsed = winningsUsed + prizeValue;
     const remainingSpins = currentSpins - 1;
 
     await query('BEGIN');
 
-    await query(`UPDATE users SET available_balance = $1, total_assets = $2, spin_chances = $3 WHERE id = $4;`, [newAvailable, newTotal, remainingSpins, req.user.id]);
+    await query(
+      `UPDATE users SET available_balance = $1, total_assets = $2, spin_chances = $3, spin_winnings_used = $4 WHERE id = $5;`,
+      [newAvailable, newTotal, remainingSpins, newWinningsUsed, req.user.id]
+    );
 
     if (prizeValue > 0) {
       await query(`

@@ -288,12 +288,24 @@ router.post('/deposits/approve', requireAdminSecret, async (req, res) => {
     const dep = depRes.rows[0];
     if (dep.audit_status !== 'pending') { await query('ROLLBACK'); return res.status(400).json({ error: `Already ${dep.audit_status}` }); }
     const amount = parseFloat(dep.amount);
-    // Award 1 lucky spin chance per $50 deposited (minimum 1 spin per approved deposit)
-    const awardedSpins = Math.max(1, Math.floor(amount / 50));
+    // Lucky Wheel spin rules:
+    // - Deposit < $500: 1 spin
+    // - Deposit >= $500: 2 spins
+    // - Deposit >= $1000: 3 spins (+1 for every extra $500)
+    // - Max 10 spins per deposit
+    let awardedSpins = 1;
+    if (amount >= 1000) {
+      awardedSpins = 3 + Math.floor((amount - 1000) / 500);
+    } else if (amount >= 500) {
+      awardedSpins = 2;
+    }
+    awardedSpins = Math.min(awardedSpins, 10);
 
     await query(`UPDATE deposits SET status = 'success', audit_status = 'approved' WHERE id = $1`, [depositId]);
+    // Set last_deposit_amount and reset spin_winnings_used so the new deposit
+    // establishes a fresh 1%-10% win cap for the Lucky Wheel.
     const userRes = await query(
-      `UPDATE users SET available_balance = available_balance + $1, total_assets = total_assets + $1, spin_chances = spin_chances + $2 WHERE id = $3 RETURNING available_balance, spin_chances`,
+      `UPDATE users SET available_balance = available_balance + $1, total_assets = total_assets + $1, spin_chances = spin_chances + $2, last_deposit_amount = $1, spin_winnings_used = 0 WHERE id = $3 RETURNING available_balance, spin_chances`,
       [amount, awardedSpins, dep.user_id]
     );
     await query(

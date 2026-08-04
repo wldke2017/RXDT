@@ -47,6 +47,8 @@ export async function initDatabase() {
     ALTER TABLE users ADD COLUMN IF NOT EXISTS transaction_password VARCHAR(255);
     ALTER TABLE users ADD COLUMN IF NOT EXISTS referred_by VARCHAR(50);
     ALTER TABLE users ADD COLUMN IF NOT EXISTS spin_chances INT DEFAULT 0;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS last_deposit_amount NUMERIC(15, 2) DEFAULT 0;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS spin_winnings_used NUMERIC(15, 2) DEFAULT 0;
     ALTER TABLE users ALTER COLUMN phone DROP NOT NULL;
   `).catch(err => console.log('User schema migration notice:', err.message));
 

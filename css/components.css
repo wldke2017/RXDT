@@ -379,6 +379,58 @@
   border-color: rgba(0, 242, 254, 0.5);
 }
 
+/* Popular Coins Row */
+.popular-coins-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.popular-coins-row::-webkit-scrollbar {
+  display: none;
+}
+
+.popular-coins-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-muted);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.popular-coins-list {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.popular-coin-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 100px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-main);
+  white-space: nowrap;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.popular-coin-chip:hover {
+  border-color: rgba(0, 242, 254, 0.4);
+  background: rgba(0, 242, 254, 0.06);
+  color: var(--el-color-primary);
+}
+
 /* Tabs */
 .market-tabs {
   display: flex;
