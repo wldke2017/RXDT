@@ -201,6 +201,16 @@ export async function initDatabase() {
     );
   `);
 
+  // Ensure missing columns exist on existing kyc_records tables (production migration)
+  await query(`
+    ALTER TABLE kyc_records ADD COLUMN IF NOT EXISTS nationality VARCHAR(100);
+    ALTER TABLE kyc_records ADD COLUMN IF NOT EXISTS document_type VARCHAR(50) DEFAULT 'Passport';
+    ALTER TABLE kyc_records ADD COLUMN IF NOT EXISTS front_img TEXT;
+    ALTER TABLE kyc_records ADD COLUMN IF NOT EXISTS back_img TEXT;
+    ALTER TABLE kyc_records ADD COLUMN IF NOT EXISTS handheld_img TEXT;
+    ALTER TABLE kyc_records ADD COLUMN IF NOT EXISTS reject_reason TEXT;
+  `).catch(err => console.log('KYC schema migration notice:', err.message));
+
   await query(`
     CREATE TABLE IF NOT EXISTS contract_orders (
       id VARCHAR(50) PRIMARY KEY,
