@@ -21,10 +21,19 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   // ---- Signal Push Notification Poller ----
-  // Polls the backend every 20 seconds while logged in so the signal pop-up
+  // Polls the backend every 8 seconds while logged in so the signal pop-up
   // is pushed to users automatically at exactly 5pm, 6pm, and 7pm EAT the
   // moment the signal window opens — no manual refresh required.
   startSignalPoller();
+
+  // ---- Aggressive Signal Popup on Every Page Navigation ----
+  // Whenever the user navigates to a different page (home → market → profile,
+  // etc.), immediately re-check for an active signal and show the popup again
+  // if they haven't joined yet. This makes the popup "follow" the user across
+  // the entire site until they join the signal.
+  window.addEventListener('hashchange', () => {
+    if (store.isLoggedIn()) checkSignalWindow();
+  });
 });
 
 // Start polling for active signals to "push" notifications at signal times
@@ -34,7 +43,7 @@ function startSignalPoller() {
   signalPollTimer = setInterval(() => {
     if (!store.isLoggedIn()) return;
     checkSignalWindow();
-  }, 20 * 1000); // check every 20 seconds
+  }, 8 * 1000); // check every 8 seconds
 }
 
 function renderShell() {
