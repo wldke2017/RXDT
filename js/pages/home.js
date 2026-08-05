@@ -65,6 +65,7 @@ export function render() {
           <button class="btn-dark action-btn" onclick="navigateTo('follow')">🤖 Start AI Trading</button>
           <button class="btn-outline action-btn" onclick="navigateTo('market')">📊 Live Markets</button>
           <button class="btn-outline action-btn" onclick="navigateTo('invite-friends')">🎁 Refer & Earn</button>
+          <button class="btn-outline action-btn" onclick="navigateTo('earn-guide')">📈 How to Earn</button>
         </div>
 
         <div class="hero-stats-row">

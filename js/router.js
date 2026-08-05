@@ -14,36 +14,37 @@ import * as adminPage from './pages/admin.js';
 import * as contractPage from './pages/contract.js';
 
 const routes = {
-  'home':                 homePage,
-  'market':               marketPage,
-  'follow':               followPage,
-  'follow/note':          followPage,
-  'follow/team':          followPage,
-  'assets':               assetsPage,
-  'recharge':             assetsPage,
-  'withdraw':             assetsPage,
-  'bind-address':         assetsPage,
-  'account-change':       assetsPage,
-  'login':                authPage,
-  'register':             authPage,
-  'forget-pwd':           authPage,
-  'kyc':                  authPage,
-  'lucky-wheel':          luckyWheelPage,
-  'invite-friends':       profilePage,
-  'security-settings':    profilePage,
-  'customer-service':     profilePage,
-  'about':                aboutPage,
-  'agreement':            aboutPage,
+  'home': homePage,
+  'market': marketPage,
+  'follow': followPage,
+  'follow/note': followPage,
+  'follow/team': followPage,
+  'assets': assetsPage,
+  'recharge': assetsPage,
+  'withdraw': assetsPage,
+  'bind-address': assetsPage,
+  'account-change': assetsPage,
+  'login': authPage,
+  'register': authPage,
+  'forget-pwd': authPage,
+  'kyc': authPage,
+  'earn-guide': authPage,
+  'lucky-wheel': luckyWheelPage,
+  'invite-friends': profilePage,
+  'security-settings': profilePage,
+  'customer-service': profilePage,
+  'about': aboutPage,
+  'agreement': aboutPage,
   'investment-agreement': aboutPage,
-  'admin':                adminPage,
-  'contract':             contractPage,
+  'admin': adminPage,
+  'contract': contractPage,
 };
 
 // Pages that require a logged-in user
 const authRequired = [
   'follow', 'follow/note', 'follow/team',
   'assets', 'recharge', 'withdraw', 'bind-address', 'account-change',
-  'lucky-wheel', 'invite-friends', 'security-settings', 'kyc', 'contract'
+  'lucky-wheel', 'invite-friends', 'security-settings', 'kyc', 'earn-guide', 'contract'
 ];
 
 async function navigate(path) {
@@ -94,7 +95,7 @@ function init() {
 }
 
 // Expose global navigation helper used throughout all page files
-window.navigateTo = function(page) {
+window.navigateTo = function (page) {
   window.location.hash = '#/' + page;
 };
 

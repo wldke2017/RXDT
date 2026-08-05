@@ -574,7 +574,7 @@ export function init(page) {
               <span>🟡</span> Awaiting Payment
             </div>
             <div style="font-family:monospace;font-size:18px;font-weight:800;color:#f59e0b;" id="dep-timer">
-              11:59:59
+              00:12:00
             </div>
           </div>
 
@@ -645,19 +645,25 @@ export function init(page) {
     let secondsLeft = 12 * 60; // 12 minutes countdown
     if (depositTimerInterval) clearInterval(depositTimerInterval);
 
+    const updateTimer = () => {
+      const display = document.getElementById('dep-timer');
+      if (!display) return;
+      const h = Math.floor(secondsLeft / 3600);
+      const m = Math.floor((secondsLeft % 3600) / 60);
+      const s = secondsLeft % 60;
+      display.textContent = `${h < 10 ? '0' + h : h}:${m < 10 ? '0' + m : m}:${s < 10 ? '0' + s : s}`;
+    };
+
+    updateTimer(); // show initial 00:12:00
     depositTimerInterval = setInterval(() => {
       secondsLeft--;
-      const display = document.getElementById('dep-timer');
       if (secondsLeft <= 0) {
         clearInterval(depositTimerInterval);
+        const display = document.getElementById('dep-timer');
         if (display) display.textContent = '00:00:00';
         return;
       }
-      const m = Math.floor(secondsLeft / 60);
-      const s = secondsLeft % 60;
-      if (display) {
-        display.textContent = `11:${m < 10 ? '0' + m : m}:${s < 10 ? '0' + s : s}`;
-      }
+      updateTimer();
     }, 1000);
   }
 
@@ -666,29 +672,18 @@ export function init(page) {
       .catch(() => { const ta = document.createElement('textarea'); ta.value = addr; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); toast('Address copied!', 'success'); });
   };
 
-  window.submitDeposit = function () {
-    const addr = document.getElementById('dep-from-addr')?.value;
-    const amount = parseFloat(document.getElementById('dep-amount')?.value || 0);
-    if (!addr) { toast('Please enter your wallet address', 'error'); return; }
-    if (!amount || amount < 100) { toast('Minimum deposit is $100', 'error'); return; }
-    store.addDeposit({ coin: 'USDT', network: 'TRC-20', amount, rate: 1.002, actualAmount: amount * 0.998 });
-    toast('Deposit submitted! Under review.', 'success');
-    setTimeout(() => window.location.hash = '#/assets', 1000);
-  };
-
-  window.switchWithdrawTab = function (tab, btn) {
-    document.querySelectorAll('.tabs-header .tab-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    document.getElementById('withdraw-crypto-panel').style.display = tab === 'crypto' ? '' : 'none';
-    document.getElementById('withdraw-bank-panel').style.display = tab === 'bank' ? '' : 'none';
-  };
+  // Note: submitDeposit was dead code referencing non-existent DOM elements — removed.
+  // Note: switchWithdrawTab referenced non-existent withdraw-bank-panel — removed.
 
   window.calcWithdrawFee = function (val) {
     const el = document.getElementById('withdraw-fee-calc');
     if (!el || !val) return;
-    const fee = Math.max(2, parseFloat(val) * 0.005);
+    const user = store.getUser();
+    const hasDoubled = !!(user && user.doubledCapital);
+    const feeRate = hasDoubled ? 0.10 : 0.25;
+    const fee = parseFloat((parseFloat(val) * feeRate).toFixed(2));
     const actual = parseFloat(val) - fee;
-    el.innerHTML = `Fee: $${fmt(fee)} · You receive: <strong>$${fmt(actual)}</strong>`;
+    el.innerHTML = `Fee (${(feeRate * 100).toFixed(0)}%): $${fmt(fee)} · You receive: <strong>$${fmt(actual)}</strong>`;
   };
 
   window.fillWithdrawAddress = function (sel) {
@@ -711,7 +706,10 @@ export function init(page) {
     if (!address) { toast('Please enter withdrawal address', 'error'); return; }
     if (!transactionPassword) { toast('Please enter your transaction password', 'error'); return; }
     if (!/^\d{6}$/.test(transactionPassword)) { toast('Transaction password must be exactly 6 digits', 'error'); return; }
-    const fee = 1.00;
+    // Fee matches backend: 25% if not doubled, 10% if doubled
+    const hasDoubled = !!(user && user.doubledCapital);
+    const feeRate = hasDoubled ? 0.10 : 0.25;
+    const fee = parseFloat((amount * feeRate).toFixed(2));
     try {
       await store.addWithdrawal({ coin: 'USDT', network: 'TRC-20', amount, fee, actualAmount: amount - fee, address, transactionPassword });
       toast('Withdrawal submitted! Under review.', 'success');
@@ -721,12 +719,7 @@ export function init(page) {
     }
   };
 
-  window.switchBindTab = function (tab, btn) {
-    document.querySelectorAll('.tabs-header .tab-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    document.getElementById('bind-crypto-panel').style.display = tab === 'crypto' ? '' : 'none';
-    document.getElementById('bind-bank-panel').style.display = tab === 'bank' ? '' : 'none';
-  };
+  // Note: switchBindTab referenced non-existent bind-bank-panel — removed.
 
   window.submitBindAddress = async function () {
     const coin = document.getElementById('bind-coin')?.value || 'USDT';

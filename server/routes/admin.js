@@ -3,7 +3,7 @@ import { query } from '../db.js';
 
 const router = express.Router();
 
-function requireAdminSecret(req, res, next) {
+export function requireAdminSecret(req, res, next) {
   const adminSecret = req.headers['x-admin-secret'] || req.query.admin_secret;
   const expectedSecret = process.env.ADMIN_SECRET;
   if (!expectedSecret) {
@@ -198,7 +198,7 @@ router.post('/users/release-frozen', requireAdminSecret, async (req, res) => {
   }
 });
 
-import { setTestSignalWindow, clearTestSignalWindow, getTestSignalStatus } from './signals.js';
+import { setTestSignalWindow, clearTestSignalWindow, getTestSignalStatus, autoExecuteEligibleSignals } from './signals.js';
 
 // ----------------------------------------------------
 // SIGNAL TEST TRIGGER (ADMIN DEMO MODE)
@@ -219,6 +219,15 @@ router.post('/trigger-signal', requireAdminSecret, async (req, res) => {
   const sigId = parseInt(signalId || 1);
   await setTestSignalWindow(mins, sigId);
   res.json({ message: `🚀 Test Signal ${sigId} triggered for ${mins} minutes! Users will now see the pop-up modal.` });
+});
+
+// ----------------------------------------------------
+// AUTO-EXECUTE SIGNALS FOR ALL ELIGIBLE USERS
+// ----------------------------------------------------
+router.post('/auto-execute-signals', requireAdminSecret, async (req, res) => {
+  const result = await autoExecuteEligibleSignals();
+  const prefix = result.executed > 0 ? '✅' : 'ℹ️';
+  res.json({ message: `${prefix} ${result.message}`, executed: result.executed, skipped: result.skipped });
 });
 
 // ----------------------------------------------------

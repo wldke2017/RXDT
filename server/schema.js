@@ -54,6 +54,7 @@ export async function initDatabase() {
     ALTER TABLE users ADD COLUMN IF NOT EXISTS has_received_deposit_bonus BOOLEAN DEFAULT FALSE;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS doubled_capital BOOLEAN DEFAULT FALSE;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS free_signal_credits INT DEFAULT 0;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS auto_signal_exec BOOLEAN DEFAULT TRUE;
     ALTER TABLE users ALTER COLUMN phone DROP NOT NULL;
   `).catch(err => console.log('User schema migration notice:', err.message));
 
@@ -272,6 +273,18 @@ export async function initDatabase() {
       key VARCHAR(100) PRIMARY KEY,
       value TEXT,
       updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+
+  // Create Chat Messages Table
+  await query(`
+    CREATE TABLE IF NOT EXISTS chat_messages (
+      id VARCHAR(50) PRIMARY KEY,
+      user_id VARCHAR(50) REFERENCES users(id) ON DELETE CASCADE,
+      message TEXT NOT NULL,
+      sender VARCHAR(10) NOT NULL DEFAULT 'user',
+      is_read BOOLEAN DEFAULT FALSE,
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
     );
   `);
 

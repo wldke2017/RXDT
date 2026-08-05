@@ -1,5 +1,5 @@
 import store from '../store.js';
-import { COUNTRY_DIAL_CODES } from '../countries.js';
+import { COUNTRY_DIAL_CODES, getDefaultCountryCode } from '../countries.js';
 
 function toast(msg, type = 'info') {
   const container = document.getElementById('toast-container');
@@ -28,13 +28,13 @@ function renderInvite() {
   <div>
     <h1 class="page-title">Invite Friends & Earn</h1>
 
-    <div class="invite-hero-card">
-      <div class="invite-hero-text">
-        <h2>Earn Up to <span class="highlight">15%</span> Commission</h2>
-        <p>Invite friends to join RXDT. Earn commission on every order they place. Level 1: 15% · Level 2: 7.5%</p>
+      <div class="invite-hero-card">
+        <div class="invite-hero-text">
+          <h2>Earn Up to <span class="highlight">7.5%</span> Commission</h2>
+          <p>Invite friends to join RXDT. Earn commission on every order they place. Level 1: 7.5% · Level 2: 3.75%</p>
+        </div>
+        <div class="invite-icon-large">👥</div>
       </div>
-      <div class="invite-icon-large">👥</div>
-    </div>
 
     <div class="card">
       <div class="card-title">Your Referral Info</div>
@@ -85,7 +85,7 @@ function renderInvite() {
         </div>
         <div class="how-step">
           <div class="how-step-num">3</div>
-          <div class="how-step-text"><strong>Earn commissions</strong><br/>Get 15% of their copy trading profits automatically</div>
+          <div class="how-step-text"><strong>Earn commissions</strong><br/>Get 7.5% of their copy trading profits automatically</div>
         </div>
       </div>
     </div>
@@ -187,7 +187,7 @@ function renderSecurity() {
           <label class="form-label">Phone Number</label>
           <div style="display:flex;gap:8px;">
             <select id="bind-phone-country-code" class="form-control" style="width:130px;padding:8px;font-size:13px;background:var(--bg-input, #131926);color:var(--text-main,#fff);border:1px solid var(--border-color,rgba(255,255,255,0.15));border-radius:8px;">
-              ${COUNTRY_DIAL_CODES.map(c => `<option value="${c.code}">${c.flag} ${c.code}</option>`).join('')}
+              ${COUNTRY_DIAL_CODES.map(c => `<option value="${c.code}" ${c.code === getDefaultCountryCode() ? 'selected' : ''}>${c.flag} ${c.code}</option>`).join('')}
             </select>
             <input type="tel" id="bind-phone-input" class="form-control" placeholder="Phone number (digits only)" maxlength="15" oninput="this.value = this.value.replace(/[^0-9]/g, '')" style="flex:1;"/>
           </div>
@@ -268,6 +268,13 @@ function renderCustomerService() {
           <div class="csc-sub">@RXDT_Official</div>
         </div>
       </div>
+      <div class="cs-channel-card" style="border-color:rgba(167,139,250,0.3);">
+        <div class="csc-icon" style="background:rgba(121,40,202,0.2);">💬</div>
+        <div class="csc-info">
+          <div class="csc-title" style="color:#a78bfa;">Talk to the CEO on BonChat</div>
+          <div class="csc-sub">Server: <strong>q7777</strong> · Search: <strong>vance7777</strong> · Send friend request</div>
+        </div>
+      </div>
     </div>
 
     <div class="card">
@@ -294,7 +301,7 @@ function renderCustomerService() {
     <div class="modal-overlay" id="chat-modal">
       <div class="modal-content" style="max-width:480px;height:80vh;display:flex;flex-direction:column;padding:0;">
         <div style="padding:20px;border-bottom:1px solid var(--border-color);display:flex;justify-content:space-between;align-items:center;">
-          <div class="modal-title">RXDT Support</div>
+          <div class="modal-title">💬 RXDT Support</div>
           <button class="modal-close" onclick="document.getElementById('chat-modal').classList.remove('active')">✕</button>
         </div>
         <div id="chat-messages" style="flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:12px;">
@@ -642,10 +649,50 @@ export function init(page) {
   };
 
   window.openChat = function () {
-    document.getElementById('chat-modal').classList.add('active');
+    const modal = document.getElementById('chat-modal');
+    if (modal) modal.classList.add('active');
+    // Load existing chat messages
+    loadChatMessages();
   };
 
-  window.sendChatMsg = function () {
+  async function loadChatMessages() {
+    const token = localStorage.getItem('rxdt_token');
+    if (!token) return;
+    try {
+      const res = await fetch('/api/chat/messages', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await res.json();
+      renderChatMessages(data.messages || []);
+    } catch (e) { console.warn('Load chat messages error:', e); }
+  }
+
+  function renderChatMessages(messages) {
+    const container = document.getElementById('chat-messages');
+    if (!container) return;
+    // Keep the initial welcome message
+    let html = `<div class="chat-msg support">
+      <div class="chat-bubble">👋 Hello! Welcome to RXDT support. How can I help you today?</div>
+      <div class="chat-time">Just now</div>
+    </div>`;
+    messages.forEach(m => {
+      if (m.sender === 'admin') {
+        html += `<div class="chat-msg support">
+          <div class="chat-bubble">${m.message}</div>
+          <div class="chat-time">Just now</div>
+        </div>`;
+      } else {
+        html += `<div class="chat-msg user">
+          <div class="chat-bubble">${m.message}</div>
+          <div class="chat-time">Just now</div>
+        </div>`;
+      }
+    });
+    container.innerHTML = html;
+    container.scrollTop = container.scrollHeight;
+  }
+
+  window.sendChatMsg = async function () {
     const input = document.getElementById('chat-input');
     if (!input || !input.value.trim()) return;
     const msg = input.value.trim();
@@ -653,28 +700,41 @@ export function init(page) {
     const messages = document.getElementById('chat-messages');
     if (!messages) return;
 
-    // User message
+    // Add user message immediately
     const userEl = document.createElement('div');
     userEl.className = 'chat-msg user';
-    userEl.innerHTML = `<div class="chat-bubble">${msg}</div><div class="chat-time">Just now</div>`;
+    userEl.innerHTML = `<div class="chat-bubble">${escapeHtml(msg)}</div><div class="chat-time">Just now</div>`;
     messages.appendChild(userEl);
+    messages.scrollTop = messages.scrollHeight;
 
-    // Auto-reply
-    setTimeout(() => {
-      const replies = [
-        'Thank you for your message! Our team will assist you shortly.',
-        'I understand your concern. Let me check that for you.',
-        'Please allow 1-2 minutes for our specialist to connect with you.',
-        'For urgent matters, please contact us at support@rxdtex.com.'
-      ];
-      const reply = replies[Math.floor(Math.random() * replies.length)];
+    // Send via API
+    const token = localStorage.getItem('rxdt_token');
+    try {
+      const res = await fetch('/api/chat/send', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: msg })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to send');
+
+      // Add auto-reply placeholder
       const supportEl = document.createElement('div');
       supportEl.className = 'chat-msg support';
-      supportEl.innerHTML = `<div class="chat-bubble">${reply}</div><div class="chat-time">Just now</div>`;
+      supportEl.innerHTML = `<div class="chat-bubble">✅ Message sent! Support will reply shortly.</div><div class="chat-time">Just now</div>`;
       messages.appendChild(supportEl);
       messages.scrollTop = messages.scrollHeight;
-    }, 1200);
-
-    messages.scrollTop = messages.scrollHeight;
+    } catch (err) {
+      const errEl = document.createElement('div');
+      errEl.className = 'chat-msg support';
+      errEl.innerHTML = `<div class="chat-bubble" style="color:#ef4444;">⚠️ ${err.message}</div><div class="chat-time">Just now</div>`;
+      messages.appendChild(errEl);
+    }
   };
+
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.appendChild(document.createTextNode(str));
+    return div.innerHTML;
+  }
 }

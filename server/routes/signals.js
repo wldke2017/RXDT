@@ -122,6 +122,169 @@ export async function getTestSignalStatus() {
   }
 }
 
+/**
+ * Auto-execute eligible signals for ALL qualified users.
+ * Called when a signal window is active — ensures every eligible user
+ * receives their entitled signal even if they are not online.
+ * Tracks processed windows in system_settings to avoid duplicates.
+ */
+export async function autoExecuteEligibleSignals() {
+  try {
+    const signal = await getActiveSignal();
+    if (!signal) return { executed: 0, skipped: 0, message: 'No active signal' };
+
+    // Rate limit: run the full auto-execute at most once per 45 seconds.
+    // This prevents excessive DB churn from the 8-second frontend poller,
+    // while still catching users who deposit mid-window.
+    const lastRunKey = 'auto_exec_last_run';
+    const lastRunRes = await query(
+      `SELECT value FROM system_settings WHERE key = $1`, [lastRunKey]
+    ).catch(() => ({ rows: [] }));
+    if (lastRunRes.rows.length > 0) {
+      const lastRunMs = parseInt(lastRunRes.rows[0].value || '0');
+      if (Date.now() - lastRunMs < 45000) {
+        return { executed: 0, skipped: 0, message: 'Auto-execute already ran recently' };
+      }
+    }
+    await query(
+      `INSERT INTO system_settings (key, value, updated_at) VALUES ($1, $2, NOW())
+       ON CONFLICT (key) DO UPDATE SET value = $2, updated_at = NOW()`,
+      [lastRunKey, String(Date.now())]
+    ).catch(() => { });
+
+    const today = new Date().toISOString().split('T')[0];
+
+    // Find all eligible users
+    const usersRes = await query(`
+      SELECT id, available_balance, total_deposits, free_signal_credits 
+      FROM users 
+      WHERE available_balance > 0
+    `);
+
+    let executed = 0;
+    let skipped = 0;
+
+    for (const user of usersRes.rows) {
+      const balance = parseFloat(user.available_balance);
+      const totalDeposits = parseFloat(user.total_deposits || 0);
+      const freeSignalCredits = parseInt(user.free_signal_credits || 0);
+
+      // Check qualification
+      let tier = null;
+      let isFreeSignalTrade = false;
+      if (signal.isFreeSignal) {
+        if (freeSignalCredits <= 0) { skipped++; continue; }
+        isFreeSignalTrade = true;
+      } else {
+        tier = getTier(totalDeposits);
+        if (!tier || !tier.signals.includes(signal.signalId)) { skipped++; continue; }
+      }
+
+      // Check balance
+      if (balance <= 0) { skipped++; continue; }
+
+      // Check if already executed today
+      const execCheck = await query(
+        `SELECT id FROM signal_trades WHERE user_id = $1 AND signal_id = $2 AND DATE(created_at) = $3`,
+        [user.id, signal.signalId, today]
+      ).catch(() => ({ rows: [] }));
+      if (execCheck.rows.length > 0) { skipped++; continue; }
+
+      // Check auto-trade preference (default: enabled)
+      const prefRes = await query(
+        `SELECT auto_signal_exec FROM users WHERE id = $1`,
+        [user.id]
+      ).catch(() => ({ rows: [{ auto_signal_exec: true }] }));
+      const autoExec = prefRes.rows[0]?.auto_signal_exec !== false;
+      if (!autoExec) { skipped++; continue; }
+
+      // Execute the trade
+      try {
+        await executeSignalTrade(user.id, signal, balance, tier, isFreeSignalTrade, freeSignalCredits);
+        executed++;
+      } catch (e) {
+        console.warn(`Auto-execute failed for user ${user.id}:`, e.message);
+        skipped++;
+      }
+    }
+
+    console.log(`✅ Auto-executed Signal ${signal.signalId}: ${executed} trades, ${skipped} skipped`);
+    return { executed, skipped, signalId: signal.signalId, message: `Auto-executed ${executed} trades` };
+  } catch (err) {
+    console.error('Auto-execute error:', err);
+    return { executed: 0, skipped: 0, message: err.message };
+  }
+}
+
+/**
+ * Execute a signal trade for a specific user (shared logic between manual & auto).
+ * Moves available_balance → frozen_balance, inserts signal_trade, logs account change.
+ */
+async function executeSignalTrade(userId, signal, balance, tier, isFreeSignalTrade, freeSignalCredits) {
+  const today = new Date().toISOString().split('T')[0];
+
+  // Prevent duplicate
+  const execCheck = await query(
+    `SELECT id FROM signal_trades WHERE user_id = $1 AND signal_id = $2 AND DATE(created_at) = $3`,
+    [userId, signal.signalId, today]
+  ).catch(() => ({ rows: [] }));
+  if (execCheck.rows.length > 0) return false;
+
+  // 100% Capital Allocation Trade
+  const tradeAmount = balance;
+  const variation = Math.random() * 0.10 - 0.05; // ±5% realistic market variation
+
+  const profitRate = isFreeSignalTrade
+    ? getPerSignalProfitRate(SIGNAL_TIERS.TIER_1)
+    : getPerSignalProfitRate(tier);
+  const profitAmount = parseFloat((balance * profitRate * (1 + variation)).toFixed(4));
+  const newBalance = parseFloat((balance + profitAmount).toFixed(4));
+  const tierLabel = isFreeSignalTrade ? 'Free Signal' : tier.label;
+
+  if (!signal.closeTime) return false;
+  const releaseAt = new Date(signal.closeTime).toISOString();
+
+  const now = Date.now();
+  const tradeId = 'ST' + now + '_' + userId.substring(0, 4);
+  const openId = 'AC' + now + 'O_' + userId.substring(0, 4);
+
+  await query('BEGIN');
+
+  // 1. Move available_balance into frozen_balance ("In Order")
+  await query(
+    `UPDATE users 
+     SET available_balance = available_balance - $1,
+         frozen_balance = frozen_balance + $1
+     WHERE id = $2`,
+    [tradeAmount, userId]
+  );
+
+  // 1b. If this is a free 8pm referral signal, consume one free signal credit
+  if (isFreeSignalTrade) {
+    await query(
+      `UPDATE users SET free_signal_credits = GREATEST(0, free_signal_credits - 1) WHERE id = $1`,
+      [userId]
+    );
+  }
+
+  // 2. Insert signal trade record
+  await query(
+    `INSERT INTO signal_trades (id, user_id, signal_id, pair, trade_amount, profit, balance_before, balance_after, tier_label, status, release_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'open', $10)`,
+    [tradeId, userId, signal.signalId, signal.pairSymbol, tradeAmount, profitAmount, balance, newBalance, tierLabel, releaseAt]
+  );
+
+  // 3. Log Open Position
+  await query(
+    `INSERT INTO account_changes (id, user_id, type, amount, balance_after, remark)
+     VALUES ($1, $2, 'signal_open', $3, 0, $4)`,
+    [openId, userId, -tradeAmount, `Signal ${signal.signalId} — Auto-executed (${signal.pairSymbol}) placed in Order`]
+  );
+
+  await query('COMMIT');
+  return true;
+}
+
 export async function getActiveSignal() {
   const testSignal = await getTestSignalStatus();
   if (testSignal) return testSignal;
@@ -155,6 +318,15 @@ export async function getActiveSignal() {
 // ---- GET /api/signals/active ----
 router.get('/active', requireAuth, async (req, res) => {
   try {
+    // Auto-execute eligible signals for ALL qualified users.
+    // This ensures every user receives their entitled signal even if
+    // they are not online to manually click "Join Copy Trading".
+    // The auto-execute is triggered by the frontend poller (every 8s)
+    // and by any user hitting this endpoint during a signal window.
+    if (req.query.auto !== 'false') {
+      await autoExecuteEligibleSignals();
+    }
+
     const signal = await getActiveSignal();
     const userRes = await query(
       `SELECT available_balance, total_deposits, free_signal_credits FROM users WHERE id = $1`,
@@ -260,7 +432,7 @@ export async function processDueSignalTrades(userId) {
       await query(
         `INSERT INTO account_changes (id, user_id, type, amount, balance_after, remark)
          VALUES ($1, $2, 'signal_close', $3, $4, $5)`,
-        [closeId, userId, 'signal_close', returnTotal, newBal,
+        [closeId, userId, returnTotal, newBal,
           `Signal ${trade.signal_id} — Close Position (${trade.pair}) +${profit.toFixed(4)} USDT`]
       ).catch(() => { });
 
@@ -349,6 +521,12 @@ router.post('/execute', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'Insufficient balance to join copy trade' });
     }
 
+    // Use the amount from the request body, or default to 100% of available balance
+    const requestedAmount = parseFloat(req.body?.amount);
+    const tradeAmount = requestedAmount && requestedAmount > 0 && requestedAmount <= balance
+      ? requestedAmount
+      : balance;
+
     // Determine tier & eligibility
     let tier = null;
     let isFreeSignalTrade = false;
@@ -378,8 +556,7 @@ router.post('/execute', requireAuth, async (req, res) => {
       return res.status(400).json({ error: `You have already joined Signal ${signal.signalId} today.` });
     }
 
-    // 100% Capital Allocation Trade
-    const tradeAmount = balance; // 100% of available balance used as trade position
+    // Use the tradeAmount determined above (either requested amount or full balance)
     const variation = Math.random() * 0.10 - 0.05; // ±5% realistic market variation
 
     // Profit rate: free signal uses Tier 1's per-signal rate (1.4%),
@@ -387,8 +564,8 @@ router.post('/execute', requireAuth, async (req, res) => {
     const profitRate = isFreeSignalTrade
       ? getPerSignalProfitRate(SIGNAL_TIERS.TIER_1)
       : getPerSignalProfitRate(tier);
-    const profitAmount = parseFloat((balance * profitRate * (1 + variation)).toFixed(4));
-    const newBalance = parseFloat((balance + profitAmount).toFixed(4));
+    const profitAmount = parseFloat((tradeAmount * profitRate * (1 + variation)).toFixed(4));
+    const newBalance = parseFloat((tradeAmount + profitAmount).toFixed(4));
     const tierLabel = isFreeSignalTrade ? 'Free Signal' : tier.label;
 
     // Release at closeTime (e.g. 17:30, 18:30, 19:30 EAT / end of signal window).

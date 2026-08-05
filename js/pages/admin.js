@@ -14,8 +14,8 @@ function getAdminSecret() {
 async function adminFetch(endpoint, method = 'GET', body = null) {
   const secret = getAdminSecret();
   if (!secret) throw new Error('Admin secret not set. Please log in again.');
-  const url = `${BASE}${endpoint}?admin_secret=${encodeURIComponent(secret)}`;
-  const opts = { method, headers: { 'Content-Type': 'application/json' } };
+  const url = `${BASE}${endpoint}`;
+  const opts = { method, headers: { 'Content-Type': 'application/json', 'x-admin-secret': secret } };
   if (body) opts.body = JSON.stringify(body);
   const res = await fetch(url, opts);
   if (!res.ok) {
@@ -99,6 +99,8 @@ function renderDashboard() {
       <button class="tab-btn" onclick="switchAdminTab('kyc',this)">🪪 KYC</button>
       <button class="tab-btn" onclick="switchAdminTab('users',this)">👥 Users</button>
       <button class="tab-btn" onclick="switchAdminTab('signals',this)">📡 Signals</button>
+      <button class="tab-btn" onclick="switchAdminTab('earnings',this);loadEarningsView()">📊 Earnings</button>
+      <button class="tab-btn" onclick="switchAdminTab('chat',this);loadChatConversations()">💬 Chat</button>
     </div>
 
     <!-- Deposits Panel -->
@@ -122,6 +124,17 @@ function renderDashboard() {
         <input type="text" id="user-search" class="form-control" placeholder="🔍 Search by name, phone, ID..." style="max-width:320px;" oninput="filterUsers(this.value)"/>
       </div>
       <div id="admin-users-list"><div class="admin-loading">Loading users...</div></div>
+    </div>
+
+    <!-- Earnings Panel -->
+    <div id="admin-tab-earnings" style="display:none;">
+      <div id="admin-earnings-list"></div>
+    </div>
+
+    <!-- Chat Panel -->
+    <div id="admin-tab-chat" style="display:none;">
+      <div id="admin-chat-list" class="admin-loading">Loading conversations...</div>
+      <div id="admin-chat-conversation" style="display:none;"></div>
     </div>
 
     <!-- Signal Trades Panel -->
@@ -148,6 +161,7 @@ function renderDashboard() {
           </select>
           <button class="btn-primary" style="height:40px;padding:0 20px;font-size:14px;font-weight:700;border-radius:8px;" onclick="triggerTestSignal('start')">🚀 Start Test Signal</button>
           <button class="btn-outline" style="height:40px;padding:0 16px;font-size:13px;border-color:#ef4444;color:#ef4444;" onclick="triggerTestSignal('stop')">🛑 Stop Signal</button>
+          <button class="btn-success" style="height:40px;padding:0 16px;font-size:13px;font-weight:700;border-radius:8px;" onclick="adminAutoExecuteSignals()">⚡ Auto-Execute Signals</button>
         </div>
       </div>
 
@@ -241,6 +255,7 @@ let allUsersCache = [];
 let adminPollTimer = null;
 let adminSoundEnabled = true;
 let lastPendingCounts = { deposits: -1, withdrawals: -1, kyc: -1 };
+let lastChatUnread = -1;
 
 function adminToast(msg, type = 'info') {
   if (window.toast) { window.toast(msg, type); return; }
@@ -328,6 +343,25 @@ async function pollPendingItems() {
       window.loadAdminStats && window.loadAdminStats();
     }
 
+    // ---- Chat unread notification polling ----
+    try {
+      const chatData = await adminFetch('/chat/pending-count').catch(() => null);
+      if (chatData && chatData.unreadCount !== undefined) {
+        const unread = parseInt(chatData.unreadCount);
+        if (lastChatUnread === -1) {
+          lastChatUnread = unread;
+        } else if (unread > lastChatUnread) {
+          const newMsgs = unread - lastChatUnread;
+          adminToast(`💬 ${newMsgs} new support message${newMsgs > 1 ? 's' : ''}!`, 'warning');
+          playAdminAlertSound();
+          sendBrowserNotification('RXDT Admin Alert', `${newMsgs} new support message${newMsgs > 1 ? 's' : ''} from users`);
+          lastChatUnread = unread;
+        } else {
+          lastChatUnread = unread;
+        }
+      }
+    } catch (e) { /* chat polling is non-fatal */ }
+
     const statusEl = document.getElementById('admin-live-status');
     if (statusEl) {
       const total = depositIds.length + withdrawalIds.length + kycIds.length;
@@ -367,6 +401,7 @@ function initDashboard() {
     window.addEventListener('hashchange', () => {
       if (adminPollTimer) { clearInterval(adminPollTimer); adminPollTimer = null; }
       lastPendingCounts = { deposits: -1, withdrawals: -1, kyc: -1 };
+      lastChatUnread = -1;
     }, { once: true });
   }
 
@@ -386,7 +421,7 @@ function initDashboard() {
   window.switchAdminTab = function (tab, btn) {
     document.querySelectorAll('.tabs-header .tab-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
-    ['deposits', 'withdrawals', 'kyc', 'users', 'signals'].forEach(t => {
+    ['deposits', 'withdrawals', 'kyc', 'users', 'signals', 'earnings', 'chat'].forEach(t => {
       const el = document.getElementById(`admin-tab-${t}`);
       if (el) el.style.display = t === tab ? '' : 'none';
     });
@@ -586,6 +621,18 @@ function initDashboard() {
     }
   };
 
+  // ---- Auto-Execute Signals for All Eligible Users ----
+  window.adminAutoExecuteSignals = async function () {
+    if (!confirm('Auto-execute the current signal for ALL eligible users? This ensures every qualified user receives their entitled signal even if offline.')) return;
+    try {
+      const res = await adminFetch('/auto-execute-signals', 'POST', {});
+      window.toast(res.message, res.executed > 0 ? 'success' : 'info');
+      await loadSignalTrades();
+    } catch (err) {
+      window.toast('Error: ' + err.message, 'error');
+    }
+  };
+
   async function loadSignalTrades() {
     checkTestSignalStatus();
     const el = document.getElementById('admin-signals-list');
@@ -732,6 +779,155 @@ function initDashboard() {
 
   window.closeKycImgModal = function () {
     document.getElementById('kyc-img-modal')?.classList.remove('active');
+  };
+
+  // ---- EARNINGS VIEW (Infographic Table) ----
+  window.loadEarningsView = function () {
+    const el = document.getElementById('admin-earnings-list');
+    if (!el) return;
+
+    const cards = [
+      { num: '1', title: '💰 Deposit Funds', desc: 'Min $100 unlocks Tier 1 signals. Deposits earn Lucky Wheel spins (1-10 per deposit). Higher tiers need $300 & $1,000.' },
+      { num: '2', title: '📡 AI Signal Copy Trading', desc: 'Join live signals at 5pm, 6pm, 7pm EAT. T1: 1 signal (1.4%), T2: 2 signals (2.4%), T3: 3 signals (3.1%) daily profit.' },
+      { num: '3', title: '🤖 AI Quantitative Models', desc: 'Allocate capital to AI models. Earn 1.8%-2.8% daily returns. Doubling cycle: 26-34 days. Min allocation $100-$500.' },
+      { num: '4', title: '👥 Referral Commissions', desc: 'Earn 7.5% on L1 referrals profits, 3.75% on L2, halving up the chain. Each referral = 1 free 8pm signal!' },
+      { num: '5', title: '🎡 Lucky Wheel', desc: 'Deposits earn spin chances. Win up to $88.88 USDT per spin. Win cap: 1%-10% of last deposit amount.' },
+      { num: '6', title: '🏆 VIP Team Dividends', desc: 'Refer 5+ members to unlock team rewards & weekly trading volume dividends. The bigger your team, the higher your rewards.' },
+      { num: '7', title: '🆔 KYC Verification', desc: 'Complete identity verification to unlock withdrawals. Required before users can withdraw their earnings.' }
+    ];
+
+    el.innerHTML = `
+<div style="background:linear-gradient(135deg,#0d1322,#1a1f35);border-radius:16px;padding:24px;border:1px solid rgba(0,242,254,0.2);margin-bottom:20px;">
+  <div style="text-align:center;margin-bottom:20px;">
+    <img src="assets/images/rxdt_logo.png" alt="RXDT Logo" style="width:48px;height:48px;margin-bottom:8px;filter:drop-shadow(0 0 10px #00f2fe);"/>
+    <h2 style="color:#fff;font-size:20px;margin:0 0 4px;">🚀 RXDT Exchange — How Users Earn</h2>
+    <p style="color:var(--text-sub);font-size:13px;margin:0;">AI Quantitative Trading Platform · Institutional Grade</p>
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;">
+    ${cards.map(c => `
+    <div style="background:rgba(0,242,254,0.05);border:1px solid rgba(0,242,254,0.2);border-radius:12px;padding:14px;">
+      <div style="display:flex;gap:10px;align-items:flex-start;">
+        <div style="width:36px;height:36px;border-radius:50%;background:rgba(0,242,254,0.15);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:#00f2fe;flex-shrink:0;">${c.num}</div>
+        <div>
+          <div style="font-weight:700;color:#fff;font-size:14px;">${c.title}</div>
+          <div style="font-size:12px;color:var(--text-sub);line-height:1.5;">${c.desc}</div>
+        </div>
+      </div>
+    </div>`).join('')}
+    <div style="background:rgba(121,40,202,0.1);border:1px solid rgba(167,139,250,0.3);border-radius:12px;padding:14px;">
+      <div style="display:flex;gap:10px;align-items:flex-start;">
+        <div style="width:36px;height:36px;border-radius:50%;background:rgba(121,40,202,0.2);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:#a78bfa;flex-shrink:0;">📢</div>
+        <div>
+          <div style="font-weight:700;color:#a78bfa;font-size:14px;">💬 Talk to the CEO</div>
+          <div style="font-size:12px;color:var(--text-sub);line-height:1.5;">Users can chat with the CEO Arthur Vance on BonChat: Sign up on BonChat, server <strong style="color:#fff;">q7777</strong>, search user <strong style="color:#fff;">vance7777</strong>, and send a friend request.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>`;
+  };
+
+  // ---- CHAT: Load Conversations List ----
+  window.loadChatConversations = async function () {
+    const el = document.getElementById('admin-chat-list');
+    const convEl = document.getElementById('admin-chat-conversation');
+    if (convEl) convEl.style.display = 'none';
+    if (!el) return;
+    el.style.display = 'block';
+    el.innerHTML = '<div class="admin-loading">Loading conversations...</div>';
+
+    try {
+      const data = await adminFetch('/chat/conversations');
+      const conversations = data.conversations || [];
+      if (!conversations.length) {
+        el.innerHTML = '<div class="empty-state">💬 No conversations yet</div>';
+        return;
+      }
+      el.innerHTML = conversations.map(c => {
+        const lastMsg = c.last_message || '';
+        const truncated = lastMsg.length > 60 ? lastMsg.substring(0, 60) + '...' : lastMsg;
+        const unreadBadge = c.unread_count > 0 ? `<span style="background:#ef4444;color:#fff;border-radius:10px;padding:2px 8px;font-size:11px;font-weight:700;margin-left:8px;">${c.unread_count}</span>` : '';
+        return `
+          <div class="admin-card" style="cursor:pointer;" onclick="loadUserConversation('${c.user_id}')">
+            <div class="admin-card-header">
+              <div>
+                <div class="admin-card-title">${c.user_name || 'Unknown'} ${unreadBadge}</div>
+                <div class="admin-card-sub">${c.user_phone || ''}</div>
+                <div class="admin-card-sub" style="color:var(--text-muted);font-size:12px;">${truncated}</div>
+              </div>
+              <div style="font-size:11px;color:var(--text-muted);">${c.last_message_at ? timeAgo(c.last_message_at).substring(0, 16) : ''}</div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    } catch (err) {
+      el.innerHTML = '<div class="empty-state" style="color:#ef4444;">Failed to load: ' + err.message + '</div>';
+    }
+  };
+
+  // ---- CHAT: Load Single User Conversation ----
+  window.loadUserConversation = async function (userId) {
+    const listEl = document.getElementById('admin-chat-list');
+    const convEl = document.getElementById('admin-chat-conversation');
+    if (listEl) listEl.style.display = 'none';
+    if (!convEl) return;
+    convEl.style.display = 'block';
+    convEl.innerHTML = '<div class="admin-loading">Loading messages...</div>';
+
+    try {
+      const data = await adminFetch('/chat/messages/' + userId);
+      const messages = data.messages || [];
+      const user = data.user || {};
+
+      let msgsHtml = messages.map(m => {
+        const isAdmin = m.sender === 'admin';
+        return `
+          <div style="display:flex;justify-content:${isAdmin ? 'flex-end' : 'flex-start'};margin-bottom:10px;">
+            <div style="max-width:80%;padding:10px 14px;border-radius:12px;background:${isAdmin ? 'rgba(0,242,254,0.15)' : 'rgba(255,255,255,0.06)'};border:1px solid rgba(255,255,255,0.1);">
+              <div style="font-size:13px;color:#fff;">${m.message}</div>
+              <div style="font-size:10px;color:var(--text-muted);margin-top:4px;">${m.created_at ? timeAgo(m.created_at).substring(0, 16) : ''}</div>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      convEl.innerHTML = `
+        <div style="margin-bottom:16px;">
+          <button class="btn-outline" style="padding:6px 12px;font-size:13px;" onclick="loadChatConversations()">← Back</button>
+          <span style="margin-left:12px;font-weight:700;color:#fff;">💬 ${user.name || 'Unknown'} ${user.phone ? '(' + user.phone + ')' : ''}</span>
+        </div>
+        <div id="admin-chat-msgs" style="background:rgba(0,0,0,0.2);border-radius:12px;padding:16px;min-height:200px;max-height:400px;overflow-y:auto;margin-bottom:12px;">
+          ${msgsHtml}
+        </div>
+        <div style="display:flex;gap:8px;">
+          <input type="text" id="admin-chat-reply-input" class="form-control" placeholder="Type your reply..."
+            onkeydown="if(event.key==='Enter')adminSendChatReply('${userId}')"/>
+          <button class="btn-primary" onclick="adminSendChatReply('${userId}')">Send</button>
+        </div>
+      `;
+      // Scroll to bottom
+      const msgsContainer = document.getElementById('admin-chat-msgs');
+      if (msgsContainer) msgsContainer.scrollTop = msgsContainer.scrollHeight;
+    } catch (err) {
+      convEl.innerHTML = '<div class="empty-state" style="color:#ef4444;">Failed to load messages: ' + err.message + '</div>';
+    }
+  };
+
+  // ---- CHAT: Send Admin Reply ----
+  window.adminSendChatReply = async function (userId) {
+    const input = document.getElementById('admin-chat-reply-input');
+    if (!input || !input.value.trim()) return;
+    const msg = input.value.trim();
+    input.value = '';
+
+    try {
+      await adminFetch('/chat/reply', 'POST', { userId, message: msg });
+      // Reload conversation
+      window.loadUserConversation(userId);
+    } catch (err) {
+      window.toast('Error: ' + err.message, 'error');
+    }
   };
 
   // Auto-load on init

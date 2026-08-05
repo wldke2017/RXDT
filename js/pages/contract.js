@@ -813,7 +813,18 @@ export async function init() {
     if (btn) { btn.disabled = true; btn.textContent = 'Submitting Order...'; }
 
     try {
-      const res = await fetch('/api/signals/execute', { method: 'POST', headers: authHeaders });
+      const amountInput = document.getElementById('sm-amount-input');
+      const tradeAmount = parseFloat(amountInput?.value || '0');
+      if (!tradeAmount || tradeAmount > balance) {
+        toast(tradeAmount > balance ? 'Amount exceeds available balance' : 'Please enter a valid trade amount', 'error');
+        if (btn) { btn.disabled = false; btn.textContent = 'Confirm'; }
+        return;
+      }
+      const res = await fetch('/api/signals/execute', {
+        method: 'POST',
+        headers: authHeaders,
+        body: JSON.stringify({ amount: tradeAmount })
+      });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Submission failed');
 

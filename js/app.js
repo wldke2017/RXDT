@@ -95,10 +95,14 @@ function renderShell() {
         <a onclick="navigateTo('home')">Home</a>
         <a onclick="navigateTo('market')">Markets</a>
         <a onclick="navigateTo('follow')">AI Trading</a>
+        <a onclick="navigateTo('earn-guide')">How to Earn</a>
         <a onclick="navigateTo('about')">About Us</a>
         <a onclick="navigateTo('customer-service')">Customer Service</a>
         <a onclick="navigateTo('agreement')">User Agreement</a>
         <a onclick="navigateTo('investment-agreement')">AI Trading Agreement</a>
+      </div>
+      <div style="margin-top:12px;padding:10px 16px;background:rgba(0,242,254,0.05);border:1px solid rgba(0,242,254,0.2);border-radius:10px;display:inline-block;font-size:12px;color:var(--text-sub);">
+        💬 <strong style="color:#00f2fe;">Talk to the CEO on BonChat:</strong> Sign up on BonChat · Server <strong style="color:#fff;">q7777</strong> · Search <strong style="color:#fff;">vance7777</strong> · Send friend request
       </div>
       <div class="footer-copy">© 2026 RXDT Exchange Inc · State of Colorado Registered Entity ID: 20261325716 · Powered by Voyage Investment & Vanguard FinTech Strategies</div>
     </footer>
@@ -147,6 +151,7 @@ function renderUserActions() {
         <div class="udrop-item" onclick="navigateTo('assets');closeUserMenu()">My Assets</div>
         <div class="udrop-item" onclick="navigateTo('follow/note');closeUserMenu()">My AI Orders</div>
         <div class="udrop-item" onclick="navigateTo('invite-friends');closeUserMenu()">Invite Friends</div>
+        <div class="udrop-item" onclick="navigateTo('earn-guide');closeUserMenu()">How to Earn</div>
         <div class="udrop-item" onclick="navigateTo('security-settings');closeUserMenu()">Security Settings</div>
         <div class="udrop-item" onclick="navigateTo('kyc');closeUserMenu()">KYC Verification</div>
         <div class="udrop-divider"></div>

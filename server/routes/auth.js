@@ -41,9 +41,6 @@ router.post('/register', registerLimiter, async (req, res) => {
       return res.status(400).json({ error: 'Phone number or email, and password are required.' });
     }
 
-    // Ensure phone column allows null (fail-safe migration)
-    await query(`ALTER TABLE users ALTER COLUMN phone DROP NOT NULL;`).catch(() => { });
-
     // Check if user already exists
     let existing;
     if (phone) {

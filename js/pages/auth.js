@@ -1,5 +1,5 @@
 import store from '../store.js';
-import { COUNTRIES, COUNTRY_DIAL_CODES } from '../countries.js';
+import { COUNTRIES, COUNTRY_DIAL_CODES, getDefaultCountryCode } from '../countries.js';
 
 // Utility: Show toast
 function toast(msg, type = 'info') {
@@ -25,12 +25,14 @@ export function render(page) {
   if (page === 'register') return renderRegister();
   if (page === 'forget-pwd') return renderForgetPwd();
   if (page === 'kyc') return renderKYC();
+  if (page === 'earn-guide') return renderEarnGuide();
   return renderLogin();
 }
 
 // ---- LOGIN ----
 function renderLogin() {
-  const countryOptions = COUNTRY_DIAL_CODES.map(c => `<option value="${c.code}">${c.flag} ${c.code} (${c.name})</option>`).join('');
+  const defaultCode = getDefaultCountryCode();
+  const countryOptions = COUNTRY_DIAL_CODES.map(c => `<option value="${c.code}" ${c.code === defaultCode ? 'selected' : ''}>${c.flag} ${c.code} (${c.name})</option>`).join('');
 
   return `
   <div class="auth-page">
@@ -94,7 +96,8 @@ function renderRegister() {
   const hash = window.location.hash || '';
   const match = hash.match(/[?&]invite=([^&]+)/) || window.location.search.match(/[?&]invite=([^&]+)/);
   const defaultInvite = match ? decodeURIComponent(match[1]) : '';
-  const countryOptions = COUNTRY_DIAL_CODES.map(c => `<option value="${c.code}">${c.flag} ${c.code} (${c.name})</option>`).join('');
+  const defaultCode = getDefaultCountryCode();
+  const countryOptions = COUNTRY_DIAL_CODES.map(c => `<option value="${c.code}" ${c.code === defaultCode ? 'selected' : ''}>${c.flag} ${c.code} (${c.name})</option>`).join('');
 
   return `
   <div class="auth-page">
@@ -258,6 +261,8 @@ function renderKYC() {
         <div class="auth-tagline">Identity Verification (KYC)</div>
       </div>
 
+      <button class="btn-outline" style="width:100%;height:44px;font-size:14px;margin-bottom:20px;border-radius:10px;color:var(--text-sub);border-color:rgba(255,255,255,0.15);" onclick="navigateTo('assets')">Skip for now →</button>
+
       <div class="form-group">
         <label class="form-label">Document Type</label>
         <select class="form-control" id="kyc-id-type">
@@ -321,8 +326,124 @@ function renderKYC() {
       </div>
 
       <button class="btn-dark auth-submit" onclick="submitKYC()">Submit Verification</button>
-      <button class="btn-outline" style="width:100%;height:44px;font-size:14px;margin-top:10px;border-radius:10px;color:var(--text-sub);border-color:rgba(255,255,255,0.15);" onclick="navigateTo('assets')">Skip for now →</button>
       <p style="text-align:center;font-size:11px;color:var(--text-muted);margin-top:10px;">You can complete identity verification later from Security Settings.</p>
+    </div>
+  </div>`;
+}
+
+// ---- EARN GUIDE (shown after registration, before KYC) ----
+function renderEarnGuide() {
+  return `
+  <div class="auth-page">
+    <div class="auth-card" style="max-width:640px;">
+      <div class="auth-brand">
+        <img src="assets/images/rxdt_logo.png" alt="RXDT Logo" class="auth-brand-logo-img"/>
+        <div class="auth-logo">RXDT</div>
+        <div class="auth-tagline">How to Earn on RXDT</div>
+        <p class="auth-subtitle">Your step-by-step guide to earning on our AI Quantitative Trading Platform</p>
+      </div>
+
+      <!-- Step 1: Deposit -->
+      <div class="earn-guide-step" style="display:flex;gap:14px;align-items:flex-start;padding:16px;background:rgba(255,255,255,0.03);border:1px solid var(--border-color);border-radius:12px;margin-bottom:12px;">
+        <div style="flex-shrink:0;width:40px;height:40px;border-radius:50%;background:rgba(0,242,254,0.15);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:var(--el-color-primary);">1</div>
+        <div style="flex:1;">
+          <div style="font-weight:700;font-size:16px;color:var(--el-color-primary);margin-bottom:4px;">💰 Deposit Funds</div>
+          <div style="font-size:13px;color:var(--text-sub);line-height:1.6;">
+            Deposit USDT (ERC-20/TRC-20), BTC, ETH, or USDC via the Assets page. A minimum of <strong style="color:#fff;">$100</strong> unlocks <strong style="color:#fff;">Tier 1</strong> copy trading signals. Higher deposits unlock better tiers and more daily signals.
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 2: AI Signal Copy Trading -->
+      <div class="earn-guide-step" style="display:flex;gap:14px;align-items:flex-start;padding:16px;background:rgba(255,255,255,0.03);border:1px solid var(--border-color);border-radius:12px;margin-bottom:12px;">
+        <div style="flex-shrink:0;width:40px;height:40px;border-radius:50%;background:rgba(0,242,254,0.15);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:var(--el-color-primary);">2</div>
+        <div style="flex:1;">
+          <div style="font-weight:700;font-size:16px;color:var(--el-color-primary);margin-bottom:4px;">📡 Join AI Signal Copy Trading</div>
+          <div style="font-size:13px;color:var(--text-sub);line-height:1.6;">
+            Go to the <strong style="color:#fff;">Contract</strong> page and join live AI signals at <strong style="color:#00f2fe;">5:00 PM, 6:00 PM, or 7:00 PM EAT</strong>. Your tier determines how many signals you can join daily:
+            <div style="margin-top:8px;padding:10px;background:rgba(0,0,0,0.2);border-radius:8px;font-size:12px;">
+              <div>🔹 <strong>Tier 1</strong> ($100–$299): 1 signal/day · <span style="color:var(--color-up);">1.4% daily profit</span></div>
+              <div>🔹 <strong>Tier 2</strong> ($300–$999): 2 signals/day · <span style="color:var(--color-up);">2.4% daily profit</span></div>
+              <div>🔹 <strong>Tier 3</strong> ($1000+): 3 signals/day · <span style="color:var(--color-up);">3.1% daily profit</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 3: AI Quantitative Models -->
+      <div class="earn-guide-step" style="display:flex;gap:14px;align-items:flex-start;padding:16px;background:rgba(255,255,255,0.03);border:1px solid var(--border-color);border-radius:12px;margin-bottom:12px;">
+        <div style="flex-shrink:0;width:40px;height:40px;border-radius:50%;background:rgba(0,242,254,0.15);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:var(--el-color-primary);">3</div>
+        <div style="flex:1;">
+          <div style="font-weight:700;font-size:16px;color:var(--el-color-primary);margin-bottom:4px;">🤖 Allocate Capital to AI Quantitative Models</div>
+          <div style="font-size:13px;color:var(--text-sub);line-height:1.6;">
+            Visit the <strong style="color:#fff;">AI Trading</strong> page to browse AI quantitative models. Allocate capital to a model and earn <strong style="color:var(--color-up);">1.8%–2.8% daily returns</strong>, with a doubling cycle of <strong style="color:#fff;">26–34 days</strong>.
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 4: Referral -->
+      <div class="earn-guide-step" style="display:flex;gap:14px;align-items:flex-start;padding:16px;background:rgba(255,255,255,0.03);border:1px solid var(--border-color);border-radius:12px;margin-bottom:12px;">
+        <div style="flex-shrink:0;width:40px;height:40px;border-radius:50%;background:rgba(0,242,254,0.15);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:var(--el-color-primary);">4</div>
+        <div style="flex:1;">
+          <div style="font-weight:700;font-size:16px;color:var(--el-color-primary);margin-bottom:4px;">👥 Refer Friends & Earn Commissions</div>
+          <div style="font-size:13px;color:var(--text-sub);line-height:1.6;">
+            Share your invite link from the <strong style="color:#fff;">Refer & Earn</strong> page. Earn <strong style="color:var(--color-up);">7.5% commission</strong> on Level 1 referrals' trading profits, <strong style="color:var(--color-up);">3.75%</strong> on Level 2, and more up the chain. Each referral also grants you a <strong style="color:#00f2fe;">free 8:00 PM EAT signal</strong>!
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 5: Lucky Wheel -->
+      <div class="earn-guide-step" style="display:flex;gap:14px;align-items:flex-start;padding:16px;background:rgba(255,255,255,0.03);border:1px solid var(--border-color);border-radius:12px;margin-bottom:12px;">
+        <div style="flex-shrink:0;width:40px;height:40px;border-radius:50%;background:rgba(0,242,254,0.15);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:var(--el-color-primary);">5</div>
+        <div style="flex:1;">
+          <div style="font-weight:700;font-size:16px;color:var(--el-color-primary);margin-bottom:4px;">🎡 Spin the Lucky Wheel</div>
+          <div style="font-size:13px;color:var(--text-sub);line-height:1.6;">
+            Every deposit earns you lucky wheel spin chances. Win up to <strong style="color:var(--color-up);">$88.88 USDT</strong> per spin. Visit the Lucky Wheel page to try your luck!
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 6: VIP Team Dividends -->
+      <div class="earn-guide-step" style="display:flex;gap:14px;align-items:flex-start;padding:16px;background:rgba(255,255,255,0.03);border:1px solid var(--border-color);border-radius:12px;margin-bottom:12px;">
+        <div style="flex-shrink:0;width:40px;height:40px;border-radius:50%;background:rgba(0,242,254,0.15);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:var(--el-color-primary);">6</div>
+        <div style="flex:1;">
+          <div style="font-weight:700;font-size:16px;color:var(--el-color-primary);margin-bottom:4px;">🏆 Unlock VIP Team Dividends</div>
+          <div style="font-size:13px;color:var(--text-sub);line-height:1.6;">
+            Refer <strong style="color:#fff;">5+ members</strong> to unlock VIP team rewards and receive stable weekly trading volume dividends. The more your team trades, the more you earn!
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 7: KYC -->
+      <div class="earn-guide-step" style="display:flex;gap:14px;align-items:flex-start;padding:16px;background:rgba(0,242,254,0.05);border:1px solid rgba(0,242,254,0.3);border-radius:12px;margin-bottom:12px;">
+        <div style="flex-shrink:0;width:40px;height:40px;border-radius:50%;background:rgba(0,242,254,0.2);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:var(--el-color-primary);">7</div>
+        <div style="flex:1;">
+          <div style="font-weight:700;font-size:16px;color:var(--el-color-primary);margin-bottom:4px;">🆔 Complete KYC to Unlock Withdrawals</div>
+          <div style="font-size:13px;color:var(--text-sub);line-height:1.6;">
+            Verify your identity to unlock withdrawals. KYC takes less than 5 minutes and is required before you can withdraw your earnings.
+          </div>
+        </div>
+      </div>
+
+      <!-- Talk to the CEO on BonChat -->
+      <div class="earn-guide-step" style="display:flex;gap:14px;align-items:flex-start;padding:16px;background:rgba(121,40,202,0.12);border:1px solid rgba(167,139,250,0.35);border-radius:12px;margin-bottom:20px;">
+        <div style="flex-shrink:0;width:40px;height:40px;border-radius:50%;background:rgba(121,40,202,0.25);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:#a78bfa;">💬</div>
+        <div style="flex:1;">
+          <div style="font-weight:700;font-size:16px;color:#a78bfa;margin-bottom:4px;">Talk to the CEO on BonChat</div>
+          <div style="font-size:13px;color:var(--text-sub);line-height:1.6;">
+            Need help or want to speak directly with our CEO <strong style="color:#fff;">Arthur Vance?</strong> Connect via BonChat:
+          </div>
+          <div style="margin-top:10px;padding:12px;background:rgba(0,0,0,0.25);border-radius:10px;font-size:13px;line-height:2;">
+            <div>🔹 <strong>1.</strong> Sign up for a <strong style="color:#fff;">BonChat</strong> account</div>
+            <div>🔹 <strong>2.</strong> Join / set your server to <strong style="color:#a78bfa;">q7777</strong></div>
+            <div>🔹 <strong>3.</strong> Search for user <strong style="color:#a78bfa;">vance7777</strong></div>
+            <div>🔹 <strong>4.</strong> Send a <strong style="color:#fff;">friend request</strong> and start chatting</div>
+          </div>
+        </div>
+      </div>
+
+      <button class="btn-dark auth-submit" onclick="navigateTo('kyc')">Complete KYC Now →</button>
+      <button class="btn-outline" style="width:100%;height:44px;font-size:14px;margin-top:10px;border-radius:10px;color:var(--text-sub);border-color:rgba(255,255,255,0.15);" onclick="navigateTo('home')">Skip to Home →</button>
     </div>
   </div>`;
 }
@@ -424,7 +545,7 @@ export function init(page) {
     try {
       await store.register({ phone, email, password: pwd, inviteCode, name: isPhone ? `User_${rawPhone.slice(-4)}` : email.split('@')[0] });
       toast('Registration successful! Welcome to RXDT!', 'success');
-      setTimeout(() => { window.location.hash = '#/kyc'; }, 500);
+      setTimeout(() => { window.location.hash = '#/earn-guide'; }, 500);
     } catch (err) {
       toast(err.message || 'Registration failed', 'error');
       window.generateCaptcha();

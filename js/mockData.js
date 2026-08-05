@@ -74,14 +74,9 @@ const MOCK_DATA = {
     }
   ],
 
-  // Global Promotion Tier Data (from PDF Page 9)
+  // First Deposit Bonus: 4% flat to depositor + 4% to referrer (matches backend rule)
   depositPromotions: [
-    { range: '$500 – $999', newUserBonus: 20, referrerBonus: 40, rewardPct: 'Fixed $' },
-    { range: '$1,000 – $1,999', newUserBonus: 50, referrerBonus: 70, rewardPct: 'Fixed $' },
-    { range: '$2,000 – $2,999', newUserBonus: 100, referrerBonus: 150, rewardPct: 'Fixed $' },
-    { range: '$3,000 – $4,999', newUserBonus: 180, referrerBonus: 270, rewardPct: 'Fixed $' },
-    { range: '$5,000 – $9,999', newUserBonus: '4%', referrerBonus: '8%', rewardPct: 'Percentage' },
-    { range: '$10,000+', newUserBonus: '6%', referrerBonus: '12%', rewardPct: 'Percentage' }
+    { range: 'Any amount', newUserBonus: '4%', referrerBonus: '4%', rewardPct: 'Percentage' }
   ],
 
   // Team VIP Tier Rewards Table (from PDF Page 10)
@@ -101,8 +96,8 @@ const MOCK_DATA = {
   // Asset Doubling Schedules (3 Signals / Day)
   // Testing Mode (<$500): 34 Days Doubling | Standard Tier (≥$500): 28 Days Doubling
   assetDoubling3Signals: [
-    { day: 1,  c100: 102.06, c200: 204.12, c500: 512.50, c1000: 1025.00, c2000: 2050.00, c5000: 5125.00 },
-    { day: 7,  c100: 115.34, c200: 230.68, c500: 587.39, c1000: 1174.79, c2000: 2349.57, c5000: 5873.93 },
+    { day: 1, c100: 102.06, c200: 204.12, c500: 512.50, c1000: 1025.00, c2000: 2050.00, c5000: 5125.00 },
+    { day: 7, c100: 115.34, c200: 230.68, c500: 587.39, c1000: 1174.79, c2000: 2349.57, c5000: 5873.93 },
     { day: 14, c100: 133.03, c200: 266.06, c500: 690.03, c1000: 1380.06, c2000: 2760.13, c5000: 6900.32 },
     { day: 21, c100: 153.44, c200: 306.88, c500: 810.78, c1000: 1621.56, c2000: 3243.13, c5000: 8107.82 },
     { day: 28, c100: 176.98, c200: 353.96, c500: 1000.00, c1000: 2000.00, c2000: 4000.00, c5000: 10000.00 },
@@ -184,19 +179,27 @@ const MOCK_DATA = {
   },
 
   cryptoNetworks: [
-    { coin: 'USDT', networks: [
-      { name: 'TRC-20', address: 'TQn5gt9JfVE4RXzGh8kYr2wH8mPLRkzV', confirmations: 12, rate: 1.00 },
-      { name: 'ERC-20', address: '0x1ab4f28D7F8a9CdF901e3a5B4C9ef2FF1D2d9', confirmations: 12, rate: 1.00 }
-    ]},
-    { coin: 'USDC', networks: [
-      { name: 'ERC-20', address: '0x3bc9aA1F2B87e43dC0fA234d9ef1CC289F7Pb12', confirmations: 12, rate: 1.00 }
-    ]},
-    { coin: 'BTC', networks: [
-      { name: 'BTC', address: '1A1zP1eP5QGefi2DMPTfTL5SLmv7Divf', confirmations: 3, rate: 98420 }
-    ]},
-    { coin: 'ETH', networks: [
-      { name: 'ERC-20', address: '0x742d35Cc6634C0532925a3b8D4C9ef13A5B7Fe1', confirmations: 12, rate: 3421.50 }
-    ]}
+    {
+      coin: 'USDT', networks: [
+        { name: 'TRC-20', address: 'TQn5gt9JfVE4RXzGh8kYr2wH8mPLRkzV', confirmations: 12, rate: 1.00 },
+        { name: 'ERC-20', address: '0x1ab4f28D7F8a9CdF901e3a5B4C9ef2FF1D2d9', confirmations: 12, rate: 1.00 }
+      ]
+    },
+    {
+      coin: 'USDC', networks: [
+        { name: 'ERC-20', address: '0x3bc9aA1F2B87e43dC0fA234d9ef1CC289F7Pb12', confirmations: 12, rate: 1.00 }
+      ]
+    },
+    {
+      coin: 'BTC', networks: [
+        { name: 'BTC', address: '1A1zP1eP5QGefi2DMPTfTL5SLmv7Divf', confirmations: 3, rate: 98420 }
+      ]
+    },
+    {
+      coin: 'ETH', networks: [
+        { name: 'ERC-20', address: '0x742d35Cc6634C0532925a3b8D4C9ef13A5B7Fe1', confirmations: 12, rate: 3421.50 }
+      ]
+    }
   ]
 };
 

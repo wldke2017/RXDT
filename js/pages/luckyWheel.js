@@ -24,7 +24,7 @@ export function render() {
     <div class="lucky-wheel-container">
       <!-- Deposit Qualification Banner -->
       <div style="background:linear-gradient(135deg,rgba(0,242,254,0.15),rgba(121,40,202,0.2));border:1px solid #00f2fe;border-radius:12px;padding:12px 18px;margin-bottom:16px;text-align:center;font-size:13px;color:#fff;">
-        🎁 <strong>Deposit Reward:</strong> Every approved deposit automatically unlocks <strong>Lucky Wheel Spin Chances</strong> (1 Spin per $50 deposited)!
+        🎁 <strong>Deposit Reward:</strong> Every approved deposit automatically unlocks <strong>Lucky Wheel Spin Chances</strong> (Under $500: 1 spin · $500+: 2 spins · $1,000+: 3+ spins, up to 10)!
       </div>
 
       <!-- Prize Ring Info -->
@@ -94,7 +94,7 @@ export function init() {
   const wheel = store.getLuckyWheel();
   drawWheel(wheel.prizes);
 
-  window.spinWheel = async function() {
+  window.spinWheel = async function () {
     const user = store.getUser();
     const wheel = store.getLuckyWheel();
     const availableSpins = user && user.spinChances !== undefined ? user.spinChances : wheel.remainingChances;
@@ -158,7 +158,7 @@ export function init() {
     requestAnimationFrame(animate);
   };
 
-  window.closeWinModal = function() {
+  window.closeWinModal = function () {
     document.getElementById('win-modal').classList.remove('active');
   };
 }
