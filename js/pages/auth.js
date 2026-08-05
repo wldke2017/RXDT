@@ -254,6 +254,25 @@ function renderKYC() {
     </div>`;
   }
 
+  if (status === 'rejected') {
+    return `
+    <div class="auth-page">
+      <div class="auth-card">
+        <div style="text-align:center;padding:40px 0;">
+          <div style="font-size:64px;margin-bottom:16px;">❌</div>
+          <h2 style="font-size:22px;font-weight:600;color:#ff4d4d;margin-bottom:8px;">KYC Rejected</h2>
+          <p style="color:var(--text-sub);margin-bottom:8px;">Your identity verification was not approved.</p>
+          <div id="kyc-reject-reason" style="background:rgba(255,77,77,0.1);border:1px solid rgba(255,77,77,0.3);border-radius:10px;padding:14px 18px;margin:16px 0;text-align:left;font-size:13px;color:#ffaaaa;">
+            <strong>Reason:</strong> <span id="kyc-reject-reason-text">Loading reason...</span>
+          </div>
+          <p style="color:var(--text-muted);font-size:13px;margin-top:8px;">Please review the reason above, correct the issues, and resubmit your verification.</p>
+          <button class="btn-primary" style="margin-top:24px;" onclick="retryKYC()">🔄 Retry Verification</button>
+          <button class="btn-outline" style="margin-top:12px;" onclick="navigateTo('assets')">Go to Assets</button>
+        </div>
+      </div>
+    </div>`;
+  }
+
   return `
   <div class="auth-page">
     <div class="auth-card" style="max-width:560px;">
@@ -694,6 +713,50 @@ export function init(page) {
       if (dd) dd.style.display = 'none';
     }
   });
+
+  // Fetch KYC rejection reason from the API and display it
+  async function loadKycRejectReason() {
+    try {
+      const token = localStorage.getItem('rxdt_token');
+      if (!token) return;
+      const res = await fetch('/api/kyc/status', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (data.record && data.record.reject_reason) {
+        const reasonEl = document.getElementById('kyc-reject-reason-text');
+        if (reasonEl) reasonEl.textContent = data.record.reject_reason;
+      } else {
+        const reasonEl = document.getElementById('kyc-reject-reason-text');
+        if (reasonEl) reasonEl.textContent = 'Documents were not clear enough. Please ensure all photos are well-lit and clearly readable.';
+      }
+    } catch (e) {
+      console.warn('Failed to fetch KYC reject reason:', e);
+    }
+  }
+
+  // Load rejection reason if on the rejected KYC page
+  if (page === 'kyc') {
+    const user = store.getUser();
+    if (user && user.kycStatus === 'rejected') {
+      loadKycRejectReason();
+    }
+  }
+
+  // Retry KYC: reset the user's kycStatus locally and re-render the form
+  window.retryKYC = function () {
+    if (store.getUser()) {
+      store.getUser().kycStatus = 'unverified';
+      localStorage.setItem('rxdt_user', JSON.stringify(store.getUser()));
+    }
+    // Re-render the KYC page by navigating to it
+    const container = document.getElementById('page-content');
+    if (container) {
+      container.innerHTML = renderKYC();
+      // Re-init the page handlers since we re-rendered
+      init(page);
+    }
+  };
 
   window.submitKYC = async function () {
     const idType = document.getElementById('kyc-id-type')?.value;
