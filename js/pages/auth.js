@@ -610,10 +610,48 @@ export function init(page) {
   window.previewUpload = function (input, previewId) {
     const file = input.files[0];
     if (!file) return;
+
+    // Compress and resize the image before storing as base64
+    // This reduces payload size from ~5-10MB per image to ~100-300KB
     const reader = new FileReader();
     reader.onload = (e) => {
-      const img = document.getElementById(previewId);
-      if (img) { img.src = e.target.result; img.style.display = 'block'; }
+      const tempImg = new Image();
+      tempImg.onload = () => {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+
+        // Max dimension: 1200px (preserves quality while reducing size)
+        const MAX_DIM = 1200;
+        let { width, height } = tempImg;
+        if (width > MAX_DIM || height > MAX_DIM) {
+          if (width > height) {
+            height = Math.round((height * MAX_DIM) / width);
+            width = MAX_DIM;
+          } else {
+            width = Math.round((width * MAX_DIM) / height);
+            height = MAX_DIM;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        ctx.drawImage(tempImg, 0, 0, width, height);
+
+        // Export as JPEG with 80% quality (much smaller than PNG)
+        const compressed = canvas.toDataURL('image/jpeg', 0.8);
+
+        const previewImg = document.getElementById(previewId);
+        if (previewImg) {
+          previewImg.src = compressed;
+          previewImg.style.display = 'block';
+        }
+      };
+      tempImg.onerror = () => {
+        // Fallback: use original if compression fails
+        const previewImg = document.getElementById(previewId);
+        if (previewImg) { previewImg.src = e.target.result; previewImg.style.display = 'block'; }
+      };
+      tempImg.src = e.target.result;
     };
     reader.readAsDataURL(file);
   };
