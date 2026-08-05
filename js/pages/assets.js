@@ -552,11 +552,13 @@ export function init(page) {
       return;
     }
 
-    try {
-      // 1. Submit deposit to backend database
-      const depRecord = await store.addDeposit({ coin, network, amount, rate: 1.00 });
+    // Store deposit details for later submission when user confirms payment
+    pendingDeposit = { coin, network, amount, rate: 1.00 };
 
-      // 2. Open Awaiting Payment Checkout Screen Modal
+    try {
+      // Open Awaiting Payment Checkout Screen Modal first.
+      // The deposit is NOT submitted to the backend yet — it will be
+      // submitted only when the user clicks "I Have Paid → View Status".
       const modal = document.getElementById('checkout-modal');
       const body = document.getElementById('checkout-modal-body');
 
@@ -634,11 +636,25 @@ export function init(page) {
     }
   };
 
-  window.closeCheckoutModal = function () {
+  // Store pending deposit details so they can be submitted when user confirms payment
+  let pendingDeposit = null;
+
+  window.closeCheckoutModal = async function () {
     const modal = document.getElementById('checkout-modal');
     if (modal) modal.classList.remove('active');
     if (depositTimerInterval) clearInterval(depositTimerInterval);
-    toast('Deposit order submitted to database! Under review.', 'success');
+
+    // Submit the deposit to the backend only now (when user confirms they've paid)
+    if (pendingDeposit) {
+      try {
+        await store.addDeposit(pendingDeposit);
+        toast('Deposit order submitted! Under review.', 'success');
+        pendingDeposit = null; // clear after successful submission
+      } catch (err) {
+        toast(err.message || 'Failed to submit deposit', 'error');
+        pendingDeposit = null;
+      }
+    }
   };
 
   function startDepositCountdown() {
