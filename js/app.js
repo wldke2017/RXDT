@@ -25,9 +25,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Check and show signal pop-up if in active window
   if (store.isLoggedIn()) {
     setTimeout(() => checkSignalWindow(), 1500); // slight delay after page load
+    requestNotificationPermission();
   }
   store.subscribe('auth', () => {
-    if (store.isLoggedIn()) setTimeout(() => checkSignalWindow(), 1000);
+    if (store.isLoggedIn()) {
+      setTimeout(() => checkSignalWindow(), 1000);
+      requestNotificationPermission();
+    }
   });
 
   // ---- Signal Push Notification Poller ----
@@ -207,6 +211,56 @@ function startMarketUpdates() {
   }, 8000);
 }
 
+// ---- Browser Notification Support ----
+// Track which signals have already been notified to avoid duplicate notifications
+let notifiedSignals = new Set();
+
+// Request notification permission when the user logs in
+function requestNotificationPermission() {
+  try {
+    if (!('Notification' in window)) return;
+    if (Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  } catch (e) { /* notifications not supported */ }
+}
+
+// Send a browser notification for an active signal
+function sendSignalNotification(signalData) {
+  try {
+    if (!('Notification' in window)) return;
+    if (Notification.permission !== 'granted') return;
+
+    const signal = signalData.activeSignal;
+    if (!signal) return;
+
+    // Avoid duplicate notifications for the same signal
+    const notifyKey = `signal_${signal.signalId}_${new Date().toISOString().split('T')[0]}`;
+    if (notifiedSignals.has(notifyKey)) return;
+    notifiedSignals.add(notifyKey);
+
+    const isFreeSignal = !!signal.isFreeSignal;
+    const title = isFreeSignal ? '🎁 FREE Signal is Live!' : '📡 Signal is Live!';
+    const body = isFreeSignal
+      ? `Free 8PM referral signal is now active! Join now to earn.`
+      : `Signal ${signal.signalId} is now active! Join copy trading to earn daily profits.`;
+
+    const notification = new Notification(title, {
+      body,
+      icon: 'assets/images/rxdt_logo.png',
+      tag: notifyKey,
+      requireInteraction: true,
+    });
+
+    // Clicking the notification navigates to the contract page
+    notification.onclick = () => {
+      window.focus();
+      window.location.hash = '#/contract';
+      notification.close();
+    };
+  } catch (e) { /* notification failed */ }
+}
+
 // ---- Signal Window Pop-Up ----
 async function checkSignalWindow() {
   if (!store.isLoggedIn()) return;
@@ -222,6 +276,8 @@ async function checkSignalWindow() {
     const data = await res.json();
     if (!data.activeSignal || !data.qualified || data.alreadyExecuted) return;
     showSignalPopup(data);
+    // Send browser notification when signal is active
+    sendSignalNotification(data);
   } catch (e) {
     console.warn('Signal check failed:', e);
   }
