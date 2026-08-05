@@ -67,14 +67,16 @@ function renderDashboard() {
   return `
   <div style="max-width:960px;margin:0 auto;padding:16px;">
 
-    <!-- Header -->
+      <!-- Header -->
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px;">
       <div>
         <h1 style="font-size:22px;font-weight:800;margin:0;">🛡️ Admin Dashboard</h1>
         <div style="font-size:13px;color:var(--text-sub);margin-top:4px;">RXDT Exchange — Management Panel</div>
+        <div id="admin-live-status" style="font-size:11px;color:#00c49a;margin-top:4px;">🟢 Live alerts: ON</div>
       </div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
         <button class="btn-outline" onclick="releaseFrozenFunds()" style="padding:8px 16px;font-size:13px;color:#f59e0b;border-color:#f59e0b;">🔓 Release In-Orders Funds</button>
+        <button class="btn-outline" id="admin-sound-btn" onclick="toggleAdminSound()" style="padding:8px 16px;font-size:13px;">🔔 Sound: On</button>
         <button class="btn-outline" onclick="loadAdminStats()" id="admin-refresh-btn" style="padding:8px 16px;font-size:13px;">🔄 Refresh</button>
         <button class="btn-outline" onclick="adminLogout()" style="padding:8px 16px;font-size:13px;color:#ef4444;border-color:#ef4444;">Logout</button>
       </div>
@@ -232,6 +234,110 @@ export function init() {
 
 let allUsersCache = [];
 
+// ---- Real-Time Pending Alerts ----
+// Polls the backend every 15 seconds. When the number of pending items
+// (deposits, withdrawals, KYC) increases, fires a toast + sound + browser
+// notification so the admin is alerted in real-time.
+let adminPollTimer = null;
+let adminSoundEnabled = true;
+let lastPendingCounts = { deposits: -1, withdrawals: -1, kyc: -1 };
+
+function adminToast(msg, type = 'info') {
+  if (window.toast) { window.toast(msg, type); return; }
+  // Minimal fallback toast if window.toast isn't wired up yet
+  const container = document.getElementById('toast-container');
+  if (!container) { alert(msg); return; }
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.textContent = msg;
+  container.appendChild(el);
+  setTimeout(() => el.remove(), 4000);
+}
+
+function playAdminAlertSound() {
+  if (!adminSoundEnabled) return;
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    // Pleasant two-tone alert
+    [880, 1174].forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0.0001, ctx.currentTime + i * 0.15);
+      gain.gain.exponentialRampToValueAtTime(0.25, ctx.currentTime + i * 0.15 + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + i * 0.15 + 0.12);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(ctx.currentTime + i * 0.15);
+      osc.stop(ctx.currentTime + i * 0.15 + 0.13);
+    });
+  } catch (e) { /* audio not supported */ }
+}
+
+function sendBrowserNotification(title, body) {
+  try {
+    if (!('Notification' in window)) return;
+    if (Notification.permission === 'granted') {
+      new Notification(title, { body, icon: 'assets/images/rxdt_logo.png' });
+    } else if (Notification.permission === 'default') {
+      Notification.requestPermission().then(p => {
+        if (p === 'granted') new Notification(title, { body, icon: 'assets/images/rxdt_logo.png' });
+      });
+    }
+  } catch (e) { /* notifications not available */ }
+}
+
+async function pollPendingItems() {
+  try {
+    const pending = await adminFetch('/pending').catch(() => null);
+    if (!pending || pending === null) return;
+
+    const depositIds = (pending.pendingDeposits || []).map(d => d.id);
+    const withdrawalIds = (pending.pendingWithdrawals || []).map(w => w.id);
+    const kycIds = (pending.pendingKyc || []).map(k => k.id);
+
+    // First poll: just baseline, don't alert on pre-existing items
+    if (lastPendingCounts.deposits === -1) {
+      lastPendingCounts = { deposits: depositIds.length, withdrawals: withdrawalIds.length, kyc: kycIds.length };
+      if (depositIds.length || withdrawalIds.length || kycIds.length) {
+        const statusEl = document.getElementById('admin-live-status');
+        if (statusEl) statusEl.textContent = `🟢 Live alerts: ON · ${depositIds.length + withdrawalIds.length + kycIds.length} pending`;
+      }
+      return;
+    }
+
+    const newDeposits = depositIds.length - lastPendingCounts.deposits;
+    const newWithdrawals = withdrawalIds.length - lastPendingCounts.withdrawals;
+    const newKyc = kycIds.length - lastPendingCounts.kyc;
+
+    lastPendingCounts = { deposits: depositIds.length, withdrawals: withdrawalIds.length, kyc: kycIds.length };
+
+    if (newDeposits > 0 || newWithdrawals > 0 || newKyc > 0) {
+      const parts = [];
+      if (newDeposits > 0) parts.push(`${newDeposits} new deposit${newDeposits > 1 ? 's' : ''}`);
+      if (newWithdrawals > 0) parts.push(`${newWithdrawals} new withdrawal${newWithdrawals > 1 ? 's' : ''}`);
+      if (newKyc > 0) parts.push(`${newKyc} new KYC`);
+      const msg = `🔔 ${parts.join(', ')} pending!`;
+
+      adminToast(msg, 'warning');
+      playAdminAlertSound();
+      sendBrowserNotification('RXDT Admin Alert', parts.join(', ') + ' pending review');
+
+      // Auto-refresh the dashboard data so new items appear immediately
+      window.loadAdminStats && window.loadAdminStats();
+    }
+
+    const statusEl = document.getElementById('admin-live-status');
+    if (statusEl) {
+      const total = depositIds.length + withdrawalIds.length + kycIds.length;
+      statusEl.textContent = total > 0
+        ? `🟢 Live alerts: ON · ${total} pending`
+        : '🟢 Live alerts: ON';
+    }
+  } catch (e) { /* poll errors are non-fatal */ }
+}
+
 function initDashboard() {
   window.toast = window.toast || ((m, t) => alert(m));
 
@@ -240,6 +346,29 @@ function initDashboard() {
     sessionStorage.removeItem(ADMIN_SECRET_KEY);
     window.location.reload();
   };
+
+  // Sound toggle button
+  window.toggleAdminSound = function () {
+    adminSoundEnabled = !adminSoundEnabled;
+    const btn = document.getElementById('admin-sound-btn');
+    if (btn) {
+      btn.textContent = adminSoundEnabled ? '🔔 Sound: On' : '🔕 Sound: Off';
+      btn.style.color = adminSoundEnabled ? '' : '#ef4444';
+      btn.style.borderColor = adminSoundEnabled ? '' : '#ef4444';
+    }
+  };
+
+  // Start real-time polling (only once)
+  if (!adminPollTimer) {
+    // Baseline immediately, then poll every 15s
+    setTimeout(() => pollPendingItems(), 1000);
+    adminPollTimer = setInterval(() => pollPendingItems(), 15000);
+    // Cleanup when leaving the admin page
+    window.addEventListener('hashchange', () => {
+      if (adminPollTimer) { clearInterval(adminPollTimer); adminPollTimer = null; }
+      lastPendingCounts = { deposits: -1, withdrawals: -1, kyc: -1 };
+    }, { once: true });
+  }
 
   // Release all users' frozen ("In Orders") funds back to available balance.
   // Useful for legacy users whose signal trades never auto-settled.

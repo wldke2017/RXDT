@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import { query } from '../db.js';
 import { requireAuth } from '../middleware/auth.js';
 import { processDueSignalTrades } from './signals.js';
+import { notifyAdminOfPendingItem } from '../notify.js';
 
 const router = express.Router();
 
@@ -51,6 +52,16 @@ router.post('/deposits', requireAuth, async (req, res) => {
     `, [id, orderNumber, req.userId, numAmount, coin || 'USDT', network || 'TRC-20', txHash || '']);
 
     const d = insertRes.rows[0];
+
+    // Notify admin via email of the new pending deposit
+    await notifyAdminOfPendingItem({
+      type: 'deposit',
+      id: d.order_number,
+      amount: `$${parseFloat(d.amount).toFixed(2)} USDT`,
+      userLabel: req.userId,
+      detail: `${d.coin || 'USDT'} (${d.network || 'TRC-20'}) · TX: ${(d.tx_hash || '').slice(0, 12)}...`,
+    }).catch(() => { });
+
     res.json({
       message: 'Deposit request submitted successfully!',
       deposit: {
@@ -165,6 +176,16 @@ router.post('/withdrawals', requireAuth, async (req, res) => {
     await query('COMMIT');
 
     const w = insertRes.rows[0];
+
+    // Notify admin via email of the new pending withdrawal
+    await notifyAdminOfPendingItem({
+      type: 'withdrawal',
+      id: w.order_number,
+      amount: `$${parseFloat(w.amount).toFixed(2)} USDT`,
+      userLabel: req.userId,
+      detail: `${w.coin || 'USDT'} (${w.network || 'TRC-20'}) · Fee: $${parseFloat(w.fee || 0).toFixed(2)} · To: ${(w.address || '').slice(0, 12)}...`,
+    }).catch(() => { });
+
     res.json({
       message: 'Withdrawal request submitted successfully!',
       withdrawal: {

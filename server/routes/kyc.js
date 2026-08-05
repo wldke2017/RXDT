@@ -1,6 +1,7 @@
 import express from 'express';
 import { query } from '../db.js';
 import { requireAuth } from '../middleware/auth.js';
+import { notifyAdminOfPendingItem } from '../notify.js';
 
 const router = express.Router();
 
@@ -25,6 +26,14 @@ router.post('/submit', requireAuth, async (req, res) => {
     await query(`UPDATE users SET kyc_status = 'pending' WHERE id = $1;`, [req.user.id]);
 
     await query('COMMIT');
+
+    // Notify admin via email of the new pending KYC submission
+    await notifyAdminOfPendingItem({
+      type: 'kyc',
+      id,
+      userLabel: req.user.name || req.user.id,
+      detail: `${realName} · ${documentType || 'Passport'} · ${nationality || ''}`,
+    }).catch(() => { });
 
     res.json({
       message: 'KYC identity verification submitted successfully! Under review.',
