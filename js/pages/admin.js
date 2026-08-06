@@ -25,6 +25,21 @@ async function adminFetch(endpoint, method = 'GET', body = null) {
   return res.json();
 }
 
+// Chat admin endpoints are mounted at /api/chat/admin/* (not /api/admin/chat/*)
+async function chatFetch(endpoint, method = 'GET', body = null) {
+  const secret = getAdminSecret();
+  if (!secret) throw new Error('Admin secret not set. Please log in again.');
+  const url = `/api/chat/admin${endpoint}`;
+  const opts = { method, headers: { 'Content-Type': 'application/json', 'x-admin-secret': secret } };
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch(url, opts);
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: 'Request failed' }));
+    throw new Error(err.error || 'Request failed');
+  }
+  return res.json();
+}
+
 function fmt(n, d = 2) {
   return Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
 }
@@ -345,7 +360,7 @@ async function pollPendingItems() {
 
     // ---- Chat unread notification polling ----
     try {
-      const chatData = await adminFetch('/chat/pending-count').catch(() => null);
+      const chatData = await chatFetch('/pending-count').catch(() => null);
       if (chatData && chatData.unreadCount !== undefined) {
         const unread = parseInt(chatData.unreadCount);
         if (lastChatUnread === -1) {
@@ -838,7 +853,7 @@ function initDashboard() {
     el.innerHTML = '<div class="admin-loading">Loading conversations...</div>';
 
     try {
-      const data = await adminFetch('/chat/conversations');
+      const data = await chatFetch('/conversations');
       const conversations = data.conversations || [];
       if (!conversations.length) {
         el.innerHTML = '<div class="empty-state">💬 No conversations yet</div>';
@@ -876,7 +891,7 @@ function initDashboard() {
     convEl.innerHTML = '<div class="admin-loading">Loading messages...</div>';
 
     try {
-      const data = await adminFetch('/chat/messages/' + userId);
+      const data = await chatFetch('/messages/' + userId);
       const messages = data.messages || [];
       const user = data.user || {};
 
@@ -922,7 +937,7 @@ function initDashboard() {
     input.value = '';
 
     try {
-      await adminFetch('/chat/reply', 'POST', { userId, message: msg });
+      await chatFetch('/reply', 'POST', { userId, message: msg });
       // Reload conversation
       window.loadUserConversation(userId);
     } catch (err) {
