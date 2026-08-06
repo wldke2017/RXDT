@@ -444,19 +444,18 @@ function renderEarnGuide() {
         </div>
       </div>
 
-      <!-- Talk to the CEO on BonChat -->
+      <!-- Talk to the CEO on Telegram -->
       <div class="earn-guide-step" style="display:flex;gap:14px;align-items:flex-start;padding:16px;background:rgba(121,40,202,0.12);border:1px solid rgba(167,139,250,0.35);border-radius:12px;margin-bottom:20px;">
         <div style="flex-shrink:0;width:40px;height:40px;border-radius:50%;background:rgba(121,40,202,0.25);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:#a78bfa;">💬</div>
         <div style="flex:1;">
-          <div style="font-weight:700;font-size:16px;color:#a78bfa;margin-bottom:4px;">Talk to the CEO on BonChat</div>
+          <div style="font-weight:700;font-size:16px;color:#a78bfa;margin-bottom:4px;">💬 Contact CEO on Telegram</div>
           <div style="font-size:13px;color:var(--text-sub);line-height:1.6;">
-            Need help or want to speak directly with our CEO <strong style="color:#fff;">Arthur Vance?</strong> Connect via BonChat:
+            Need help or want to speak directly with our CEO <strong style="color:#fff;">Arthur Vance?</strong> Message us on Telegram:
           </div>
           <div style="margin-top:10px;padding:12px;background:rgba(0,0,0,0.25);border-radius:10px;font-size:13px;line-height:2;">
-            <div>🔹 <strong>1.</strong> Sign up for a <strong style="color:#fff;">BonChat</strong> account</div>
-            <div>🔹 <strong>2.</strong> Join / set your server to <strong style="color:#a78bfa;">q7777</strong></div>
-            <div>🔹 <strong>3.</strong> Search for user <strong style="color:#a78bfa;">vance7777</strong></div>
-            <div>🔹 <strong>4.</strong> Send a <strong style="color:#fff;">friend request</strong> and start chatting</div>
+            <div>🔹 <strong>1.</strong> Open Telegram and search for <strong style="color:#00f2fe;">@RXDT888</strong></div>
+            <div>🔹 <strong>2.</strong> Or tap this link: <a href="https://t.me/RXDT888" target="_blank" style="color:#00f2fe;font-weight:700;text-decoration:underline;">@RXDT888</a></div>
+            <div>🔹 <strong>3.</strong> Start chatting with us directly</div>
           </div>
         </div>
       </div>

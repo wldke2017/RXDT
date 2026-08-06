@@ -851,7 +851,7 @@ function initDashboard() {
         <div style="width:36px;height:36px;border-radius:50%;background:rgba(121,40,202,0.2);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:#a78bfa;flex-shrink:0;">📢</div>
         <div>
           <div style="font-weight:700;color:#a78bfa;font-size:14px;">💬 Talk to the CEO</div>
-          <div style="font-size:12px;color:var(--text-sub);line-height:1.5;">Users can chat with the CEO Arthur Vance on BonChat: Sign up on BonChat, server <strong style="color:#fff;">q7777</strong>, search user <strong style="color:#fff;">vance7777</strong>, and send a friend request.</div>
+          <div style="font-size:12px;color:var(--text-sub);line-height:1.5;">Users can contact the CEO Arthur Vance on Telegram: <a href="https://t.me/RXDT888" target="_blank" style="color:#00f2fe;font-weight:700;text-decoration:underline;">@RXDT888</a></div>
         </div>
       </div>
     </div>

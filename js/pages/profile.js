@@ -271,8 +271,8 @@ function renderCustomerService() {
       <div class="cs-channel-card" style="border-color:rgba(167,139,250,0.3);">
         <div class="csc-icon" style="background:rgba(121,40,202,0.2);">💬</div>
         <div class="csc-info">
-          <div class="csc-title" style="color:#a78bfa;">Talk to the CEO on BonChat</div>
-          <div class="csc-sub">Server: <strong>q7777</strong> · Search: <strong>vance7777</strong> · Send friend request</div>
+          <div class="csc-title" style="color:#a78bfa;">💬 Contact CEO on Telegram</div>
+          <div class="csc-sub">Click to message: <a href="https://t.me/RXDT888" target="_blank" style="color:#00f2fe;font-weight:700;text-decoration:underline;">@RXDT888</a></div>
         </div>
       </div>
     </div>

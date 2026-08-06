@@ -106,7 +106,7 @@ function renderShell() {
         <a onclick="navigateTo('investment-agreement')">AI Trading Agreement</a>
       </div>
       <div style="margin-top:12px;padding:10px 16px;background:rgba(0,242,254,0.05);border:1px solid rgba(0,242,254,0.2);border-radius:10px;display:inline-block;font-size:12px;color:var(--text-sub);">
-        💬 <strong style="color:#00f2fe;">Talk to the CEO on BonChat:</strong> Sign up on BonChat · Server <strong style="color:#fff;">q7777</strong> · Search <strong style="color:#fff;">vance7777</strong> · Send friend request
+        💬 <strong style="color:#00f2fe;">Contact CEO on Telegram:</strong> <a href="https://t.me/RXDT888" target="_blank" style="color:#fff;font-weight:700;text-decoration:underline;">@RXDT888</a>
       </div>
       <div class="footer-copy">© 2026 RXDT Exchange Inc · State of Colorado Registered Entity ID: 20261325716 · Powered by Voyage Investment & Vanguard FinTech Strategies</div>
     </footer>
