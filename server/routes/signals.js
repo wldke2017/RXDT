@@ -219,27 +219,26 @@ export async function autoExecuteEligibleSignals() {
 /**
  * Execute a signal trade for a specific user (shared logic between manual & auto).
  * Moves available_balance → frozen_balance, inserts signal_trade, logs account change.
+ *
+ * Race-condition safe: the duplicate check is performed INSIDE the transaction
+ * while holding a row lock (SELECT ... FOR UPDATE) on the user. This serializes
+ * concurrent executions for the same user (e.g. the 8-second auto-execute poller
+ * racing with a manual "Join Copy Trading" click), preventing duplicate positions.
+ *
+ * @param {string} userId
+ * @param {object} signal
+ * @param {number} balance - available balance at time of call
+ * @param {object|null} tier
+ * @param {boolean} isFreeSignalTrade
+ * @param {number} freeSignalCredits
+ * @param {number} [tradeAmount] - optional amount to trade; defaults to full balance
+ * @returns {Promise<object|false>} trade record on success, false if duplicate/skipped
  */
-async function executeSignalTrade(userId, signal, balance, tier, isFreeSignalTrade, freeSignalCredits) {
+async function executeSignalTrade(userId, signal, balance, tier, isFreeSignalTrade, freeSignalCredits, tradeAmount) {
   const today = new Date().toISOString().split('T')[0];
 
-  // Prevent duplicate
-  const execCheck = await query(
-    `SELECT id FROM signal_trades WHERE user_id = $1 AND signal_id = $2 AND DATE(created_at) = $3`,
-    [userId, signal.signalId, today]
-  ).catch(() => ({ rows: [] }));
-  if (execCheck.rows.length > 0) return false;
-
-  // 100% Capital Allocation Trade
-  const tradeAmount = balance;
-  const variation = Math.random() * 0.10 - 0.05; // ±5% realistic market variation
-
-  const profitRate = isFreeSignalTrade
-    ? getPerSignalProfitRate(SIGNAL_TIERS.TIER_1)
-    : getPerSignalProfitRate(tier);
-  const profitAmount = parseFloat((balance * profitRate * (1 + variation)).toFixed(4));
-  const newBalance = parseFloat((balance + profitAmount).toFixed(4));
-  const tierLabel = isFreeSignalTrade ? 'Free Signal' : tier.label;
+  // Default to 100% capital allocation if no amount specified
+  const amount = tradeAmount && tradeAmount > 0 && tradeAmount <= balance ? tradeAmount : balance;
 
   if (!signal.closeTime) return false;
   const releaseAt = new Date(signal.closeTime).toISOString();
@@ -250,39 +249,109 @@ async function executeSignalTrade(userId, signal, balance, tier, isFreeSignalTra
 
   await query('BEGIN');
 
-  // 1. Move available_balance into frozen_balance ("In Order")
-  await query(
-    `UPDATE users 
-     SET available_balance = available_balance - $1,
-         frozen_balance = frozen_balance + $1
-     WHERE id = $2`,
-    [tradeAmount, userId]
-  );
-
-  // 1b. If this is a free 8pm referral signal, consume one free signal credit
-  if (isFreeSignalTrade) {
-    await query(
-      `UPDATE users SET free_signal_credits = GREATEST(0, free_signal_credits - 1) WHERE id = $1`,
+  try {
+    // Lock the user row to serialize concurrent executions for this user.
+    // Any other concurrent request for the same user will block here until
+    // this transaction commits/rolls back, preventing the duplicate race.
+    const lockRes = await query(
+      `SELECT id, available_balance, free_signal_credits FROM users WHERE id = $1 FOR UPDATE`,
       [userId]
     );
+    if (!lockRes.rows.length) {
+      await query('ROLLBACK');
+      return false;
+    }
+
+    // Re-read the balance under the lock (it may have changed while waiting)
+    const lockedBalance = parseFloat(lockRes.rows[0].available_balance);
+    const lockedFreeCredits = parseInt(lockRes.rows[0].free_signal_credits || 0);
+
+    // Re-check for duplicate INSIDE the transaction (after acquiring the lock).
+    // This is the critical fix: two concurrent requests can no longer both pass
+    // the duplicate check because the second one blocks on FOR UPDATE until the
+    // first commits its INSERT.
+    const execCheck = await query(
+      `SELECT id FROM signal_trades WHERE user_id = $1 AND signal_id = $2 AND DATE(created_at) = $3`,
+      [userId, signal.signalId, today]
+    );
+    if (execCheck.rows.length > 0) {
+      await query('ROLLBACK');
+      return false;
+    }
+
+    // Re-validate balance under lock
+    if (lockedBalance <= 0) {
+      await query('ROLLBACK');
+      return false;
+    }
+
+    // Re-validate free signal credits under lock
+    if (isFreeSignalTrade && lockedFreeCredits <= 0) {
+      await query('ROLLBACK');
+      return false;
+    }
+
+    // Use the locked balance for the trade amount if no explicit amount was given
+    const effectiveAmount = amount > 0 && amount <= lockedBalance ? amount : lockedBalance;
+
+    const variation = Math.random() * 0.10 - 0.05; // ±5% realistic market variation
+
+    const profitRate = isFreeSignalTrade
+      ? getPerSignalProfitRate(SIGNAL_TIERS.TIER_1)
+      : getPerSignalProfitRate(tier);
+    const profitAmount = parseFloat((effectiveAmount * profitRate * (1 + variation)).toFixed(4));
+    const newBalance = parseFloat((effectiveAmount + profitAmount).toFixed(4));
+    const tierLabel = isFreeSignalTrade ? 'Free Signal' : tier.label;
+
+    // 1. Move available_balance into frozen_balance ("In Order")
+    await query(
+      `UPDATE users 
+       SET available_balance = available_balance - $1,
+           frozen_balance = frozen_balance + $1
+       WHERE id = $2`,
+      [effectiveAmount, userId]
+    );
+
+    // 1b. If this is a free 8pm referral signal, consume one free signal credit
+    if (isFreeSignalTrade) {
+      await query(
+        `UPDATE users SET free_signal_credits = GREATEST(0, free_signal_credits - 1) WHERE id = $1`,
+        [userId]
+      );
+    }
+
+    // 2. Insert signal trade record
+    await query(
+      `INSERT INTO signal_trades (id, user_id, signal_id, pair, trade_amount, profit, balance_before, balance_after, tier_label, status, release_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'open', $10)`,
+      [tradeId, userId, signal.signalId, signal.pairSymbol, effectiveAmount, profitAmount, lockedBalance, newBalance, tierLabel, releaseAt]
+    );
+
+    // 3. Log Open Position
+    await query(
+      `INSERT INTO account_changes (id, user_id, type, amount, balance_after, remark)
+       VALUES ($1, $2, 'signal_open', $3, 0, $4)`,
+      [openId, userId, -effectiveAmount, `Signal ${signal.signalId} — Auto-executed (${signal.pairSymbol}) placed in Order`]
+    );
+
+    await query('COMMIT');
+
+    return {
+      id: tradeId,
+      signalId: signal.signalId,
+      pair: signal.pairSymbol,
+      tradeAmount: effectiveAmount,
+      profit: profitAmount,
+      balanceBefore: lockedBalance,
+      balanceAfter: newBalance,
+      tier: tierLabel,
+      status: 'open',
+      releaseAt,
+    };
+  } catch (err) {
+    await query('ROLLBACK').catch(() => { });
+    throw err;
   }
-
-  // 2. Insert signal trade record
-  await query(
-    `INSERT INTO signal_trades (id, user_id, signal_id, pair, trade_amount, profit, balance_before, balance_after, tier_label, status, release_at)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'open', $10)`,
-    [tradeId, userId, signal.signalId, signal.pairSymbol, tradeAmount, profitAmount, balance, newBalance, tierLabel, releaseAt]
-  );
-
-  // 3. Log Open Position
-  await query(
-    `INSERT INTO account_changes (id, user_id, type, amount, balance_after, remark)
-     VALUES ($1, $2, 'signal_open', $3, 0, $4)`,
-    [openId, userId, -tradeAmount, `Signal ${signal.signalId} — Auto-executed (${signal.pairSymbol}) placed in Order`]
-  );
-
-  await query('COMMIT');
-  return true;
 }
 
 export async function getActiveSignal() {
@@ -546,95 +615,29 @@ router.post('/execute', requireAuth, async (req, res) => {
       }
     }
 
-    // Prevent duplicate execution today
-    const today = new Date().toISOString().split('T')[0];
-    const execCheck = await query(
-      `SELECT id FROM signal_trades WHERE user_id = $1 AND signal_id = $2 AND DATE(created_at) = $3`,
-      [req.userId, signal.signalId, today]
-    ).catch(() => ({ rows: [] }));
-    if (execCheck.rows.length > 0) {
+    // Execute the trade using the shared race-safe helper.
+    // This performs the duplicate check INSIDE the transaction with a row lock,
+    // so a concurrent auto-execute (8-second poller) cannot create a duplicate.
+    const trade = await executeSignalTrade(
+      req.userId,
+      signal,
+      balance,
+      tier,
+      isFreeSignalTrade,
+      freeSignalCredits,
+      tradeAmount
+    );
+
+    if (!trade) {
       return res.status(400).json({ error: `You have already joined Signal ${signal.signalId} today.` });
     }
 
-    // Use the tradeAmount determined above (either requested amount or full balance)
-    const variation = Math.random() * 0.10 - 0.05; // ±5% realistic market variation
-
-    // Profit rate: free signal uses Tier 1's per-signal rate (1.4%),
-    // otherwise the tier's per-signal rate (daily rate split across signals).
-    const profitRate = isFreeSignalTrade
-      ? getPerSignalProfitRate(SIGNAL_TIERS.TIER_1)
-      : getPerSignalProfitRate(tier);
-    const profitAmount = parseFloat((tradeAmount * profitRate * (1 + variation)).toFixed(4));
-    const newBalance = parseFloat((tradeAmount + profitAmount).toFixed(4));
-    const tierLabel = isFreeSignalTrade ? 'Free Signal' : tier.label;
-
-    // Release at closeTime (e.g. 17:30, 18:30, 19:30 EAT / end of signal window).
-    // This is the GLOBAL scheduled end of the 30-minute window — NOT the user's
-    // entry time. A user who joins 5 minutes before the window closes gets the
-    // exact same release_at as every other participant, so all assets unlock
-    // and release concurrently when the global 30-minute window expires.
-    if (!signal.closeTime) {
-      return res.status(400).json({ error: 'Signal close time is unavailable. Please try again.' });
-    }
-    const releaseAt = new Date(signal.closeTime).toISOString();
-
-    const now = Date.now();
-    const tradeId = 'ST' + now;
-    const openId = 'AC' + now + 'O';
-
-    await query('BEGIN');
-
-    // 1. Move available_balance into frozen_balance ("In Order")
-    await query(
-      `UPDATE users 
-       SET available_balance = available_balance - $1,
-           frozen_balance = frozen_balance + $1
-       WHERE id = $2`,
-      [tradeAmount, req.userId]
-    );
-
-    // 1b. If this is a free 8pm referral signal, consume one free signal credit
-    if (isFreeSignalTrade) {
-      await query(
-        `UPDATE users SET free_signal_credits = GREATEST(0, free_signal_credits - 1) WHERE id = $1`,
-        [req.userId]
-      );
-    }
-
-    // 2. Insert signal trade record (status = 'open')
-    await query(
-      `INSERT INTO signal_trades (id, user_id, signal_id, pair, trade_amount, profit, balance_before, balance_after, tier_label, status, release_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'open', $10)`,
-      [tradeId, req.userId, signal.signalId, signal.pairSymbol, tradeAmount, profitAmount, balance, newBalance, tierLabel, releaseAt]
-    );
-
-    // 3. Log Open Position (Full 100% Allocation into Order)
-    await query(
-      `INSERT INTO account_changes (id, user_id, type, amount, balance_after, remark)
-       VALUES ($1, $2, 'signal_open', $3, 0, $4)`,
-      [openId, req.userId, -tradeAmount, `Signal ${signal.signalId} — Open Position (${signal.pairSymbol}) placed in Order`]
-    );
-
-    await query('COMMIT');
-
     res.json({
       success: true,
-      message: `Order submitted successfully! Capital is placed In Order and will be released at ${new Date(releaseAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} with profit.`,
-      trade: {
-        id: tradeId,
-        signalId: signal.signalId,
-        pair: signal.tradingPair,
-        tradeAmount,
-        profit: profitAmount,
-        balanceBefore: balance,
-        balanceAfter: newBalance,
-        tier: tierLabel,
-        status: 'open',
-        releaseAt,
-      },
+      message: `Order submitted successfully! Capital is placed In Order and will be released at ${new Date(trade.releaseAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} with profit.`,
+      trade,
     });
   } catch (err) {
-    await query('ROLLBACK').catch(() => { });
     console.error('Signal execute error:', err);
     res.status(500).json({ error: err.message });
   }
