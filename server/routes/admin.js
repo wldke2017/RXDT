@@ -496,12 +496,14 @@ router.post('/signals/reconcile', requireAdminSecret, async (req, res) => {
     const reversed = [];
     const reverseRecord = async (dup) => {
       const dupAmount = parseFloat(dup.amount);
-      // Reverse: subtract the duplicate credit from available_balance & total_assets
-      // (total_earnings is NOT reduced — it's a lifetime earnings metric)
+      // Reverse: subtract the duplicate credit from available_balance ONLY.
+      // (The settlement added the FULL return total to available_balance, so that's
+      // what must be withdrawn here. total_assets is recomputed from the authoritative
+      // ledger below — it only ever received the PROFIT portion per settlement, so
+      // subtracting the full return would incorrectly thrash it.)
       await query(
         `UPDATE users
-         SET available_balance = GREATEST(0, available_balance - $1),
-             total_assets = GREATEST(0, total_assets - $1)
+         SET available_balance = GREATEST(0, available_balance - $1)
          WHERE id = $2`,
         [dupAmount, userId]
       );
@@ -547,6 +549,29 @@ router.post('/signals/reconcile', requireAdminSecret, async (req, res) => {
       }
     }
 
+    // ---- Recompute total_assets from the authoritative ledger ----
+    // total_assets is a cumulative-inflow metric:
+    //   deposits (approved) + bonuses/commissions + signal profits (exactly once)
+    // The signal_trades table stores ONE row per opened position, so summing its
+    // profit column counts each position's profit EXACTLY once — ignoring the
+    // multiple settlements that may have credited it to available_balance.
+    const assetsLedger = await query(
+      `SELECT
+         (SELECT COALESCE(SUM(amount),0) FROM deposits
+           WHERE user_id = $1 AND status = 'success') AS deposits,
+         (SELECT COALESCE(SUM(amount),0) FROM account_changes
+           WHERE user_id = $1 AND type IN ('deposit_bonus','referral_bonus','commission')) AS bonuses,
+         (SELECT COALESCE(SUM(profit),0) FROM signal_trades
+           WHERE user_id = $1 AND status = 'completed') AS profits`,
+      [userId]
+    );
+    const l = assetsLedger.rows[0];
+    const correctTotalAssets = parseFloat(l.deposits) + parseFloat(l.bonuses) + parseFloat(l.profits);
+    await query(
+      `UPDATE users SET total_assets = $1 WHERE id = $2`,
+      [correctTotalAssets, userId]
+    );
+
     // Re-fetch the user's corrected balances
     const corrected = await query(
       `SELECT available_balance, total_assets, total_earnings, frozen_balance FROM users WHERE id = $1`,
@@ -557,8 +582,8 @@ router.post('/signals/reconcile', requireAdminSecret, async (req, res) => {
 
     res.json({
       message: reversed.length
-        ? `Reversed ${reversed.length} duplicate signal settlement(s) for user ${userId}`
-        : `No duplicate settlements found for user ${userId}`,
+        ? `Reversed ${reversed.length} duplicate signal settlement(s) for user ${userId} and recomputed total_assets: $${correctTotalAssets.toFixed(2)}`
+        : `No duplicate settlements found for user ${userId}. Recomputed total_assets: $${correctTotalAssets.toFixed(2)}`,
       reversed,
       user: corrected.rows[0],
     });
