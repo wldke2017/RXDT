@@ -588,6 +588,7 @@ function initDashboard() {
             <td style="font-size:11px;">${timeAgo(u.created_at).substring(0, 10)}</td>
             <td>
               <button class="btn-outline" style="padding:4px 10px;font-size:12px;" onclick="openBalanceModal('${u.id}','${(u.name || '').replace(/'/g, "\\'")}','${fmt(u.available_balance)}')">💰 Balance</button>
+              <button class="btn-outline" style="padding:4px 10px;font-size:12px;color:#f59e0b;border-color:#f59e0b;margin-left:6px;" onclick="reconcileSignalTrades('${u.id}')">🔧 Reconcile</button>
             </td>
           </tr>`).join('')}
         </tbody>
@@ -682,6 +683,21 @@ function initDashboard() {
       if (el) el.innerHTML = `<div class="empty-state" style="color:#ef4444;">Failed to load: ${err.message}</div>`;
     }
   }
+
+  // ---- Signal Reconcile (repair double-settled trades) ----
+  window.reconcileSignalTrades = async function (userId) {
+    if (!confirm(`Reconcile signal settlements for user ${userId}?\n\nThis checks for trades that were settled multiple times (a bug that caused users to earn double/triple) and reverses the duplicate credits.`)) return;
+    try {
+      const res = await adminFetch('/signals/reconcile', 'POST', { userId });
+      window.toast(res.message, res.reversed.length > 0 ? 'success' : 'info');
+      if (res.reversed.length > 0) {
+        window.toast(`💵 Reversed $${res.reversed.reduce((s, r) => s + r.amount, 0).toFixed(2)} in duplicate credits`, 'success');
+      }
+      await loadUsers();
+    } catch (err) {
+      window.toast('Error: ' + err.message, 'error');
+    }
+  };
 
   // ---- Balance Modal ----
   window.openBalanceModal = function (userId, name, balance) {

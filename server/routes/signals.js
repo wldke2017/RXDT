@@ -451,118 +451,147 @@ router.get('/active', requireAuth, async (req, res) => {
 });
 
 // ---- Helper: Auto-settle completed signal trades when release_at has passed ----
+// Race-condition safe: each due trade is atomically claimed with
+//   UPDATE signal_trades SET status = 'processing'
+//   WHERE id = (SELECT ... status='open' AND release_at <= NOW() ...)
+//   RETURNING *
+// so concurrent triggers (the 8-second poller's /active, /me, /history and
+// /consume-record ALL call this function) can NEVER settle the same trade
+// twice. Previously, two or three concurrent requests could all read the
+// same 'open' trade before any of them flipped it to 'completed', crediting
+// the user 2-3x for a single position.
 export async function processDueSignalTrades(userId) {
   try {
-    const dueTrades = await query(
-      `SELECT * FROM signal_trades WHERE user_id = $1 AND status = 'open' AND release_at <= NOW()`,
-      [userId]
-    );
-
-    for (const trade of dueTrades.rows) {
-      await query('BEGIN');
-      const tradeAmount = parseFloat(trade.trade_amount);
-      const profit = parseFloat(trade.profit);
-      const returnTotal = tradeAmount + profit;
-
-      // 1. Release frozen balance and add profit to available_balance & total_assets & total_earnings
-      const userRes = await query(
-        `UPDATE users 
-         SET frozen_balance = GREATEST(0, frozen_balance - $1),
-             available_balance = available_balance + $2,
-             total_assets = total_assets + $3,
-             total_earnings = total_earnings + $3
-         WHERE id = $4 RETURNING available_balance`,
-        [tradeAmount, returnTotal, profit, userId]
-      );
-
-      const newBal = parseFloat(userRes.rows[0]?.available_balance || 0);
-
-      // 2. Mark trade completed
-      await query(`UPDATE signal_trades SET status = 'completed' WHERE id = $1`, [trade.id]);
-
-      // 2b. Check if the user has now doubled their invested capital.
-      //     If total_earnings >= initial_deposit, mark doubled_capital = true
-      //     (this unlocks the lower 10% withdrawal fee).
-      const capRes = await query(
-        `SELECT initial_deposit, total_earnings FROM users WHERE id = $1`,
+    // Atomically claim & settle due trades one at a time.
+    while (true) {
+      const claimRes = await query(
+        `UPDATE signal_trades
+         SET status = 'processing'
+         WHERE id = (
+           SELECT id FROM signal_trades
+           WHERE user_id = $1 AND status = 'open' AND release_at <= NOW()
+           ORDER BY created_at ASC
+           LIMIT 1
+         )
+         RETURNING id, signal_id, pair, trade_amount, profit, balance_before, balance_after`,
         [userId]
       );
-      const cap = capRes.rows[0];
-      if (cap) {
-        const initialDeposit = parseFloat(cap.initial_deposit || 0);
-        const totalEarnings = parseFloat(cap.total_earnings || 0);
-        if (initialDeposit > 0 && totalEarnings >= initialDeposit) {
-          await query(`UPDATE users SET doubled_capital = TRUE WHERE id = $1`, [userId]);
-        }
-      }
+      const claimed = claimRes.rows[0];
+      if (!claimed) break; // no more due trades — done
 
-      // 3. Log Close Position in account_changes
-      const closeId = 'AC' + Date.now() + 'C';
-      await query(
-        `INSERT INTO account_changes (id, user_id, type, amount, balance_after, remark)
-         VALUES ($1, $2, 'signal_close', $3, $4, $5)`,
-        [closeId, userId, returnTotal, newBal,
-          `Signal ${trade.signal_id} — Close Position (${trade.pair}) +${profit.toFixed(4)} USDT`]
-      ).catch(() => { });
-
-      // 4. Referral Commissions — halving chain model.
-      //    Level 1 (direct referrer): 7.5% of profit
-      //    Level 2: 3.75% (half of L1)
-      //    Level 3: 1.875% (half of L2)
-      //    ... continues halving up the chain until the commission rounds to 0.
       try {
-        if (profit > 0) {
-          let currentUserId = userId;
-          let commissionRate = 0.075; // Level 1 starts at 7.5%
-          let level = 1;
+        const trade = claimed;
+        const tradeAmount = parseFloat(trade.trade_amount);
+        const profit = parseFloat(trade.profit);
+        const returnTotal = tradeAmount + profit;
 
-          // Walk up the referral chain, halving the rate each level.
-          // Stop when the rate becomes negligible (rounds to 0) or no more referrers.
-          while (commissionRate > 0.0001) {
-            const refRes = await query(`SELECT referred_by FROM users WHERE id = $1`, [currentUserId]);
-            const referrerId = refRes.rows[0]?.referred_by;
-            if (!referrerId) break; // top of chain reached
+        await query('BEGIN');
 
-            const commission = parseFloat((profit * commissionRate).toFixed(4));
-            if (commission <= 0) break;
+        // 1. Release frozen balance and add profit to available_balance & total_assets & total_earnings
+        const userRes = await query(
+          `UPDATE users 
+           SET frozen_balance = GREATEST(0, frozen_balance - $1),
+               available_balance = available_balance + $2,
+               total_assets = total_assets + $3,
+               total_earnings = total_earnings + $3
+           WHERE id = $4 RETURNING available_balance`,
+          [tradeAmount, returnTotal, profit, userId]
+        );
 
-            const rcId = 'RC' + Date.now() + 'L' + level;
-            await query(
-              `INSERT INTO referral_commissions (id, referrer_id, referred_user_id, level, trade_amount, amount)
-               VALUES ($1, $2, $3, $4, $5, $6)`,
-              [rcId, referrerId, userId, level, tradeAmount, commission]
-            );
+        const newBal = parseFloat(userRes.rows[0]?.available_balance || 0);
 
-            const balRes = await query(
-              `UPDATE users 
-               SET available_balance = available_balance + $1,
-                   total_assets = total_assets + $1,
-                   total_earnings = total_earnings + $1
-               WHERE id = $2 RETURNING available_balance`,
-              [commission, referrerId]
-            );
-            const newBal = parseFloat(balRes.rows[0]?.available_balance || 0);
-            await query(
-              `INSERT INTO account_changes (id, user_id, type, amount, balance_after, remark)
-               VALUES ($1, $2, 'commission', $3, $4, $5)`,
-              ['AC' + Date.now() + 'R' + level, referrerId, commission, newBal,
-              `L${level} Referral Commission — ${trade.pair} trade by referred user +${commission.toFixed(4)} USDT`]
-            ).catch(() => { });
+        // 2. Mark trade completed (was atomically claimed as 'processing')
+        await query(`UPDATE signal_trades SET status = 'completed' WHERE id = $1`, [trade.id]);
 
-            // Move up the chain and halve the rate
-            currentUserId = referrerId;
-            commissionRate = commissionRate / 2;
-            level++;
+        // 2b. Check if the user has now doubled their invested capital.
+        //     If total_earnings >= initial_deposit, mark doubled_capital = true
+        //     (this unlocks the lower 10% withdrawal fee).
+        const capRes = await query(
+          `SELECT initial_deposit, total_earnings FROM users WHERE id = $1`,
+          [userId]
+        );
+        const cap = capRes.rows[0];
+        if (cap) {
+          const initialDeposit = parseFloat(cap.initial_deposit || 0);
+          const totalEarnings = parseFloat(cap.total_earnings || 0);
+          if (initialDeposit > 0 && totalEarnings >= initialDeposit) {
+            await query(`UPDATE users SET doubled_capital = TRUE WHERE id = $1`, [userId]);
           }
         }
-      } catch (commErr) {
-        console.error('Referral commission error (non-fatal):', commErr);
-      }
 
-      await query('COMMIT');
+        // 3. Log Close Position in account_changes (includes the unique trade id
+        //    in the remark so any future duplicate settlement is easy to detect).
+        const closeId = 'AC' + Date.now() + 'C';
+        await query(
+          `INSERT INTO account_changes (id, user_id, type, amount, balance_after, remark)
+           VALUES ($1, $2, 'signal_close', $3, $4, $5)`,
+          [closeId, userId, returnTotal, newBal,
+            `Signal ${trade.signal_id} — Close Position (${trade.pair}) +${profit.toFixed(4)} USDT · trade ${trade.id}`]
+        ).catch(() => { });
+
+        // 4. Referral Commissions — halving chain model.
+        //    Level 1 (direct referrer): 7.5% of profit
+        //    Level 2: 3.75% (half of L1)
+        //    Level 3: 1.875% (half of L2)
+        //    ... continues halving up the chain until the commission rounds to 0.
+        try {
+          if (profit > 0) {
+            let currentUserId = userId;
+            let commissionRate = 0.075; // Level 1 starts at 7.5%
+            let level = 1;
+
+            // Walk up the referral chain, halving the rate each level.
+            // Stop when the rate becomes negligible (rounds to 0) or no more referrers.
+            while (commissionRate > 0.0001) {
+              const refRes = await query(`SELECT referred_by FROM users WHERE id = $1`, [currentUserId]);
+              const referrerId = refRes.rows[0]?.referred_by;
+              if (!referrerId) break; // top of chain reached
+
+              const commission = parseFloat((profit * commissionRate).toFixed(4));
+              if (commission <= 0) break;
+
+              const rcId = 'RC' + Date.now() + 'L' + level;
+              await query(
+                `INSERT INTO referral_commissions (id, referrer_id, referred_user_id, level, trade_amount, amount)
+                 VALUES ($1, $2, $3, $4, $5, $6)`,
+                [rcId, referrerId, userId, level, tradeAmount, commission]
+              );
+
+              const balRes = await query(
+                `UPDATE users 
+                 SET available_balance = available_balance + $1,
+                     total_assets = total_assets + $1,
+                     total_earnings = total_earnings + $1
+                 WHERE id = $2 RETURNING available_balance`,
+                [commission, referrerId]
+              );
+              const newBal = parseFloat(balRes.rows[0]?.available_balance || 0);
+              await query(
+                `INSERT INTO account_changes (id, user_id, type, amount, balance_after, remark)
+                 VALUES ($1, $2, 'commission', $3, $4, $5)`,
+                ['AC' + Date.now() + 'R' + level, referrerId, commission, newBal,
+                `L${level} Referral Commission — ${trade.pair} trade by referred user +${commission.toFixed(4)} USDT`]
+              ).catch(() => { });
+
+              // Move up the chain and halve the rate
+              currentUserId = referrerId;
+              commissionRate = commissionRate / 2;
+              level++;
+            }
+          }
+        } catch (commErr) {
+          console.error('Referral commission error (non-fatal):', commErr);
+        }
+
+        await query('COMMIT');
+      } catch (err) {
+        await query('ROLLBACK').catch(() => { });
+        // Reset the claim so the trade can be retried on the next poll
+        await query(`UPDATE signal_trades SET status = 'open' WHERE id = $1`, [claimed.id]).catch(() => { });
+        throw err;
+      }
     }
   } catch (err) {
-    await query('ROLLBACK').catch(() => { });
     console.error('Error settling due signal trades:', err);
   }
 }

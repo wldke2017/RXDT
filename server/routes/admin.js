@@ -444,4 +444,129 @@ router.post('/withdrawals/reject', requireAdminSecret, async (req, res) => {
   }
 });
 
+// ----------------------------------------------------
+// SIGNAL RECONCILIATION — repair double-settled trades
+// ----------------------------------------------------
+// Detects signal_trades that were settled more than once (due to the earlier
+// race condition in processDueSignalTrades) and reverses the duplicate credits.
+//
+// Two detection strategies are used:
+//  A) Trade-ID based: new close records include "trade ST..." in their remark.
+//     Group by trade id — if more than one close record references the same
+//     trade, the extras are duplicates.
+//  B) Legacy amount+time based: older close records (created before the remark
+//     fix) don't include a trade id. If two+ signal_close records with the same
+//     rounded amount were created within the same 2-minute window (exactly what
+//     happened in the triple-close bug), all but the earliest are duplicates.
+router.post('/signals/reconcile', requireAdminSecret, async (req, res) => {
+  try {
+    const { userId } = req.body;
+    if (!userId) return res.status(400).json({ error: 'userId is required' });
+
+    await query('BEGIN');
+
+    // Lock the user row to serialize reconciliation
+    const userLock = await query(`SELECT id, available_balance, total_assets, total_earnings, frozen_balance FROM users WHERE id = $1 FOR UPDATE`, [userId]);
+    if (!userLock.rows.length) { await query('ROLLBACK'); return res.status(404).json({ error: 'User not found' }); }
+
+    // Find ALL signal_close records for this user (with their timestamps)
+    const closeRes = await query(
+      `SELECT id, amount, remark, created_at FROM account_changes
+       WHERE user_id = $1 AND type = 'signal_close' AND remark NOT LIKE '%[REVERSED]%'
+       ORDER BY created_at ASC, id ASC`,
+      [userId]
+    );
+
+    // Strategy A: group by trade id from remark
+    const tradeGroups = {};
+    // Strategy B: track records with no trade id for amount+time grouping
+    const noIdRecords = [];
+
+    for (const rec of closeRes.rows) {
+      const m = rec.remark.match(/trade (ST[^\s]+)/);
+      if (m) {
+        const tradeId = m[1];
+        if (!tradeGroups[tradeId]) tradeGroups[tradeId] = [];
+        tradeGroups[tradeId].push(rec);
+      } else {
+        noIdRecords.push(rec);
+      }
+    }
+
+    const reversed = [];
+    const reverseRecord = async (dup) => {
+      const dupAmount = parseFloat(dup.amount);
+      // Reverse: subtract the duplicate credit from available_balance & total_assets
+      // (total_earnings is NOT reduced — it's a lifetime earnings metric)
+      await query(
+        `UPDATE users
+         SET available_balance = GREATEST(0, available_balance - $1),
+             total_assets = GREATEST(0, total_assets - $1)
+         WHERE id = $2`,
+        [dupAmount, userId]
+      );
+      // Mark the duplicate close record as reversed
+      await query(
+        `UPDATE account_changes SET remark = remark || ' [REVERSED]' WHERE id = $1`,
+        [dup.id]
+      );
+      reversed.push({ recordId: dup.id, amount: dupAmount, basis: dup.basis || 'same-trade' });
+    };
+
+    // Strategy A: same trade id = duplicates (keep earliest)
+    for (const [tradeId, records] of Object.entries(tradeGroups)) {
+      if (records.length <= 1) continue;
+      records.sort((a, b) => new Date(a.created_at) - new Date(b.created_at) || a.id.localeCompare(b.id));
+      for (const dup of records.slice(1)) {
+        dup.basis = `same-trade ${tradeId}`;
+        await reverseRecord(dup);
+      }
+    }
+
+    // Strategy B: legacy records without trade id — group by rounded amount
+    // within a 2-minute window (the triple-close bug fired at the same instant).
+    const legacyGroups = {};
+    for (const rec of noIdRecords) {
+      const key = rec.amount.toFixed(2);
+      if (!legacyGroups[key]) legacyGroups[key] = [];
+      legacyGroups[key].push(rec);
+    }
+    for (const records of Object.values(legacyGroups)) {
+      if (records.length <= 1) continue;
+      // Sort chronologically
+      records.sort((a, b) => new Date(a.created_at) - new Date(b.created_at) || a.id.localeCompare(b.id));
+      // Keep the first record as the legitimate settlement, but only mark the
+      // FOLLOWING records as duplicates if they occurred within 2 minutes.
+      for (let i = 1; i < records.length; i++) {
+        const prev = records[i - 1];
+        const diffMs = new Date(records[i].created_at) - new Date(prev.created_at);
+        if (diffMs <= 120000) { // within 2 minutes
+          records[i].basis = `same-amount ${records[i].amount.toFixed(2)} (${diffMs}ms apart)`;
+          await reverseRecord(records[i]);
+        }
+      }
+    }
+
+    // Re-fetch the user's corrected balances
+    const corrected = await query(
+      `SELECT available_balance, total_assets, total_earnings, frozen_balance FROM users WHERE id = $1`,
+      [userId]
+    );
+
+    await query('COMMIT');
+
+    res.json({
+      message: reversed.length
+        ? `Reversed ${reversed.length} duplicate signal settlement(s) for user ${userId}`
+        : `No duplicate settlements found for user ${userId}`,
+      reversed,
+      user: corrected.rows[0],
+    });
+  } catch (err) {
+    await query('ROLLBACK').catch(() => { });
+    console.error('Signal reconcile error:', err);
+    res.status(500).json({ error: 'Failed to reconcile signal trades' });
+  }
+});
+
 export default router;
