@@ -10,16 +10,16 @@ const recentlyNotified = new Map(); // key -> timestamp
 const DEDUPE_WINDOW_MS = 5 * 60 * 1000; // 5 minutes
 
 function isDuplicate(key) {
-    const last = recentlyNotified.get(key);
-    const now = Date.now();
-    if (last && now - last < DEDUPE_WINDOW_MS) return true;
-    recentlyNotified.set(key, now);
-    // Keep the map small
-    if (recentlyNotified.size > 500) {
-        const oldestKey = recentlyNotified.keys().next().value;
-        recentlyNotified.delete(oldestKey);
-    }
-    return false;
+  const last = recentlyNotified.get(key);
+  const now = Date.now();
+  if (last && now - last < DEDUPE_WINDOW_MS) return true;
+  recentlyNotified.set(key, now);
+  // Keep the map small
+  if (recentlyNotified.size > 500) {
+    const oldestKey = recentlyNotified.keys().next().value;
+    recentlyNotified.delete(oldestKey);
+  }
+  return false;
 }
 
 /**
@@ -32,25 +32,27 @@ function isDuplicate(key) {
  * @param {string} opts.detail - extra line(s) shown in the email
  */
 export async function notifyAdminOfPendingItem({ type, id, amount = '', userLabel = '', detail = '' }) {
-    const adminEmail = process.env.ADMIN_NOTIFY_EMAIL;
-    if (!adminEmail) return; // Not configured — skip silently
-    if (isDuplicate(`pending:${type}:${id}`)) return;
+  const adminEmail = process.env.ADMIN_NOTIFY_EMAIL;
+  if (!adminEmail) return; // Not configured — skip silently
+  if (isDuplicate(`pending:${type}:${id}`)) return;
 
-    const apiKey = process.env.RESEND_API_KEY;
-    if (!apiKey) {
-        console.warn('[notify] RESEND_API_KEY missing — cannot email admin notification.');
-        return;
-    }
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    console.warn('[notify] RESEND_API_KEY missing — cannot email admin notification.');
+    return;
+  }
 
-    const typeLabels = {
-        deposit: '💰 New Pending Deposit',
-        withdrawal: '📤 New Pending Withdrawal',
-        kyc: '🪪 New KYC Submission',
-    };
-    const emojis = { deposit: '💰', withdrawal: '📤', kyc: '🪪' };
-    const title = typeLabels[type] || '🔔 New Pending Admin Item';
+  const typeLabels = {
+    deposit: '💰 New Pending Deposit',
+    withdrawal: '📤 New Pending Withdrawal',
+    kyc: '🪪 New KYC Submission',
+    chat: '💬 New Support Message',
+    user: '👤 New User Registration',
+  };
+  const emojis = { deposit: '💰', withdrawal: '📤', kyc: '🪪', chat: '💬', user: '👤' };
+  const title = typeLabels[type] || '🔔 New Pending Admin Item';
 
-    const html = `
+  const html = `
   <div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;padding:32px;background:#0a0e1a;border-radius:16px;border:1px solid #1e2a3a;">
     <div style="text-align:center;margin-bottom:24px;">
       <h1 style="color:#00d4ff;font-size:26px;margin:0;">${emojis[type] || '🔔'} ${title}</h1>
@@ -73,28 +75,28 @@ export async function notifyAdminOfPendingItem({ type, id, amount = '', userLabe
     </div>
   </div>`;
 
-    try {
-        const res = await fetch('https://api.resend.com/emails', {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${apiKey}`,
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                from: 'RXDT Exchange Admin Alerts <noreply@rxdt.site>',
-                to: [adminEmail],
-                subject: `${title} — ${amount || id || ''}`.trim(),
-                html,
-            }),
-        });
+  try {
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: 'RXDT Exchange Admin Alerts <noreply@rxdt.site>',
+        to: [adminEmail],
+        subject: `${title} — ${amount || id || ''}`.trim(),
+        html,
+      }),
+    });
 
-        if (!res.ok) {
-            const err = await res.json().catch(() => ({}));
-            console.warn('[notify] Resend admin alert failed:', err);
-        } else {
-            console.log(`[notify] Admin alert sent for ${type} ${id}`);
-        }
-    } catch (e) {
-        console.warn('[notify] Failed to send admin alert:', e.message);
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      console.warn('[notify] Resend admin alert failed:', err);
+    } else {
+      console.log(`[notify] Admin alert sent for ${type} ${id}`);
     }
+  } catch (e) {
+    console.warn('[notify] Failed to send admin alert:', e.message);
+  }
 }

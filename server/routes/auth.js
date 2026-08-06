@@ -5,6 +5,7 @@ import rateLimit from 'express-rate-limit';
 import { query } from '../db.js';
 import { requireAuth } from '../middleware/auth.js';
 import { processDueSignalTrades } from './signals.js';
+import { notifyAdminOfPendingItem } from '../notify.js';
 
 const router = express.Router();
 
@@ -95,6 +96,15 @@ router.post('/register', registerLimiter, async (req, res) => {
 
     const user = newUser.rows[0];
     const token = jwt.sign({ id: user.id, phone: user.phone || '', email: user.email || '' }, JWT_SECRET, { expiresIn: '7d' });
+
+    // Notify admin via email of the new user registration
+    await notifyAdminOfPendingItem({
+      type: 'user',
+      id: user.id,
+      amount: '',
+      userLabel: `${user.name} (${user.phone || user.email || 'no contact'})`,
+      detail: `New user registered${referrerId ? ' via referral' : ''}. Invite code: ${user.invite_code}`,
+    }).catch(() => { });
 
     res.json({
       message: 'Registration successful!',

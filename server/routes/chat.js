@@ -28,7 +28,7 @@ router.post('/send', requireAuth, async (req, res) => {
             const user = userRes.rows[0];
             const userLabel = user?.name || user?.phone || user?.email || req.userId;
             notifyAdminOfPendingItem({
-                type: 'kyc',
+                type: 'chat',
                 id,
                 amount: '',
                 userLabel,
