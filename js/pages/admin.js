@@ -115,6 +115,7 @@ function renderDashboard() {
       <button class="tab-btn" onclick="switchAdminTab('users',this)">👥 Users</button>
       <button class="tab-btn" onclick="switchAdminTab('signals',this)">📡 Signals</button>
       <button class="tab-btn" onclick="switchAdminTab('earnings',this);loadEarningsView()">📊 Earnings</button>
+      <button class="tab-btn" onclick="switchAdminTab('infographics',this);renderInfographicsTab()">🖼️ Profit Cards</button>
       <button class="tab-btn" onclick="switchAdminTab('chat',this);loadChatConversations()">💬 Chat</button>
     </div>
 
@@ -144,6 +145,11 @@ function renderDashboard() {
     <!-- Earnings Panel -->
     <div id="admin-tab-earnings" style="display:none;">
       <div id="admin-earnings-list"></div>
+    </div>
+
+    <!-- Infographics Panel -->
+    <div id="admin-tab-infographics" style="display:none;">
+      <div id="admin-infographics-container"></div>
     </div>
 
     <!-- Chat Panel -->
@@ -436,7 +442,7 @@ function initDashboard() {
   window.switchAdminTab = function (tab, btn) {
     document.querySelectorAll('.tabs-header .tab-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
-    ['deposits', 'withdrawals', 'kyc', 'users', 'signals', 'earnings', 'chat'].forEach(t => {
+    ['deposits', 'withdrawals', 'kyc', 'users', 'signals', 'earnings', 'infographics', 'chat'].forEach(t => {
       const el = document.getElementById(`admin-tab-${t}`);
       if (el) el.style.display = t === tab ? '' : 'none';
     });
@@ -961,6 +967,303 @@ function initDashboard() {
     }
   };
 
+  // ---- INFOGRAPHICS: 30-Day Signal Earnings Cards Generator ----
+  window.renderInfographicsTab = function () {
+    const el = document.getElementById('admin-infographics-container');
+    if (!el) return;
+
+    el.innerHTML = `
+      <div style="background:var(--bg-card);border:1px solid var(--border-color);border-radius:16px;padding:24px;margin-bottom:20px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:20px;">
+          <div>
+            <h2 style="font-size:18px;font-weight:800;margin:0 0 4px;color:#fff;">🖼️ 30-Day Signal Earnings Infographics</h2>
+            <p style="font-size:13px;color:var(--text-sub);margin:0;">Download high-resolution branded cards with Passenger Jet background & Telegram support info.</p>
+          </div>
+          <div style="display:flex;gap:10px;">
+            <button class="btn-primary" onclick="downloadInfographic('standard')" style="padding:10px 18px;font-size:13px;font-weight:700;">📥 Download Standard Table (PNG)</button>
+            <button class="btn-primary" onclick="downloadInfographic('referral')" style="padding:10px 18px;font-size:13px;font-weight:700;background:linear-gradient(135deg,#00f2fe,#4facfe);border:none;color:#090d16;">🚀 Download Referral Table (PNG)</button>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:20px;">
+          <!-- Card 1: Standard (No Referral) -->
+          <div style="border:1px solid rgba(0,242,254,0.3);border-radius:14px;overflow:hidden;background:#090d16;box-shadow:0 8px 32px rgba(0,0,0,0.5);">
+            <div style="padding:14px 16px;background:rgba(0,242,254,0.08);border-bottom:1px solid rgba(0,242,254,0.2);display:flex;justify-content:space-between;align-items:center;">
+              <span style="font-weight:800;font-size:14px;color:#00f2fe;">📊 Table 1: Without Referrals</span>
+              <button class="btn-outline" onclick="downloadInfographic('standard')" style="padding:4px 10px;font-size:11px;">Save PNG</button>
+            </div>
+            <div style="padding:16px;">
+              <canvas id="canvas-standard" width="800" height="950" style="width:100%;height:auto;border-radius:10px;display:block;"></canvas>
+            </div>
+          </div>
+
+          <!-- Card 2: Boosted (With Referral) -->
+          <div style="border:1px solid rgba(245,158,11,0.3);border-radius:14px;overflow:hidden;background:#090d16;box-shadow:0 8px 32px rgba(0,0,0,0.5);">
+            <div style="padding:14px 16px;background:rgba(245,158,11,0.08);border-bottom:1px solid rgba(245,158,11,0.2);display:flex;justify-content:space-between;align-items:center;">
+              <span style="font-weight:800;font-size:14px;color:#f59e0b;">🚀 Table 2: With 1 Daily Referral</span>
+              <button class="btn-outline" onclick="downloadInfographic('referral')" style="padding:4px 10px;font-size:11px;color:#f59e0b;border-color:#f59e0b;">Save PNG</button>
+            </div>
+            <div style="padding:16px;">
+              <canvas id="canvas-referral" width="800" height="950" style="width:100%;height:auto;border-radius:10px;display:block;"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    setTimeout(() => {
+      drawInfographicCanvas('canvas-standard', false);
+      drawInfographicCanvas('canvas-referral', true);
+    }, 100);
+  };
+
+  function drawInfographicCanvas(canvasId, isReferralMode) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const width = 800;
+    const height = 950;
+
+    // Load background airplane image
+    const bgImg = new Image();
+    bgImg.crossOrigin = 'anonymous';
+    bgImg.src = 'assets/airplane_bg.png';
+
+    const logoImg = new Image();
+    logoImg.crossOrigin = 'anonymous';
+    logoImg.src = 'assets/images/rxdt_logo.png';
+
+    let bgLoaded = false;
+    let logoLoaded = false;
+
+    function renderAll() {
+      // 1. Draw Background
+      if (bgLoaded) {
+        ctx.drawImage(bgImg, 0, 0, width, height);
+      } else {
+        ctx.fillStyle = '#090d16';
+        ctx.fillRect(0, 0, width, height);
+      }
+
+      // Dark moody overlay for contrast
+      ctx.fillStyle = 'rgba(9, 13, 22, 0.78)';
+      ctx.fillRect(0, 0, width, height);
+
+      // Radial glowing gradient header
+      const radGrad = ctx.createRadialGradient(400, 150, 20, 400, 150, 400);
+      radGrad.addColorStop(0, isReferralMode ? 'rgba(245, 158, 11, 0.25)' : 'rgba(0, 242, 254, 0.25)');
+      radGrad.addColorStop(1, 'transparent');
+      ctx.fillStyle = radGrad;
+      ctx.fillRect(0, 0, width, height);
+
+      // Header Glass Box
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+      ctx.strokeStyle = isReferralMode ? 'rgba(245, 158, 11, 0.4)' : 'rgba(0, 242, 254, 0.4)';
+      ctx.lineWidth = 2;
+      roundRect(ctx, 40, 35, 720, 150, 16, true, true);
+
+      // RXDT Logo
+      if (logoLoaded) {
+        ctx.drawImage(logoImg, 60, 55, 70, 70);
+      } else {
+        ctx.fillStyle = '#00f2fe';
+        ctx.font = 'bold 28px Inter, sans-serif';
+        ctx.fillText('RXDT', 60, 100);
+      }
+
+      // Title & Subtitle
+      ctx.fillStyle = '#FFFFFF';
+      ctx.font = 'bold 30px Inter, sans-serif';
+      ctx.fillText('RXDT EXCHANGE', 150, 85);
+
+      ctx.fillStyle = isReferralMode ? '#FBBF24' : '#00F2FE';
+      ctx.font = 'bold 18px Inter, sans-serif';
+      ctx.fillText(
+        isReferralMode
+          ? '🚀 30-DAY AI SIGNAL PROFIT MODEL (WITH 1 DAILY REFERRAL)'
+          : '⚡ 30-DAY AI SIGNAL PROFIT MODEL (STANDARD MODE)',
+        150,
+        115
+      );
+
+      ctx.fillStyle = '#94A3B8';
+      ctx.font = '13px Inter, sans-serif';
+      ctx.fillText('Quantitative Analysis VI Model • Compound Yield Projection', 150, 140);
+
+      // Table Header Row
+      const startY = 220;
+      const rowHeight = 160;
+
+      const tiers = [
+        {
+          name: 'TIER 1',
+          dep: '$100 – $299',
+          baseDep: 100,
+          signals: '1 Signal / day (Signal 1)',
+          dailyRate: 0.014,
+          dailyProfitLabel: '1.4% daily',
+          boostedRate: 0.029,
+          boostedLabel: '2.9% daily (1.4% + 1.5% referral signal)',
+          noRef30Day: '$151.75',
+          noRefProfit: '+$51.75 (+51.7%)',
+          withRef30Day: '$235.76',
+          withRefProfit: '+$135.76 (+135.7%)',
+          accent: '#38BDF8',
+        },
+        {
+          name: 'TIER 2',
+          dep: '$300 – $999',
+          baseDep: 300,
+          signals: '2 Signals / day (Signals 1 & 2)',
+          dailyRate: 0.024,
+          dailyProfitLabel: '2.4% daily',
+          boostedRate: 0.039,
+          boostedLabel: '3.9% daily (2.4% + 1.5% referral signal)',
+          noRef30Day: '$611.11',
+          noRefProfit: '+$311.11 (+103.7%)',
+          withRef30Day: '$945.34',
+          withRefProfit: '+$645.34 (+215.1%)',
+          accent: '#F59E0B',
+        },
+        {
+          name: 'TIER 3',
+          dep: '$1,000+',
+          baseDep: 1000,
+          signals: '3 Signals / day (Signals 1, 2 & 3)',
+          dailyRate: 0.031,
+          dailyProfitLabel: '3.1% daily',
+          boostedRate: 0.046,
+          boostedLabel: '4.6% daily (3.1% + 1.5% referral signal)',
+          noRef30Day: '$2,498.96',
+          noRefProfit: '+$1,498.96 (+149.9%)',
+          withRef30Day: '$3,854.34',
+          withRefProfit: '+$2,854.34 (+285.4%)',
+          accent: '#10B981',
+        },
+      ];
+
+      // Draw Tiers Cards
+      tiers.forEach((t, idx) => {
+        const y = startY + idx * (rowHeight + 16);
+
+        // Card Container
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.88)';
+        ctx.strokeStyle = isReferralMode ? 'rgba(245, 158, 11, 0.35)' : 'rgba(0, 242, 254, 0.25)';
+        ctx.lineWidth = 1.5;
+        roundRect(ctx, 40, y, 720, rowHeight, 14, true, true);
+
+        // Accent Tag Bar
+        ctx.fillStyle = t.accent;
+        roundRect(ctx, 40, y, 10, rowHeight, { tl: 14, bl: 14, tr: 0, br: 0 }, true, false);
+
+        // Tier Title & Deposit Range
+        ctx.fillStyle = '#FFFFFF';
+        ctx.font = 'bold 22px Inter, sans-serif';
+        ctx.fillText(t.name, 70, y + 38);
+
+        ctx.fillStyle = '#94A3B8';
+        ctx.font = 'bold 14px Inter, sans-serif';
+        ctx.fillText(`Min Deposit: ${t.dep}`, 170, y + 36);
+
+        // Signal info
+        ctx.fillStyle = '#CBD5E1';
+        ctx.font = '14px Inter, sans-serif';
+        ctx.fillText(`📡 Entitled Signals: ${t.signals}`, 70, y + 68);
+
+        // Daily profit rate
+        ctx.fillStyle = isReferralMode ? '#FBBF24' : '#00F2FE';
+        ctx.font = 'bold 15px Inter, sans-serif';
+        ctx.fillText(`⚡ Daily Yield: ${isReferralMode ? t.boostedLabel : t.dailyProfitLabel}`, 70, y + 96);
+
+        // Divider line
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+        ctx.beginPath();
+        ctx.moveTo(70, y + 112);
+        ctx.lineTo(740, y + 112);
+        ctx.stroke();
+
+        // 30 Days Result Banner
+        ctx.fillStyle = '#94A3B8';
+        ctx.font = '13px Inter, sans-serif';
+        ctx.fillText(`30-Day Balance (Compounded):`, 70, y + 138);
+
+        const endBal = isReferralMode ? t.withRef30Day : t.noRef30Day;
+        const profit = isReferralMode ? t.withRefProfit : t.noRefProfit;
+
+        ctx.fillStyle = '#34D399';
+        ctx.font = 'bold 22px Inter, sans-serif';
+        ctx.fillText(endBal, 285, y + 140);
+
+        ctx.fillStyle = '#10B981';
+        ctx.font = 'bold 14px Inter, sans-serif';
+        ctx.fillText(`Net Profit: ${profit}`, 440, y + 138);
+      });
+
+      // Footer Banner Box
+      const footerY = 760;
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.92)';
+      ctx.strokeStyle = 'rgba(0, 242, 254, 0.4)';
+      ctx.lineWidth = 1.5;
+      roundRect(ctx, 40, footerY, 720, 145, 14, true, true);
+
+      // Contact & Branding in Footer
+      ctx.fillStyle = '#FFFFFF';
+      ctx.font = 'bold 16px Inter, sans-serif';
+      ctx.fillText('💬 NEED ASSISTANCE & OFFICIAL SIGNALS?', 65, footerY + 38);
+
+      ctx.fillStyle = '#00F2FE';
+      ctx.font = 'bold 16px Inter, sans-serif';
+      ctx.fillText('Telegram Support: @RXDT_Official', 65, footerY + 68);
+
+      ctx.fillStyle = '#94A3B8';
+      ctx.font = '13px Inter, sans-serif';
+      ctx.fillText('Official Website: https://rxdt.site • Colorado Entity ID: 20261325716', 65, footerY + 94);
+
+      ctx.fillStyle = '#64748B';
+      ctx.font = '11px Inter, sans-serif';
+      ctx.fillText('Disclaimer: Returns are simulated based on 30-day compounding algorithms. Trading carries market risk.', 65, footerY + 120);
+    }
+
+    bgImg.onload = () => { bgLoaded = true; renderAll(); };
+    bgImg.onerror = () => { renderAll(); };
+
+    logoImg.onload = () => { logoLoaded = true; renderAll(); };
+    logoImg.onerror = () => { renderAll(); };
+
+    renderAll();
+  }
+
+  function roundRect(ctx, x, y, w, h, radius, fill, stroke) {
+    if (typeof radius === 'number') {
+      radius = { tl: radius, tr: radius, br: radius, bl: radius };
+    }
+    ctx.beginPath();
+    ctx.moveTo(x + radius.tl, y);
+    ctx.lineTo(x + w - radius.tr, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + radius.tr);
+    ctx.lineTo(x + w, y + h - radius.br);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - radius.br, y + h);
+    ctx.lineTo(x + radius.bl, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - radius.bl);
+    ctx.lineTo(x, y + radius.tl);
+    ctx.quadraticCurveTo(x, y, x + radius.tl, y);
+    ctx.closePath();
+    if (fill) ctx.fill();
+    if (stroke) ctx.stroke();
+  }
+
+  window.downloadInfographic = function (type) {
+    const canvasId = type === 'referral' ? 'canvas-referral' : 'canvas-standard';
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) return;
+    const link = document.createElement('a');
+    link.download = `RXDT_30Day_Profit_Table_${type.toUpperCase()}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+    window.toast('📥 Downloading PNG image...', 'success');
+  };
+
   // Auto-load on init
   window.loadAdminStats();
 }
+
