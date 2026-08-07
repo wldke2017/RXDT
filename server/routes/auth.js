@@ -353,6 +353,7 @@ function formatUser(u) {
     totalEarnings: parseFloat(u.total_earnings || 0),
     inviteCode: u.invite_code,
     kycStatus: u.kyc_status,
+    avatarImg: u.avatar_img || null,
     membershipTier: u.membership_tier,
     spinChances: u.spin_chances !== undefined && u.spin_chances !== null ? parseInt(u.spin_chances) : 1,
     dailySignalCount: u.daily_signal_count || 3,

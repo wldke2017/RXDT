@@ -30,6 +30,8 @@ const routes = {
   'kyc': authPage,
   'earn-guide': authPage,
   'lucky-wheel': luckyWheelPage,
+  'profile': profilePage,
+  'profile-main': profilePage,
   'invite-friends': profilePage,
   'security-settings': profilePage,
   'customer-service': profilePage,
@@ -44,7 +46,7 @@ const routes = {
 const authRequired = [
   'follow', 'follow/note', 'follow/team',
   'assets', 'recharge', 'withdraw', 'bind-address', 'account-change',
-  'lucky-wheel', 'invite-friends', 'security-settings', 'kyc', 'earn-guide', 'contract'
+  'lucky-wheel', 'profile', 'profile-main', 'invite-friends', 'security-settings', 'kyc', 'earn-guide', 'contract'
 ];
 
 async function navigate(path) {

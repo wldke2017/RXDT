@@ -255,10 +255,10 @@ router.post('/kyc/approve', requireAdminSecret, async (req, res) => {
     if (!kycId) return res.status(400).json({ error: 'kycId is required' });
     await query('BEGIN');
     const kycRes = await query(`UPDATE kyc_records SET status = 'pass' WHERE id = $1 RETURNING *`, [kycId]);
-    if (!kycRes.rows.length) { await query('ROLLBACK'); return res.status(404).json({ error: 'KYC not found' }); }
-    await query(`UPDATE users SET kyc_status = 'pass' WHERE id = $1`, [kycRes.rows[0].user_id]);
+    const kyc = kycRes.rows[0];
+    await query(`UPDATE users SET kyc_status = 'pass', avatar_img = COALESCE(NULLIF($2, ''), avatar_img) WHERE id = $1`, [kyc.user_id, kyc.handheld_img || '']);
     await query('COMMIT');
-    res.json({ message: `KYC for ${kycRes.rows[0].real_name} approved!` });
+    res.json({ message: `KYC for ${kyc.real_name} approved!` });
   } catch (err) {
     await query('ROLLBACK');
     res.status(500).json({ error: 'Failed to approve KYC' });

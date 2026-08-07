@@ -130,7 +130,7 @@ function renderShell() {
           <svg viewBox="0 0 24 24"><path d="M21 18v1c0 1.1-.9 2-2 2H5c-1.11 0-2-.9-2-2V5c0-1.1.89-2 2-2h14c1.1 0 2 .9 2 2v1h-9c-1.11 0-2 .9-2 2v8c0 1.1.89 2 2 2h9zm-9-2h10V8H12v8zm4-2.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/></svg>
           <span>Assets</span>
         </div>
-        <div class="mobile-nav-item" data-page="invite-friends" onclick="navigateTo('invite-friends')">
+        <div class="mobile-nav-item" data-page="profile" onclick="navigateTo('profile')">
           <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
           <span>Profile</span>
         </div>
@@ -152,6 +152,7 @@ function renderUserActions() {
         <span>▾</span>
       </div>
       <div class="user-dropdown" id="user-dropdown" style="background:#131926;border:1px solid rgba(255,255,255,0.15);">
+        <div class="udrop-item" onclick="navigateTo('profile');closeUserMenu()">My Profile</div>
         <div class="udrop-item" onclick="navigateTo('assets');closeUserMenu()">My Assets</div>
         <div class="udrop-item" onclick="navigateTo('follow/note');closeUserMenu()">My AI Orders</div>
         <div class="udrop-item" onclick="navigateTo('invite-friends');closeUserMenu()">Invite Friends</div>

@@ -12,10 +12,155 @@ function toast(msg, type = 'info') {
 }
 
 export function render(page) {
+  if (page === 'profile-main' || page === 'profile') return renderProfileMain();
   if (page === 'invite-friends') return renderInvite();
   if (page === 'security-settings') return renderSecurity();
   if (page === 'customer-service') return renderCustomerService();
-  return renderInvite();
+  return renderProfileMain();
+}
+
+function renderProfileHeader() {
+  const user = store.getUser();
+  const avatarSrc = user?.avatarImg || user?.avatar_img || null;
+  const displayName = user?.name || 'User';
+  const uid = user?.id || user?.inviteCode || '201652';
+  const contactText = user?.email || user?.phone || user?.emailBound || 'No Email/Phone Bound';
+  const isKycVerified = user?.kycStatus === 'pass';
+  const kycStatusText = user?.kycStatus === 'pass' ? 'Verified' : (user?.kycStatus === 'pending' ? 'Pending' : 'Unverified');
+  const badgeClass = user?.kycStatus === 'pass' ? 'verified' : (user?.kycStatus === 'pending' ? 'pending' : 'unverified');
+
+  return `
+  <div class="user-profile-header-card">
+    <div class="uph-top-bar">
+      <button class="uph-icon-btn" onclick="history.back()" title="Back">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>
+      <button class="uph-icon-btn" onclick="navigateTo('customer-service')" title="Customer Service">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 18v-6a9 9 0 0118 0v6"/><path d="M21 19a2 2 0 01-2 2h-1a2 2 0 01-2-2v-3a2 2 0 012-2h3zM3 19a2 2 0 002 2h1a2 2 0 002-2v-3a2 2 0 00-2-2H3z"/></svg>
+      </button>
+    </div>
+
+    <div class="uph-avatar-wrapper">
+      ${avatarSrc ? `
+        <img src="${avatarSrc}" alt="Avatar" class="uph-avatar-img" />
+      ` : `
+        <div class="uph-avatar-placeholder">
+          <svg viewBox="0 0 24 24" width="36" height="36" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+        </div>
+      `}
+    </div>
+
+    <div class="uph-user-info">
+      <div class="uph-name-row">
+        <span class="uph-name">${displayName}</span>
+        <button class="uph-eye-btn" onclick="toggleUidMask()" title="Hide/Unhide Details">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        </button>
+      </div>
+      <div class="uph-contact" id="uph-contact-label">${contactText}</div>
+      <div class="uph-uid">UID: <span id="uph-uid-val">${uid}</span></div>
+      <div class="uph-kyc-badge ${badgeClass}" onclick="navigateTo('kyc')">
+        ${kycStatusText} <span>›</span>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ---- MAIN PROFILE PAGE ----
+function renderProfileMain() {
+  const user = store.getUser();
+  const kycText = user?.kycStatus === 'pass' ? 'Verified' : (user?.kycStatus === 'pending' ? 'Pending' : 'Unverified');
+
+  return `
+  <div class="profile-page-container">
+    ${renderProfileHeader()}
+
+    <!-- Account & Security Section -->
+    <div class="profile-menu-group">
+      <div class="profile-menu-item" onclick="navigateTo('security-settings')">
+        <div class="pmi-icon">🛡️</div>
+        <div class="pmi-label">Safe</div>
+        <div class="pmi-arrow">›</div>
+      </div>
+      <div class="profile-menu-item" onclick="openChangePwd('login')">
+        <div class="pmi-icon">🔑</div>
+        <div class="pmi-label">Change Password</div>
+        <div class="pmi-arrow">›</div>
+      </div>
+    </div>
+
+    <!-- Features & Services Section -->
+    <div class="profile-menu-group">
+      <div class="profile-menu-item" onclick="navigateTo('invite-friends')">
+        <div class="pmi-icon">👥</div>
+        <div class="pmi-label">Referral Program</div>
+        <div class="pmi-arrow">›</div>
+      </div>
+      <div class="profile-menu-item" onclick="navigateTo('account-change')">
+        <div class="pmi-icon">📋</div>
+        <div class="pmi-label">Consume Record</div>
+        <div class="pmi-arrow">›</div>
+      </div>
+      <div class="profile-menu-item" onclick="navigateTo('earn-guide')">
+        <div class="pmi-icon">🧮</div>
+        <div class="pmi-label">Profit Calculator</div>
+        <div class="pmi-arrow">›</div>
+      </div>
+      <div class="profile-menu-item" onclick="navigateTo('kyc')">
+        <div class="pmi-icon">🆔</div>
+        <div class="pmi-label">KYC</div>
+        <div class="pmi-value ${user?.kycStatus === 'pass' ? 'verified' : ''}">${kycText}</div>
+      </div>
+    </div>
+
+    <!-- App Preferences Section -->
+    <div class="profile-menu-group">
+      <div class="profile-menu-item" onclick="toast('Language: English (US)', 'info')">
+        <div class="pmi-icon">🌐</div>
+        <div class="pmi-label">Language</div>
+        <div class="pmi-arrow">›</div>
+      </div>
+      <div class="profile-menu-item" onclick="toast('Price Method: USDT', 'info')">
+        <div class="pmi-icon">📊</div>
+        <div class="pmi-label">Price Method</div>
+        <div class="pmi-arrow">›</div>
+      </div>
+      <div class="profile-menu-item" onclick="navigateTo('customer-service')">
+        <div class="pmi-icon">🎧</div>
+        <div class="pmi-label">Online Service</div>
+        <div class="pmi-arrow">›</div>
+      </div>
+      <div class="profile-menu-item" onclick="toast('Theme Mode: Dark (Default)', 'info')">
+        <div class="pmi-icon">◐</div>
+        <div class="pmi-label">Theme Mode</div>
+        <div class="pmi-arrow">›</div>
+      </div>
+      <div class="profile-menu-item" onclick="toast('App download link copied!', 'success')">
+        <div class="pmi-icon">📥</div>
+        <div class="pmi-label">Download App</div>
+        <div class="pmi-arrow">›</div>
+      </div>
+    </div>
+
+    <!-- Support Section -->
+    <div class="profile-menu-group">
+      <div class="profile-menu-item" onclick="navigateTo('customer-service')">
+        <div class="pmi-icon">❓</div>
+        <div class="pmi-label">Help Center</div>
+        <div class="pmi-arrow">›</div>
+      </div>
+      <div class="profile-menu-item" onclick="navigateTo('about')">
+        <div class="pmi-icon">ℹ️</div>
+        <div class="pmi-label">About Us</div>
+        <div class="pmi-arrow">›</div>
+      </div>
+    </div>
+
+    <!-- Logout Button -->
+    <div style="margin-top:24px;margin-bottom:32px;">
+      <button class="profile-logout-btn" onclick="doLogoutProfile()">Logout</button>
+    </div>
+  </div>`;
 }
 
 // ---- INVITE FRIENDS ----
@@ -730,6 +875,35 @@ export function init(page) {
       errEl.innerHTML = `<div class="chat-bubble" style="color:#ef4444;">⚠️ ${err.message}</div><div class="chat-time">Just now</div>`;
       messages.appendChild(errEl);
     }
+  };
+
+  window.toggleUidMask = function () {
+    const uidEl = document.getElementById('uph-uid-val');
+    const contactEl = document.getElementById('uph-contact-label');
+    const user = store.getUser();
+    if (!uidEl) return;
+
+    if (uidEl.dataset.masked === 'true') {
+      uidEl.textContent = user?.id || user?.inviteCode || '201652';
+      if (contactEl) contactEl.textContent = user?.email || user?.phone || user?.emailBound || 'No Email/Phone Bound';
+      uidEl.dataset.masked = 'false';
+    } else {
+      const origUid = user?.id || user?.inviteCode || '201652';
+      uidEl.textContent = origUid.substring(0, 2) + '****' + origUid.slice(-2);
+      if (contactEl && contactEl.textContent.includes('@')) {
+        const parts = contactEl.textContent.split('@');
+        contactEl.textContent = parts[0].substring(0, 2) + '****@' + parts[1];
+      } else if (contactEl) {
+        contactEl.textContent = contactEl.textContent.substring(0, 3) + '****' + contactEl.textContent.slice(-3);
+      }
+      uidEl.dataset.masked = 'true';
+    }
+  };
+
+  window.doLogoutProfile = function () {
+    store.logout();
+    toast('Logged out successfully', 'info');
+    navigateTo('login');
   };
 
   function escapeHtml(str) {

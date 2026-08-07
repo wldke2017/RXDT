@@ -26,8 +26,8 @@ router.post('/submit', requireAuth, async (req, res) => {
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending');
     `, [id, req.userId, realName, idNumber, nationality || '', documentType || 'Passport', frontImg || '', backImg || '', handheldImg || '']);
 
-    // Update user kyc_status to pending review
-    await query(`UPDATE users SET kyc_status = 'pending' WHERE id = $1;`, [req.userId]);
+    // Update user kyc_status to pending review and set avatar_img to handheld image if provided
+    await query(`UPDATE users SET kyc_status = 'pending', avatar_img = COALESCE(NULLIF($2, ''), avatar_img) WHERE id = $1;`, [req.userId, handheldImg || '']);
 
     await query('COMMIT');
 
