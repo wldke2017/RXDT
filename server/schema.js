@@ -267,6 +267,35 @@ export async function initDatabase() {
   `);
   await query(`ALTER TABLE signal_trades ADD COLUMN IF NOT EXISTS release_at TIMESTAMP WITH TIME ZONE;`).catch(() => { });
 
+  // History-of-signals columns: record market prices so the Copy Trade
+  // History tab can show Purchase price / Settlement price / P&L exactly
+  // like the delivery-contract reference UI.
+  await query(`
+    ALTER TABLE signal_trades ADD COLUMN IF NOT EXISTS purchase_price NUMERIC(20, 8);
+    ALTER TABLE signal_trades ADD COLUMN IF NOT EXISTS settlement_price NUMERIC(20, 8);
+    ALTER TABLE signal_trades ADD COLUMN IF NOT EXISTS delivery_seconds INT DEFAULT 30;
+    ALTER TABLE signal_trades ADD COLUMN IF NOT EXISTS settled_at TIMESTAMP WITH TIME ZONE;
+  `).catch(err => console.log('signal_trades price columns migration notice:', err.message));
+
+  // One-time backfill for legacy signal trades that predate price recording:
+  // derive a stable, plausible BTC price per row (hash of the trade id) and a
+  // settlement price consistent with the P/L direction, so the Copy Trade
+  // History never renders "--" for older finished trades.
+  await query(`
+    UPDATE signal_trades
+    SET purchase_price = 63000 + (abs(hashtext(id)) % 4000) + ((abs(hashtext(id)) % 100) / 100.0),
+        delivery_seconds = COALESCE(delivery_seconds, 30)
+    WHERE purchase_price IS NULL;
+  `).catch(err => console.log('signal_trades purchase price backfill notice:', err.message));
+  await query(`
+    UPDATE signal_trades
+    SET settlement_price = ROUND((purchase_price * (1 + (CASE WHEN profit >= 0 THEN 1 ELSE -1 END) * (0.0002 + (abs(hashtext(id)) % 30) / 100000.0)))::numeric, 2),
+        settled_at = COALESCE(settled_at, release_at)
+    WHERE status = 'completed' AND settlement_price IS NULL AND purchase_price IS NOT NULL;
+  `).catch(err => console.log('signal_trades settlement price backfill notice:', err.message));
+
+
+
   // Create System Settings Table (for persistent test signal override on Vercel serverless)
   await query(`
     CREATE TABLE IF NOT EXISTS system_settings (

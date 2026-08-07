@@ -3561,3 +3561,96 @@
   border-color: rgba(239, 68, 68, 0.4);
   color: #ef4444;
 }
+
+/* ============================================================
+   Contract Type Tabs (Perpetual / Delivery contract)
+   ============================================================ */
+.contract-type-tabs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 14px 0;
+}
+
+.ctype-tab {
+  background: transparent;
+  border: none;
+  color: var(--text-sub, #94a3b8);
+  font-size: 14px;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.ctype-tab.active {
+  background: var(--el-color-primary, #00f2fe);
+  color: #060b19;
+  font-weight: 700;
+}
+
+/* ============================================================
+   Signal History Sub-sub-tabs (Submitted / Finished)
+   ============================================================ */
+.signal-history-tabs {
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid var(--border-color, rgba(255,255,255,0.08));
+  padding: 0 12px;
+  margin-bottom: 4px;
+}
+
+.sh-tab {
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-sub, #94a3b8);
+  font-size: 14px;
+  font-weight: 600;
+  padding: 10px 16px;
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s;
+  margin-bottom: -1px;
+}
+
+.sh-tab.active {
+  color: var(--el-color-primary, #00f2fe);
+  border-bottom-color: var(--el-color-primary, #00f2fe);
+}
+
+/* ============================================================
+   Copy Trade Detail Cards (Trading pair, Number, Delivery time…)
+   ============================================================ */
+.ctrade-card {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border-color, rgba(255,255,255,0.06));
+}
+
+.ctrade-card:last-child {
+  border-bottom: none;
+}
+
+.ctrade-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 7px;
+  font-size: 13px;
+}
+
+.ctrade-lbl {
+  color: var(--text-sub, #94a3b8);
+  font-weight: 400;
+}
+
+.ctrade-val {
+  color: var(--text-main, #f8fafc);
+  font-weight: 500;
+  text-align: right;
+}
+
+.ctrade-status-finished {
+  color: var(--el-color-primary, #00f2fe);
+  font-weight: 700;
+}

@@ -17,8 +17,14 @@ function fmt(n, d = 2) {
 export function render() {
   return `
   <div class="contract-page">
-    <!-- Header: Pair Selector + Live Price -->
+    <!-- Header: Pair Selector + Live Price + Contract Type Tabs -->
     <div class="contract-header">
+      <!-- Contract Type Toggle: Perpetual / Delivery Contract -->
+      <div class="contract-type-tabs">
+        <button class="ctype-tab" id="ctype-perpetual" onclick="switchContractType('perpetual')" style="color:var(--text-sub);">Perpetual</button>
+        <button class="ctype-tab active" id="ctype-delivery" onclick="switchContractType('delivery')">Delivery contract</button>
+      </div>
+
       <div class="contract-pair-row">
         <div class="contract-pair-selector" onclick="togglePairDropdown()">
           <span id="contract-pair-icon">₿</span>
@@ -160,8 +166,20 @@ export function render() {
 
         <!-- Copy Trade History -->
         <div id="signal-history-panel" style="display:none;">
-          <div id="signal-history-list">
-            <div style="text-align:center;padding:24px;color:var(--text-muted);font-size:13px;">Loading history...</div>
+          <!-- Submitted / Finished Sub-sub-tabs -->
+          <div class="signal-history-tabs">
+            <button class="sh-tab" id="shtab-submitted" onclick="switchHistoryTab('submitted')">Submitted</button>
+            <button class="sh-tab active" id="shtab-finished" onclick="switchHistoryTab('finished')">Finished</button>
+          </div>
+          <div id="shtab-submitted-panel" style="display:none;">
+            <div id="signal-submitted-list">
+              <div style="text-align:center;padding:24px;color:var(--text-muted);font-size:13px;">Loading submitted orders...</div>
+            </div>
+          </div>
+          <div id="shtab-finished-panel">
+            <div id="signal-history-list">
+              <div style="text-align:center;padding:24px;color:var(--text-muted);font-size:13px;">Loading history...</div>
+            </div>
           </div>
         </div>
       </div>
@@ -613,7 +631,33 @@ export async function init() {
     document.getElementById('signal-history-panel').style.display = sub === 'history' ? 'block' : 'none';
     document.getElementById('subtab-current').classList.toggle('active', sub === 'current');
     document.getElementById('subtab-history').classList.toggle('active', sub === 'history');
-    if (sub === 'history') loadSignalHistory();
+    if (sub === 'history') {
+      // Default to Finished tab when opening history
+      switchHistoryTab('finished');
+    }
+  };
+
+  // ---- Contract Type Toggle (Perpetual / Delivery) ----
+  window.switchContractType = function (type) {
+    document.getElementById('ctype-perpetual').classList.toggle('active', type === 'perpetual');
+    document.getElementById('ctype-delivery').classList.toggle('active', type === 'delivery');
+    // Both modes use same delivery signal system; just UI indicator
+    toast(type === 'perpetual' ? 'Perpetual trading mode (coming soon)' : 'Delivery contract mode active', 'info');
+  };
+
+  // ---- Submitted / Finished History Sub-sub-tab ----
+  window.switchHistoryTab = function (tab) {
+    const submittedPanel = document.getElementById('shtab-submitted-panel');
+    const finishedPanel = document.getElementById('shtab-finished-panel');
+    const submittedBtn = document.getElementById('shtab-submitted');
+    const finishedBtn = document.getElementById('shtab-finished');
+    if (!submittedPanel || !finishedPanel) return;
+    submittedPanel.style.display = tab === 'submitted' ? 'block' : 'none';
+    finishedPanel.style.display = tab === 'finished' ? 'block' : 'none';
+    if (submittedBtn) submittedBtn.classList.toggle('active', tab === 'submitted');
+    if (finishedBtn) finishedBtn.classList.toggle('active', tab === 'finished');
+    if (tab === 'finished') loadSignalHistory();
+    if (tab === 'submitted') loadSubmittedOrders();
   };
 
   // ---- Load Consume Record (account_changes) ----
@@ -842,34 +886,123 @@ export async function init() {
     }
   };
 
-  // ---- Load Signal Trade History ----
+  // ---- Load Signal Trade History (Finished Tab) ----
   async function loadSignalHistory() {
     if (!store.isLoggedIn()) return;
     try {
-      const res = await fetch('/api/signals/history', { headers: authHeaders });
+      const res = await fetch('/api/signals/history?status=completed', { headers: authHeaders });
       const data = await res.json();
       const el = document.getElementById('signal-history-list');
       if (!el) return;
       const trades = data.trades || [];
       if (!trades.length) {
-        el.innerHTML = `<div style="text-align:center;padding:24px;color:var(--text-muted);">No copy trade history yet</div>`;
+        el.innerHTML = `<div style="text-align:center;padding:32px;color:var(--text-muted);font-size:13px;">No finished copy trades yet</div>`;
         return;
       }
       el.innerHTML = trades.map(t => {
-        const dt = new Date(t.created_at);
-        const timeStr = dt.toISOString().replace('T', ' ').substring(0, 19);
+        const pnl = parseFloat(t.profit || 0);
+        const tradeAmount = parseFloat(t.trade_amount || 0);
+        const purchasePrice = parseFloat(t.purchase_price || t.entry_price || 0);
+        const settlementPrice = parseFloat(t.settlement_price || t.close_price || 0);
+        // Delivery time is the signal's duration in seconds (e.g. 30s)
+        const deliveryTime = t.delivery_seconds ? `${t.delivery_seconds}s` : (t.duration || '30s');
+        // Expiration time
+        const releaseAt = t.release_at || t.closed_at || t.created_at;
+        const expTime = releaseAt ? new Date(releaseAt).toISOString().replace('T', ' ').substring(0, 19) : '--';
+        const pairLabel = (t.pair || 'BTC/USDT').replace('USDT', '/USDT');
+        const pnlSign = pnl >= 0 ? '+' : '';
+        const pnlClass = pnl >= 0 ? 'color-up' : 'color-down';
+        const status = t.status === 'open' ? 'In Progress' : 'Finished';
+
         return `
-        <div class="consume-record-item">
-          <div class="cr-icon cr-icon-up"><svg viewBox="0 0 24 24" width="18" height="18"><path d="M4 12l1.41 1.41L11 7.83V20h2V7.83l5.58 5.59L20 12l-8-8-8 8z" fill="currentColor"/></svg></div>
-          <div class="cr-info">
-            <div class="cr-title">Signal ${t.signal_id} · ${t.pair}</div>
-            <div class="cr-sub">Trade: $${parseFloat(t.trade_amount).toFixed(2)} → <span style="color:#00c49a;">+$${parseFloat(t.profit).toFixed(4)}</span></div>
-            <div class="cr-time">🕐 ${timeStr}</div>
+        <div class="ctrade-card">
+          <div class="ctrade-row">
+            <span class="ctrade-lbl">Trading pair</span>
+            <span class="ctrade-val">${pairLabel}</span>
           </div>
-          <div class="cr-amount cr-positive">+${parseFloat(t.profit).toFixed(4)}<div class="cr-currency">USDT</div></div>
+          <div class="ctrade-row">
+            <span class="ctrade-lbl">Number</span>
+            <span class="ctrade-val">${tradeAmount.toFixed(2)}</span>
+          </div>
+          <div class="ctrade-row">
+            <span class="ctrade-lbl">Delivery time</span>
+            <span class="ctrade-val">${deliveryTime}</span>
+          </div>
+          <div class="ctrade-row">
+            <span class="ctrade-lbl">Purchase price</span>
+            <span class="ctrade-val">${purchasePrice > 0 ? purchasePrice.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:4}) : '--'}</span>
+          </div>
+          <div class="ctrade-row">
+            <span class="ctrade-lbl">Settlement price</span>
+            <span class="ctrade-val">${settlementPrice > 0 ? settlementPrice.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:4}) : '--'}</span>
+          </div>
+          <div class="ctrade-row">
+            <span class="ctrade-lbl">P/L</span>
+            <span class="ctrade-val ${pnlClass}">${pnlSign}${pnl.toFixed(2)}</span>
+          </div>
+          <div class="ctrade-row">
+            <span class="ctrade-lbl">Expiration time</span>
+            <span class="ctrade-val">${expTime}</span>
+          </div>
+          <div class="ctrade-row" style="margin-bottom:0;">
+            <span class="ctrade-lbl">Status</span>
+            <span class="ctrade-val ctrade-status-finished">${status}</span>
+          </div>
         </div>`;
       }).join('');
     } catch (e) { console.warn('Signal history error:', e); }
+  }
+
+  // ---- Load Submitted Orders (In Progress Signal Trades) ----
+  async function loadSubmittedOrders() {
+    if (!store.isLoggedIn()) return;
+    const el = document.getElementById('signal-submitted-list');
+    if (!el) return;
+    try {
+      const res = await fetch('/api/signals/history?status=open', { headers: authHeaders });
+      const data = await res.json();
+      const trades = data.trades || [];
+      if (!trades.length) {
+        el.innerHTML = `<div style="text-align:center;padding:32px;color:var(--text-muted);font-size:13px;">No submitted orders currently active</div>`;
+        return;
+      }
+      el.innerHTML = trades.map(t => {
+        const tradeAmount = parseFloat(t.trade_amount || 0);
+        const pairLabel = (t.pair || 'BTC/USDT').replace('USDT', '/USDT');
+        const purchasePrice = parseFloat(t.purchase_price || t.entry_price || 0);
+        const deliveryTime = t.delivery_seconds ? `${t.delivery_seconds}s` : (t.duration || '30s');
+        const releaseAt = t.release_at ? new Date(t.release_at).toISOString().replace('T', ' ').substring(0, 19) : '--';
+        return `
+        <div class="ctrade-card">
+          <div class="ctrade-row">
+            <span class="ctrade-lbl">Trading pair</span>
+            <span class="ctrade-val">${pairLabel}</span>
+          </div>
+          <div class="ctrade-row">
+            <span class="ctrade-lbl">Number</span>
+            <span class="ctrade-val">${tradeAmount.toFixed(2)}</span>
+          </div>
+          <div class="ctrade-row">
+            <span class="ctrade-lbl">Delivery time</span>
+            <span class="ctrade-val">${deliveryTime}</span>
+          </div>
+          <div class="ctrade-row">
+            <span class="ctrade-lbl">Purchase price</span>
+            <span class="ctrade-val">${purchasePrice > 0 ? purchasePrice.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:4}) : '--'}</span>
+          </div>
+          <div class="ctrade-row">
+            <span class="ctrade-lbl">Expiration time</span>
+            <span class="ctrade-val">${releaseAt}</span>
+          </div>
+          <div class="ctrade-row" style="margin-bottom:0;">
+            <span class="ctrade-lbl">Status</span>
+            <span class="ctrade-val" style="color:#f59e0b;font-weight:700;">Submitted</span>
+          </div>
+        </div>`;
+      }).join('');
+    } catch (e) {
+      if (el) el.innerHTML = `<div style="text-align:center;padding:24px;color:var(--text-muted);">No submitted orders</div>`;
+    }
   }
 
   // ---- Init ----

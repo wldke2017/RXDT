@@ -168,9 +168,15 @@ router.post('/users/release-frozen', requireAdminSecret, async (req, res) => {
       const newBal = parseFloat(upd.rows[0]?.available_balance || 0);
 
       // Mark any open signal trades as completed so they don't re-settle
+      // (also stamp settlement price/time so Copy Trade History stays complete)
       await query(
-        `UPDATE signal_trades SET status = 'completed' WHERE user_id = $1 AND status = 'open'`,
+        `UPDATE signal_trades
+         SET status = 'completed',
+             settlement_price = COALESCE(settlement_price, purchase_price),
+             settled_at = NOW()
+         WHERE user_id = $1 AND status = 'open'`,
         [u.id]
+
       ).catch(() => { });
 
       await query(

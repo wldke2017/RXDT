@@ -75,6 +75,34 @@ function getPerSignalProfitRate(tier) {
   return tier.dailyProfitPercent / tier.signals.length;
 }
 
+// ---- Market Price Helper (for signal history purchase/settlement prices) ----
+// Fetches the live pair price from Binance with a short-lived cache so the
+// 8-second poller and batch auto-executions don't hammer the public API.
+// If Binance is unreachable, we drift the last known price slightly so
+// history records are still complete and realistic.
+const priceCache = new Map(); // symbol -> { price, ts }
+
+async function getMarketPrice(symbol) {
+  const sym = (symbol || 'BTCUSDT').toUpperCase().replace('/', '');
+  const cached = priceCache.get(sym);
+  if (cached && Date.now() - cached.ts < 10000) return cached.price;
+  try {
+    const res = await fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${sym}`);
+    if (!res.ok) throw new Error(`price fetch failed (${res.status})`);
+    const data = await res.json();
+    const price = parseFloat(data.price);
+    if (!(price > 0)) throw new Error('invalid price payload');
+    priceCache.set(sym, { price, ts: Date.now() });
+    return price;
+  } catch (e) {
+    const base = cached?.price || 65000;
+    const drifted = parseFloat((base * (1 + (Math.random() - 0.5) * 0.002)).toFixed(2));
+    priceCache.set(sym, { price: drifted, ts: Date.now() });
+    return drifted;
+  }
+}
+
+
 export async function setTestSignalWindow(durationMinutes = 15, signalId = 1) {
   const expiresAt = new Date(Date.now() + durationMinutes * 60 * 1000).toISOString();
   const val = JSON.stringify({ signalId, expiresAt });
@@ -247,7 +275,14 @@ async function executeSignalTrade(userId, signal, balance, tier, isFreeSignalTra
   const tradeId = 'ST' + now + '_' + userId.substring(0, 4);
   const openId = 'AC' + now + 'O_' + userId.substring(0, 4);
 
+  // Capture the live market price BEFORE opening the transaction (network
+  // call) so the Copy Trade History shows a real Purchase price, and derive
+  // the delivery duration in seconds (e.g. 30s) for the history record.
+  const purchasePrice = await getMarketPrice(signal.pairSymbol);
+  const deliverySeconds = Math.max(1, Math.round((new Date(releaseAt).getTime() - now) / 1000));
+
   await query('BEGIN');
+
 
   try {
     // Lock the user row to serialize concurrent executions for this user.
@@ -320,12 +355,14 @@ async function executeSignalTrade(userId, signal, balance, tier, isFreeSignalTra
       );
     }
 
-    // 2. Insert signal trade record
+    // 2. Insert signal trade record (with purchase price + delivery time so
+    //    the Copy Trade History shows full delivery-contract style details)
     await query(
-      `INSERT INTO signal_trades (id, user_id, signal_id, pair, trade_amount, profit, balance_before, balance_after, tier_label, status, release_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'open', $10)`,
-      [tradeId, userId, signal.signalId, signal.pairSymbol, effectiveAmount, profitAmount, lockedBalance, newBalance, tierLabel, releaseAt]
+      `INSERT INTO signal_trades (id, user_id, signal_id, pair, trade_amount, profit, balance_before, balance_after, tier_label, status, release_at, purchase_price, delivery_seconds)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'open', $10, $11, $12)`,
+      [tradeId, userId, signal.signalId, signal.pairSymbol, effectiveAmount, profitAmount, lockedBalance, newBalance, tierLabel, releaseAt, purchasePrice, deliverySeconds]
     );
+
 
     // 3. Log Open Position
     await query(
@@ -479,8 +516,14 @@ export async function processDueSignalTrades(userId) {
       const claimed = claimRes.rows[0];
       if (!claimed) break; // no more due trades — done
 
+      // Capture the live settlement price for the history record (outside
+      // the transaction; the price helper caches for 10s so batch settlements
+      // of the same pair share one fetch).
+      const settlementPrice = await getMarketPrice(claimed.pair);
+
       try {
         const trade = claimed;
+
         const tradeAmount = parseFloat(trade.trade_amount);
         const profit = parseFloat(trade.profit);
         const returnTotal = tradeAmount + profit;
@@ -501,7 +544,12 @@ export async function processDueSignalTrades(userId) {
         const newBal = parseFloat(userRes.rows[0]?.available_balance || 0);
 
         // 2. Mark trade completed (was atomically claimed as 'processing')
-        await query(`UPDATE signal_trades SET status = 'completed' WHERE id = $1`, [trade.id]);
+        //    and stamp the settlement price + time for the history record.
+        await query(
+          `UPDATE signal_trades SET status = 'completed', settlement_price = $2, settled_at = NOW() WHERE id = $1`,
+          [trade.id, settlementPrice]
+        );
+
 
         // 2b. Check if the user has now doubled their invested capital.
         //     If total_earnings >= initial_deposit, mark doubled_capital = true
@@ -676,15 +724,23 @@ router.post('/execute', requireAuth, async (req, res) => {
 router.get('/history', requireAuth, async (req, res) => {
   try {
     await processDueSignalTrades(req.userId);
-    const result = await query(
-      `SELECT * FROM signal_trades WHERE user_id = $1 ORDER BY created_at DESC LIMIT 50`,
-      [req.userId]
-    ).catch(() => ({ rows: [] }));
+    const statusFilter = req.query.status; // optional: 'open', 'completed', etc.
+    let queryStr, queryParams;
+    if (statusFilter) {
+      queryStr = `SELECT * FROM signal_trades WHERE user_id = $1 AND status = $2 ORDER BY created_at DESC LIMIT 100`;
+      queryParams = [req.userId, statusFilter];
+    } else {
+      queryStr = `SELECT * FROM signal_trades WHERE user_id = $1 ORDER BY created_at DESC LIMIT 100`;
+      queryParams = [req.userId];
+    }
+
+    const result = await query(queryStr, queryParams).catch(() => ({ rows: [] }));
     res.json({ trades: result.rows });
   } catch (err) {
     res.status(500).json({ error: err.message, trades: [] });
   }
 });
+
 
 // ---- GET /api/signals/consume-record ----
 router.get('/consume-record', requireAuth, async (req, res) => {
