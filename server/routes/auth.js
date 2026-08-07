@@ -64,10 +64,15 @@ router.post('/register', registerLimiter, async (req, res) => {
 
     // Check if inviteCode/referrer was provided
     let referrerId = null;
+    let referrerInfo = null; // { id, name, phone, email, invite_code } of the referrer
     if (inviteCode) {
-      const refRes = await query(`SELECT id FROM users WHERE invite_code = $1 OR id = $1`, [inviteCode.trim()]);
+      const refRes = await query(
+        `SELECT id, name, phone, email, invite_code FROM users WHERE invite_code = $1 OR id = $1`,
+        [inviteCode.trim()]
+      );
       if (refRes.rows.length > 0) {
         referrerId = refRes.rows[0].id;
+        referrerInfo = refRes.rows[0];
       }
     }
 
@@ -97,13 +102,17 @@ router.post('/register', registerLimiter, async (req, res) => {
     const user = newUser.rows[0];
     const token = jwt.sign({ id: user.id, phone: user.phone || '', email: user.email || '' }, JWT_SECRET, { expiresIn: '7d' });
 
-    // Notify admin via email of the new user registration
+    // Notify admin via email of the new user registration.
+    // Includes the invite code the new user used and who referred them.
+    const referrerLabel = referrerInfo
+      ? `${referrerInfo.name || 'Unknown'} (${referrerInfo.phone || referrerInfo.email || 'no contact'}) · code ${referrerInfo.invite_code || 'N/A'}`
+      : 'None (direct registration)';
     await notifyAdminOfPendingItem({
       type: 'user',
       id: user.id,
       amount: '',
       userLabel: `${user.name} (${user.phone || user.email || 'no contact'})`,
-      detail: `New user registered${referrerId ? ' via referral' : ''}. Invite code: ${user.invite_code}`,
+      detail: `New user registered${referrerId ? ' via referral' : ''}. Invite code used: ${inviteCode ? inviteCode.trim() : 'N/A'}. Referred by: ${referrerLabel}. New user's own invite code: ${user.invite_code}`,
     }).catch(() => { });
 
     res.json({
