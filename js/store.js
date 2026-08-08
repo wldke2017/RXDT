@@ -222,36 +222,16 @@ const store = {
 
   // ---- Actions ----
   async addFollowOrder(orderData) {
-    try {
-      const res = await api.createOrder(orderData);
-      state.followOrders.unshift(res.order);
-      if (state.user && res.updatedBalance) {
-        state.user.availableBalance = res.updatedBalance.availableBalance;
-        state.user.frozenBalance = res.updatedBalance.frozenBalance;
-      }
-      emit('orders', state.followOrders);
-      emit('user', state.user);
-      return res.order;
-    } catch (err) {
-      // Fallback
-      const newOrder = {
-        id: 'FO' + Date.now(),
-        orderNumber: 'ORD' + Date.now(),
-        status: 'pending',
-        applyTime: new Date().toISOString().replace('T', ' ').slice(0, 19),
-        profitLoss: 0,
-        totalProfitLoss: 0,
-        positionRecords: [],
-        ...orderData
-      };
-      state.followOrders.unshift(newOrder);
-      if (state.user) {
-        state.user.availableBalance -= orderData.amount;
-      }
-      emit('orders', state.followOrders);
-      emit('user', state.user);
-      return newOrder;
+    // No local fallback — server validation errors must propagate to the caller.
+    const res = await api.createOrder(orderData);
+    state.followOrders.unshift(res.order);
+    if (state.user && res.updatedBalance) {
+      state.user.availableBalance = res.updatedBalance.availableBalance;
+      state.user.frozenBalance = res.updatedBalance.frozenBalance;
     }
+    emit('orders', state.followOrders);
+    emit('user', state.user);
+    return res.order;
   },
 
   async toggleAutoRenew(orderId) {
@@ -272,53 +252,27 @@ const store = {
   },
 
   async addDeposit(deposit) {
-    try {
-      const res = await api.createDeposit(deposit);
-      state.deposits.unshift(res.deposit);
-      emit('deposits', state.deposits);
-      return res.deposit;
-    } catch (err) {
-      const newDeposit = {
-        id: 'D' + Date.now(),
-        orderNumber: 'DEP' + Date.now(),
-        status: 'pending',
-        auditStatus: 'pending',
-        time: new Date().toISOString().replace('T', ' ').slice(0, 19),
-        ...deposit
-      };
-      state.deposits.unshift(newDeposit);
-      emit('deposits', state.deposits);
-      return newDeposit;
-    }
+    // No local fallback — server validation errors must propagate to the caller.
+    const res = await api.createDeposit(deposit);
+    state.deposits.unshift(res.deposit);
+    emit('deposits', state.deposits);
+    return res.deposit;
   },
 
   async addWithdrawal(withdrawal) {
-    try {
-      const res = await api.createWithdrawal(withdrawal);
-      state.withdrawals.unshift(res.withdrawal);
-      if (state.user && res.newAvailableBalance !== undefined) {
-        state.user.availableBalance = res.newAvailableBalance;
-      }
-      emit('withdrawals', state.withdrawals);
-      emit('user', state.user);
-      return res.withdrawal;
-    } catch (err) {
-      const newW = {
-        id: 'W' + Date.now(),
-        orderNumber: 'WIT' + Date.now(),
-        status: 'processing',
-        auditStatus: 'pending',
-        time: new Date().toISOString().replace('T', ' ').slice(0, 19),
-        ...withdrawal
-      };
-      state.withdrawals.unshift(newW);
-      if (state.user) {
-        state.user.availableBalance -= withdrawal.amount;
-      }
-      emit('withdrawals', state.withdrawals);
-      emit('user', state.user);
-      return newW;
+    // IMPORTANT: No local fallback here. If the server rejects the withdrawal
+    // (e.g. wrong transaction password, insufficient balance, invalid address),
+    // the error MUST propagate to the caller so the user sees the real reason.
+    // A fake local "success" would let a withdrawal appear to succeed even when
+    // the server rejected it — a critical security bug.
+    const res = await api.createWithdrawal(withdrawal);
+    state.withdrawals.unshift(res.withdrawal);
+    if (state.user && res.newAvailableBalance !== undefined) {
+      state.user.availableBalance = res.newAvailableBalance;
     }
+    emit('withdrawals', state.withdrawals);
+    emit('user', state.user);
+    return res.withdrawal;
   },
 
   async addBindAddress(addr) {
