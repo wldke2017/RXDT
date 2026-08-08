@@ -422,13 +422,19 @@ function renderEarnGuide() {
         </div>
       </div>
 
-      <!-- Step 6: VIP Team Dividends -->
-      <div class="earn-guide-step" style="display:flex;gap:14px;align-items:flex-start;padding:16px;background:rgba(255,255,255,0.03);border:1px solid var(--border-color);border-radius:12px;margin-bottom:12px;">
-        <div style="flex-shrink:0;width:40px;height:40px;border-radius:50%;background:rgba(0,242,254,0.15);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:var(--el-color-primary);">6</div>
+      <!-- Step 6: VIP Monthly Salary & Promotion Rewards -->
+      <div class="earn-guide-step" style="display:flex;gap:14px;align-items:flex-start;padding:18px;background:linear-gradient(135deg, rgba(245,158,11,0.1), rgba(180,83,9,0.05));border:1px solid #f59e0b;border-radius:14px;margin-bottom:12px;">
+        <div style="flex-shrink:0;width:40px;height:40px;border-radius:50%;background:rgba(245,158,11,0.25);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:#f59e0b;">6</div>
         <div style="flex:1;">
-          <div style="font-weight:700;font-size:16px;color:var(--el-color-primary);margin-bottom:4px;">🏆 Unlock VIP Team Dividends</div>
-          <div style="font-size:13px;color:var(--text-sub);line-height:1.6;">
-            Refer <strong style="color:#fff;">5+ members</strong> to unlock VIP team rewards and receive stable weekly trading volume dividends. The more your team trades, the more you earn!
+          <div style="font-weight:700;font-size:16px;color:#f59e0b;margin-bottom:6px;">🏆 Monthly Salary Reward & Promotion Reward (VIP 1 – VIP 9)</div>
+          <div style="font-size:13px;color:var(--text-sub);line-height:1.6;margin-bottom:12px;">
+            Build a team to unlock recurring <strong>10-Day Salaries</strong> (automatically distributed on the <strong>3rd, 13th, and 23rd</strong> of each month) plus massive <strong>Promotion Rewards</strong>!
+          </div>
+          <div style="text-align:center;margin-bottom:8px;">
+            <img src="assets/images/rxdt_vip_rewards.png" alt="RXDT Monthly Salary & Promotion Reward Matrix" style="width:100%;max-width:580px;border-radius:10px;border:1px solid rgba(245,158,11,0.4);" />
+          </div>
+          <div style="font-size:12px;color:#a5b4fc;background:rgba(0,0,0,0.3);padding:10px;border-radius:8px;">
+            💡 <strong>Example:</strong> Reach VIP 1 with just 5 direct members to receive <strong>$30 every 10 days</strong> ($90/month) + <strong>$100 Promotion Reward</strong>! Reach VIP 9 for <strong>$3,000 every 10 days</strong> + <strong>$11,000 Promotion Reward</strong>.
           </div>
         </div>
       </div>

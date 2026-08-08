@@ -600,4 +600,179 @@ router.post('/signals/reconcile', requireAdminSecret, async (req, res) => {
   }
 });
 
+// ----------------------------------------------------
+// VIP & SALARY REWARDS MANAGEMENT
+// ----------------------------------------------------
+import { VIP_TIERS, getVipLevelInfo, calculate3LevelTeam } from './referrals.js';
+
+// GET /api/admin/vip-rewards — Get all users with VIP tier stats, salary history, and promotion claims
+router.get('/vip-rewards', requireAdminSecret, async (req, res) => {
+  try {
+    const usersRes = await query(
+      `SELECT id, name, phone, email, invite_code, available_balance, total_assets, vip_level, last_salary_payout_date, created_at 
+       FROM users 
+       ORDER BY created_at DESC`
+    );
+
+    const usersWithVip = [];
+    for (const u of usersRes.rows) {
+      const teamStats = await calculate3LevelTeam(u.id, u.invite_code);
+      const vipInfo = getVipLevelInfo(teamStats.directCount, teamStats.total3LevelCount);
+
+      usersWithVip.push({
+        id: u.id,
+        name: u.name,
+        phone: u.phone,
+        email: u.email,
+        inviteCode: u.invite_code,
+        availableBalance: parseFloat(u.available_balance || 0),
+        totalAssets: parseFloat(u.total_assets || 0),
+        vipLevel: vipInfo.level,
+        vipName: vipInfo.name,
+        directMembers: teamStats.directCount,
+        level2Members: teamStats.level2Count,
+        level3Members: teamStats.level3Count,
+        total3LevelMembers: teamStats.total3LevelCount,
+        salary10Days: vipInfo.salary10Days,
+        promotionReward: vipInfo.promotionReward,
+        lastSalaryDate: u.last_salary_payout_date
+      });
+    }
+
+    const [salaryLogs, promoClaims] = await Promise.all([
+      query(`SELECT s.*, u.name as user_name, u.phone as user_phone FROM salary_payouts s LEFT JOIN users u ON s.user_id = u.id ORDER BY s.created_at DESC LIMIT 50`),
+      query(`SELECT c.*, u.name as user_name, u.phone as user_phone FROM vip_promotion_claims c LEFT JOIN users u ON c.user_id = u.id ORDER BY c.created_at DESC LIMIT 50`)
+    ]);
+
+    res.json({
+      success: true,
+      users: usersWithVip,
+      salaryPayouts: salaryLogs.rows,
+      promotionClaims: promoClaims.rows,
+      vipTiers: VIP_TIERS
+    });
+  } catch (err) {
+    console.error('Admin VIP rewards fetch error:', err);
+    res.status(500).json({ error: 'Failed to fetch VIP rewards data' });
+  }
+});
+
+// POST /api/admin/trigger-salary-payout — Execute 10-Day Salary Payouts for eligible VIP users
+router.post('/trigger-salary-payout', requireAdminSecret, async (req, res) => {
+  try {
+    const { targetUserId } = req.body || {};
+    let whereClause = '';
+    let params = [];
+
+    if (targetUserId) {
+      whereClause = 'WHERE id = $1';
+      params = [targetUserId];
+    }
+
+    const usersRes = await query(
+      `SELECT id, name, invite_code, available_balance, total_assets, vip_level FROM users ${whereClause}`,
+      params
+    );
+
+    const payoutResults = [];
+    const nowStr = new Date().toISOString().substring(0, 10);
+    const periodLabel = `10-Day Salary (${nowStr})`;
+
+    for (const u of usersRes.rows) {
+      const teamStats = await calculate3LevelTeam(u.id, u.invite_code);
+      const vipInfo = getVipLevelInfo(teamStats.directCount, teamStats.total3LevelCount);
+
+      if (vipInfo.salary10Days > 0) {
+        const salaryAmount = vipInfo.salary10Days;
+        const payoutId = `SAL_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+
+        // Credit user's available balance and total assets
+        await query(
+          `UPDATE users 
+           SET available_balance = available_balance + $1, 
+               total_assets = total_assets + $1,
+               vip_level = $2,
+               last_salary_payout_date = CURRENT_TIMESTAMP 
+           WHERE id = $3`,
+          [salaryAmount, vipInfo.level, u.id]
+        );
+
+        // Record salary payout log
+        await query(
+          `INSERT INTO salary_payouts (id, user_id, vip_level, amount, payout_period, status)
+           VALUES ($1, $2, $3, $4, $5, 'completed')`,
+          [payoutId, u.id, vipInfo.level, salaryAmount, periodLabel]
+        );
+
+        // Record account change log for transparency
+        await query(
+          `INSERT INTO account_changes (id, user_id, type, amount, before_balance, after_balance, description)
+           VALUES ($1, $2, 'salary_payout', $3, $4, $5, $6)`,
+          [
+            `AC_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+            u.id,
+            salaryAmount,
+            parseFloat(u.available_balance || 0),
+            parseFloat(u.available_balance || 0) + salaryAmount,
+            `10-Day System Salary Payout for ${vipInfo.level}`
+          ]
+        ).catch(() => {});
+
+        payoutResults.push({
+          userId: u.id,
+          userName: u.name,
+          vipLevel: vipInfo.level,
+          amount: salaryAmount,
+          status: 'credited'
+        });
+      }
+    }
+
+    res.json({
+      success: true,
+      message: `Successfully processed 10-day salary distribution for ${payoutResults.length} VIP members.`,
+      payouts: payoutResults
+    });
+  } catch (err) {
+    console.error('Trigger salary payout error:', err);
+    res.status(500).json({ error: 'Failed to process salary payout' });
+  }
+});
+
+// POST /api/admin/approve-promotion — Approve or reject VIP promotion claims
+router.post('/approve-promotion', requireAdminSecret, async (req, res) => {
+  try {
+    const { claimId, status, note } = req.body;
+    if (!claimId || !['approved', 'rejected'].includes(status)) {
+      return res.status(400).json({ error: 'Valid claimId and status (approved/rejected) are required' });
+    }
+
+    const claimRes = await query(`SELECT * FROM vip_promotion_claims WHERE id = $1`, [claimId]);
+    if (claimRes.rows.length === 0) return res.status(404).json({ error: 'Claim record not found' });
+
+    const claim = claimRes.rows[0];
+
+    if (status === 'approved' && claim.status !== 'approved') {
+      // Credit user available balance
+      await query(
+        `UPDATE users SET available_balance = available_balance + $1, total_assets = total_assets + $1 WHERE id = $2`,
+        [claim.reward_amount, claim.user_id]
+      );
+    }
+
+    await query(
+      `UPDATE vip_promotion_claims SET status = $1, note = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3`,
+      [status, note || `Updated by admin to ${status}`, claimId]
+    );
+
+    res.json({
+      success: true,
+      message: `Promotion claim ${claimId} has been ${status}.`
+    });
+  } catch (err) {
+    console.error('Approve promotion error:', err);
+    res.status(500).json({ error: 'Failed to update promotion claim' });
+  }
+});
+
 export default router;

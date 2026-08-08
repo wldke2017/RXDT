@@ -114,6 +114,7 @@ function renderDashboard() {
       <button class="tab-btn" onclick="switchAdminTab('kyc',this)">🪪 KYC</button>
       <button class="tab-btn" onclick="switchAdminTab('users',this)">👥 Users</button>
       <button class="tab-btn" onclick="switchAdminTab('signals',this)">📡 Signals</button>
+      <button class="tab-btn" onclick="switchAdminTab('vip',this);loadVipRewardsView()">🎁 VIP Rewards</button>
       <button class="tab-btn" onclick="switchAdminTab('earnings',this);loadEarningsView()">📊 Earnings</button>
       <button class="tab-btn" onclick="switchAdminTab('infographics',this);renderInfographicsTab()">🖼️ Profit Cards</button>
       <button class="tab-btn" onclick="switchAdminTab('chat',this);loadChatConversations()">💬 Chat</button>
@@ -140,6 +141,11 @@ function renderDashboard() {
         <input type="text" id="user-search" class="form-control" placeholder="🔍 Search by name, phone, ID..." style="max-width:320px;" oninput="filterUsers(this.value)"/>
       </div>
       <div id="admin-users-list"><div class="admin-loading">Loading users...</div></div>
+    </div>
+
+    <!-- VIP Rewards Panel -->
+    <div id="admin-tab-vip" style="display:none;">
+      <div id="admin-vip-container"><div class="admin-loading">Loading VIP rewards data...</div></div>
     </div>
 
     <!-- Earnings Panel -->
@@ -442,12 +448,154 @@ function initDashboard() {
   window.switchAdminTab = function (tab, btn) {
     document.querySelectorAll('.tabs-header .tab-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
-    ['deposits', 'withdrawals', 'kyc', 'users', 'signals', 'earnings', 'infographics', 'chat'].forEach(t => {
+    ['deposits', 'withdrawals', 'kyc', 'users', 'signals', 'vip', 'earnings', 'infographics', 'chat'].forEach(t => {
       const el = document.getElementById(`admin-tab-${t}`);
       if (el) el.style.display = t === tab ? '' : 'none';
     });
     if (tab === 'users' && !allUsersCache.length) loadUsers();
     if (tab === 'signals') loadSignalTrades();
+    if (tab === 'vip') loadVipRewardsView();
+  };
+
+  window.loadVipRewardsView = async function () {
+    const container = document.getElementById('admin-vip-container');
+    if (!container) return;
+    container.innerHTML = `<div class="admin-loading">Loading VIP rewards data...</div>`;
+
+    try {
+      const data = await adminFetch('/vip-rewards');
+      if (!data.success) throw new Error(data.error || 'Failed to load VIP rewards');
+
+      container.innerHTML = `
+        <div style="background:linear-gradient(135deg, #1e1b4b, #0f172a);border:1px solid #818cf8;border-radius:16px;padding:20px;margin-bottom:20px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+            <div>
+              <h2 style="margin:0;font-size:18px;color:#fff;">🏆 RXDT VIP Monthly Salary & Promotion Rewards</h2>
+              <div style="font-size:13px;color:#a5b4fc;margin-top:4px;">Automatic 10-day salaries on 3rd, 13th, and 23rd of each month.</div>
+            </div>
+            <div style="display:flex;gap:10px;">
+              <button class="btn-primary" style="background:linear-gradient(135deg,#f59e0b,#d97706);border:none;font-weight:700;padding:10px 18px;border-radius:8px;" onclick="triggerAdminSalaryPayout()">
+                ⚡ Trigger 10-Day Salary Payout Now
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- VIP Rewards Banner Preview Card -->
+        <div style="background:#090d16;border:1px solid #d97706;border-radius:14px;padding:16px;margin-bottom:20px;text-align:center;">
+          <div style="font-size:13px;font-weight:700;color:#f59e0b;margin-bottom:10px;">🖼️ Brand Reward Schedule Image Asset (Live on User & Admin Dashboards)</div>
+          <img src="assets/images/rxdt_vip_rewards.png" alt="RXDT VIP Banner" style="width:100%;max-width:650px;border-radius:10px;border:1px solid rgba(245,158,11,0.3);" />
+        </div>
+
+        <!-- Promotion Claims Section -->
+        <div class="card" style="margin-bottom:20px;">
+          <h3 style="margin:0 0 14px;font-size:16px;color:#f59e0b;">🎁 Pending VIP Promotion Claims</h3>
+          ${!data.promotionClaims || data.promotionClaims.length === 0 ? `
+            <div style="font-size:13px;color:var(--text-muted);padding:14px;text-align:center;">No promotion claims submitted yet.</div>
+          ` : `
+            <div class="table-container">
+              <table class="data-table" style="font-size:13px;">
+                <thead>
+                  <tr>
+                    <th>User</th>
+                    <th>VIP Tier</th>
+                    <th>Reward Amount</th>
+                    <th>Status</th>
+                    <th>Submitted Date</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${data.promotionClaims.map(c => `
+                    <tr>
+                      <td><strong>${c.user_name || 'User'}</strong> <span style="font-size:11px;color:var(--text-sub);">${c.user_phone || c.user_id}</span></td>
+                      <td><span class="badge" style="background:#f59e0b22;color:#f59e0b;border:1px solid #f59e0b66;">${c.vip_level}</span></td>
+                      <td style="color:#10b981;font-weight:700;">$${parseFloat(c.reward_amount).toFixed(2)}</td>
+                      <td><span class="badge ${c.status === 'approved' ? 'badge-success' : c.status === 'rejected' ? 'badge-danger' : 'badge-warning'}">${c.status}</span></td>
+                      <td>${new Date(c.created_at).toLocaleDateString()}</td>
+                      <td>
+                        ${c.status === 'pending' ? `
+                          <button class="btn-success" style="padding:4px 10px;font-size:12px;margin-right:6px;" onclick="approveVipPromotionClaim('${c.id}', 'approved')">Approve & Credit</button>
+                          <button class="btn-outline" style="padding:4px 10px;font-size:12px;color:#ef4444;border-color:#ef4444;" onclick="approveVipPromotionClaim('${c.id}', 'rejected')">Reject</button>
+                        ` : `
+                          <span style="font-size:12px;color:var(--text-sub);">${c.status}</span>
+                        `}
+                      </td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          `}
+        </div>
+
+        <!-- User VIP Tier Status Audit Table -->
+        <div class="card">
+          <h3 style="margin:0 0 14px;font-size:16px;color:#fff;">👥 Users VIP Tier Audit & Salary Rates</h3>
+          <div class="table-container">
+            <table class="data-table" style="font-size:13px;">
+              <thead>
+                <tr>
+                  <th>User</th>
+                  <th>Current VIP</th>
+                  <th>Direct (L1)</th>
+                  <th>Total 3-Level</th>
+                  <th>10-Day Salary</th>
+                  <th>Promotion Reward</th>
+                  <th>Last Payout</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${data.users.map(u => `
+                  <tr>
+                    <td><strong>${u.name || 'Trader'}</strong> <br/><span style="font-size:11px;color:var(--text-sub);">${u.phone || u.email || u.id}</span></td>
+                    <td><span class="badge" style="background:#f59e0b22;color:#f59e0b;border:1px solid #f59e0b66;">${u.vipLevel}</span></td>
+                    <td><strong>${u.directMembers}</strong></td>
+                    <td><strong>${u.total3LevelMembers}</strong></td>
+                    <td style="color:#10b981;font-weight:700;">$${u.salary10Days.toFixed(2)}</td>
+                    <td style="color:#f59e0b;font-weight:700;">$${u.promotionReward.toFixed(2)}</td>
+                    <td style="font-size:11px;color:var(--text-sub);">${u.lastSalaryDate ? new Date(u.lastSalaryDate).toLocaleDateString() : 'Never'}</td>
+                    <td>
+                      ${u.salary10Days > 0 ? `
+                        <button class="btn-outline" style="padding:4px 10px;font-size:12px;color:#10b981;border-color:#10b981;" onclick="triggerAdminSalaryPayout('${u.id}')">Pay Salary ($${u.salary10Days})</button>
+                      ` : `
+                        <span style="font-size:11px;color:var(--text-muted);">Ineligible</span>
+                      `}
+                    </td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `;
+    } catch (err) {
+      container.innerHTML = `<div style="color:#ef4444;padding:20px;text-align:center;">Failed to load VIP rewards: ${err.message}</div>`;
+    }
+  };
+
+  window.triggerAdminSalaryPayout = async function (userId = null) {
+    const msg = userId ? `Pay 10-day salary to user ${userId}?` : `Execute 10-day salary payouts for ALL eligible VIP members?`;
+    if (!confirm(msg)) return;
+    try {
+      const res = await adminFetch('/trigger-salary-payout', 'POST', { targetUserId: userId });
+      window.toast('✅ ' + res.message, 'success');
+      loadVipRewardsView();
+    } catch (err) {
+      window.toast('❌ ' + err.message, 'error');
+    }
+  };
+
+  window.approveVipPromotionClaim = async function (claimId, status) {
+    if (!confirm(`Are you sure you want to mark claim ${claimId} as ${status}?`)) return;
+    try {
+      const res = await adminFetch('/approve-promotion', 'POST', { claimId, status });
+      window.toast('✅ ' + res.message, 'success');
+      loadVipRewardsView();
+    } catch (err) {
+      window.toast('❌ ' + err.message, 'error');
+    }
   };
 
   // ---- Stats ----

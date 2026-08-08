@@ -55,8 +55,37 @@ export async function initDatabase() {
     ALTER TABLE users ADD COLUMN IF NOT EXISTS doubled_capital BOOLEAN DEFAULT FALSE;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS free_signal_credits INT DEFAULT 0;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS auto_signal_exec BOOLEAN DEFAULT TRUE;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS vip_level VARCHAR(20) DEFAULT 'VIP0';
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS last_salary_payout_date TIMESTAMP WITH TIME ZONE;
     ALTER TABLE users ALTER COLUMN phone DROP NOT NULL;
   `).catch(err => console.log('User schema migration notice:', err.message));
+
+  // Create Salary Payouts Table
+  await query(`
+    CREATE TABLE IF NOT EXISTS salary_payouts (
+      id VARCHAR(50) PRIMARY KEY,
+      user_id VARCHAR(50) REFERENCES users(id) ON DELETE CASCADE,
+      vip_level VARCHAR(20) NOT NULL,
+      amount NUMERIC(15, 2) NOT NULL,
+      payout_period VARCHAR(50) NOT NULL,
+      status VARCHAR(20) DEFAULT 'completed',
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+
+  // Create VIP Promotion Claims Table
+  await query(`
+    CREATE TABLE IF NOT EXISTS vip_promotion_claims (
+      id VARCHAR(50) PRIMARY KEY,
+      user_id VARCHAR(50) REFERENCES users(id) ON DELETE CASCADE,
+      vip_level VARCHAR(20) NOT NULL,
+      reward_amount NUMERIC(15, 2) NOT NULL,
+      status VARCHAR(20) DEFAULT 'pending',
+      note TEXT,
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
 
   // Create AI Models Table
   await query(`

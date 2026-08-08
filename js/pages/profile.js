@@ -171,16 +171,59 @@ function renderInvite() {
 
   return `
   <div>
-    <h1 class="page-title">Invite Friends & Earn</h1>
+    <h1 class="page-title">Invite Friends & VIP Rewards</h1>
 
-      <div class="invite-hero-card">
-        <div class="invite-hero-text">
-          <h2>Earn Up to <span class="highlight">7.5%</span> Commission</h2>
-          <p>Invite friends to join RXDT. Earn commission on every order they place. Level 1: 7.5% · Level 2: 3.75%</p>
+    <!-- VIP Monthly Salary & Promotion Banner Poster -->
+    <div style="background:linear-gradient(135deg, #090d16, #111827);border:1px solid #d97706;border-radius:16px;padding:16px;margin-bottom:24px;text-align:center;box-shadow:0 10px 30px rgba(0,0,0,0.5);">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+        <span style="font-size:12px;font-weight:700;letter-spacing:1px;color:#f59e0b;text-transform:uppercase;">🔥 Official Reward Schedule</span>
+        <button class="btn-outline" style="font-size:12px;padding:4px 12px;border-color:#f59e0b;color:#f59e0b;" onclick="openVipPosterModal()">🔍 Zoom Poster</button>
+      </div>
+      <img src="assets/images/rxdt_vip_rewards.png" alt="RXDT Monthly Salary Reward & Promotion Reward Poster" style="width:100%;max-width:720px;border-radius:12px;cursor:pointer;border:1px solid rgba(245,158,11,0.3);" onclick="openVipPosterModal()" />
+    </div>
+
+    <!-- Active VIP Tier Status Card -->
+    <div style="background:linear-gradient(135deg, #1e1b4b, #0f172a);border:1px solid #818cf8;border-radius:16px;padding:20px;margin-bottom:24px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:16px;">
+        <div>
+          <div style="font-size:12px;color:#a5b4fc;text-transform:uppercase;letter-spacing:1px;font-weight:700;">Your Current Status</div>
+          <div style="font-size:24px;font-weight:800;color:#fff;display:flex;align-items:center;gap:8px;" id="vip-user-badge">
+            <span style="background:linear-gradient(135deg, #f59e0b, #b45309);color:#fff;padding:2px 10px;border-radius:20px;font-size:14px;" id="vip-level-tag">VIP 0</span>
+            <span id="vip-tier-name">Standard Member</span>
+          </div>
         </div>
-        <div class="invite-icon-large">👥</div>
+        <div style="text-align:right;">
+          <div style="font-size:12px;color:#a5b4fc;">Next 10-Day Salary Date</div>
+          <div style="font-size:16px;font-weight:700;color:#00f2fe;" id="vip-next-salary-date">Every 3rd, 13th & 23rd</div>
+        </div>
       </div>
 
+      <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(130px, 1fr));gap:12px;background:rgba(0,0,0,0.25);padding:14px;border-radius:12px;border:1px solid rgba(255,255,255,0.06);">
+        <div>
+          <div style="font-size:11px;color:var(--text-sub);">Direct Members (L1)</div>
+          <div style="font-size:18px;font-weight:700;color:#fff;" id="vip-stat-l1">0</div>
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--text-sub);">Total 3-Level Members</div>
+          <div style="font-size:18px;font-weight:700;color:#00f2fe;" id="vip-stat-3level">0</div>
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--text-sub);">10-Day Salary Rate</div>
+          <div style="font-size:18px;font-weight:700;color:#10b981;" id="vip-stat-salary">$0.00</div>
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--text-sub);">Promotion Reward</div>
+          <div style="font-size:18px;font-weight:700;color:#f59e0b;" id="vip-stat-promo">$0.00</div>
+        </div>
+      </div>
+
+      <div style="margin-top:16px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+        <span style="font-size:12px;color:var(--text-sub);" id="vip-claim-status-note">Requirements: 5 Direct Members to unlock VIP 1 ($30 Salary / 10 days + $100 Promotion Reward)</span>
+        <button class="btn-primary" style="padding:8px 18px;font-size:13px;font-weight:700;border-radius:8px;background:linear-gradient(135deg,#f59e0b,#d97706);border:none;" id="btn-claim-vip-promo" onclick="claimVipPromotionReward()">🎁 Claim Promotion Reward</button>
+      </div>
+    </div>
+
+    <!-- Referral Info Block -->
     <div class="card">
       <div class="card-title">Your Referral Info</div>
       <div class="invite-code-block">
@@ -198,7 +241,7 @@ function renderInvite() {
     <div class="grid-3" style="margin-bottom:20px;">
       <div class="card" style="text-align:center;margin-bottom:0;">
         <div style="font-size:28px;font-weight:700;color:var(--el-color-primary);" id="stat-total-members">0</div>
-        <div style="font-size:13px;color:var(--text-sub);">Total Team Members</div>
+        <div style="font-size:13px;color:var(--text-sub);">Total 3-Level Members</div>
       </div>
       <div class="card" style="text-align:center;margin-bottom:0;">
         <div style="font-size:28px;font-weight:700;color:var(--el-color-primary);" id="stat-direct-members">0</div>
@@ -210,6 +253,42 @@ function renderInvite() {
       </div>
     </div>
 
+    <!-- VIP Levels Interactive Table -->
+    <div class="card" style="margin-bottom:24px;">
+      <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
+        <span>🏆 VIP Salary & Promotion Reward Matrix</span>
+        <span style="font-size:12px;color:#f59e0b;font-weight:normal;">Paid Every 10 Days (3rd, 13th, 23rd)</span>
+      </div>
+      <div class="table-container">
+        <table class="data-table" style="font-size:13px;">
+          <thead>
+            <tr style="color:#f59e0b;">
+              <th>VIP Level</th>
+              <th>Team Requirement</th>
+              <th>Salary (Every 10 Days)</th>
+              <th>Promotion Reward</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr id="row-vip1"><td><strong style="color:#f59e0b;">VIP 1</strong></td><td>5 Direct Members</td><td style="color:#10b981;font-weight:700;">$30</td><td style="color:#f59e0b;font-weight:700;">$100</td></tr>
+            <tr id="row-vip2"><td><strong style="color:#f59e0b;">VIP 2</strong></td><td>5 Direct & Total 3-Level > 30</td><td style="color:#10b981;font-weight:700;">$70</td><td style="color:#f59e0b;font-weight:700;">$200</td></tr>
+            <tr id="row-vip3"><td><strong style="color:#f59e0b;">VIP 3</strong></td><td>5 Direct & Total 3-Level > 100</td><td style="color:#10b981;font-weight:700;">$150</td><td style="color:#f59e0b;font-weight:700;">$300</td></tr>
+            <tr id="row-vip4"><td><strong style="color:#f59e0b;">VIP 4</strong></td><td>5 Direct & Total 3-Level > 200</td><td style="color:#10b981;font-weight:700;">$200</td><td style="color:#f59e0b;font-weight:700;">$500</td></tr>
+            <tr id="row-vip5"><td><strong style="color:#f59e0b;">VIP 5</strong></td><td>5 Direct & Total 3-Level > 500</td><td style="color:#10b981;font-weight:700;">$400</td><td style="color:#f59e0b;font-weight:700;">$700</td></tr>
+            <tr id="row-vip6"><td><strong style="color:#f59e0b;">VIP 6</strong></td><td>5 Direct & Total 3-Level > 1000</td><td style="color:#10b981;font-weight:700;">$800</td><td style="color:#f59e0b;font-weight:700;">$1,100</td></tr>
+            <tr id="row-vip7"><td><strong style="color:#f59e0b;">VIP 7</strong></td><td>5 Direct & Total 3-Level > 2000</td><td style="color:#10b981;font-weight:700;">$1,000</td><td style="color:#f59e0b;font-weight:700;">$2,000</td></tr>
+            <tr id="row-vip8"><td><strong style="color:#f59e0b;">VIP 8</strong></td><td>5 Direct & Total 3-Level > 3000</td><td style="color:#10b981;font-weight:700;">$1,500</td><td style="color:#f59e0b;font-weight:700;">$5,000</td></tr>
+            <tr id="row-vip9"><td><strong style="color:#f59e0b;">VIP 9</strong></td><td>5 Direct & Total 3-Level > 5000</td><td style="color:#10b981;font-weight:700;">$3,000</td><td style="color:#f59e0b;font-weight:700;">$11,000</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div style="margin-top:14px;padding:12px;background:rgba(255,255,255,0.03);border-radius:8px;font-size:12px;color:var(--text-sub);line-height:1.6;">
+        <strong style="color:#fff;">📌 Official Rules & Terms:</strong><br/>
+        1. Salaries are automatically distributed by the system on the <strong>3rd, 13th, and 23rd</strong> of each month to your salary/available account.<br/>
+        2. VIP Promotion Rewards are funded by community leaders. Claim reward directly here to submit your record for processing.
+      </div>
+    </div>
+
     <div class="card">
       <div class="card-title">👥 Referred Members List</div>
       <div id="referred-members-list">
@@ -217,21 +296,14 @@ function renderInvite() {
       </div>
     </div>
 
-    <div class="card">
-      <div class="card-title">How It Works</div>
-      <div class="how-steps">
-        <div class="how-step">
-          <div class="how-step-num">1</div>
-          <div class="how-step-text"><strong>Share your link</strong><br/>Send your invite link or code to friends</div>
+    <!-- VIP Poster Zoom Modal -->
+    <div class="modal-overlay" id="vip-poster-modal" onclick="closeVipPosterModal()" style="display:none;z-index:9999;">
+      <div class="modal-content" style="max-width:850px;background:#090d16;border:1px solid #f59e0b;border-radius:16px;padding:20px;text-align:center;" onclick="event.stopPropagation()">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+          <strong style="color:#f59e0b;font-size:16px;">RXDT Monthly Salary & Promotion Reward Schedule</strong>
+          <button class="btn-outline" style="padding:4px 12px;" onclick="closeVipPosterModal()">✕ Close</button>
         </div>
-        <div class="how-step">
-          <div class="how-step-num">2</div>
-          <div class="how-step-text"><strong>Friend registers</strong><br/>They sign up using your invite link</div>
-        </div>
-        <div class="how-step">
-          <div class="how-step-num">3</div>
-          <div class="how-step-text"><strong>Earn commissions</strong><br/>Get 7.5% of their copy trading profits automatically</div>
-        </div>
+        <img src="assets/images/rxdt_vip_rewards.png" style="width:100%;max-height:80vh;object-fit:contain;border-radius:8px;" />
       </div>
     </div>
   </div>`;
@@ -452,9 +524,6 @@ function renderCustomerService() {
         <div id="chat-messages" style="flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:12px;">
           <div class="chat-msg support">
             <div class="chat-bubble">👋 Hello! Welcome to RXDT support. How can I help you today?</div>
-            <div class="chat-time">Just now</div>
-          </div>
-        </div>
         <div style="padding:16px;border-top:1px solid var(--border-color);display:flex;gap:8px;">
           <input type="text" id="chat-input" class="form-control" placeholder="Type your message..."
             onkeydown="if(event.key==='Enter')sendChatMsg()"/>
@@ -467,6 +536,32 @@ function renderCustomerService() {
 
 export function init(page) {
   window.toast = toast;
+
+  window.openVipPosterModal = function () {
+    const modal = document.getElementById('vip-poster-modal');
+    if (modal) modal.style.display = 'flex';
+  };
+
+  window.closeVipPosterModal = function () {
+    const modal = document.getElementById('vip-poster-modal');
+    if (modal) modal.style.display = 'none';
+  };
+
+  window.claimVipPromotionReward = async function () {
+    try {
+      const token = localStorage.getItem('rxdt_token');
+      const res = await fetch('/api/referrals/claim-promotion', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Claim failed');
+      toast(data.message || 'Promotion claim submitted!', 'success');
+      loadReferralStats();
+    } catch (err) {
+      toast(err.message || 'Failed to submit claim', 'error');
+    }
+  };
 
   window.copyText = function (text, msg) {
     navigator.clipboard?.writeText(text).then(() => toast(msg || 'Copied!', 'success'))
@@ -481,19 +576,7 @@ export function init(page) {
     return res.json();
   };
 
-  // Check email status on page load
-  async function checkEmailStatus() {
-    try {
-      const data = await authFetch('/api/email/email-status');
-      const sub = document.getElementById('email-bind-status-sub');
-      const container = document.getElementById('email-bind-btn-container');
-      if (data.emailBound) {
-        if (sub) sub.textContent = `Bound: ${data.emailBound}`;
-        if (container) container.innerHTML = `<span class="badge badge-success">Bound</span>`;
-      }
-    } catch (e) { }
-  }
-  // Load real referral stats from server
+  // Fetch and render live referral & VIP stats
   async function loadReferralStats() {
     try {
       const data = await authFetch('/api/referrals/stats');
@@ -504,11 +587,59 @@ export function init(page) {
         const codeEl = document.getElementById('ref-invite-code');
         const linkEl = document.getElementById('ref-invite-link');
 
-        if (totEl) totEl.textContent = data.totalMembers || 0;
+        if (totEl) totEl.textContent = data.total3LevelMembers || data.totalMembers || 0;
         if (dirEl) dirEl.textContent = data.directMembers || 0;
         if (commEl) commEl.textContent = `$${(data.totalCommission || 0).toFixed(2)}`;
         if (codeEl && data.inviteCode) codeEl.textContent = data.inviteCode;
         if (linkEl && data.inviteCode) linkEl.textContent = `${window.location.origin}/#/register?invite=${data.inviteCode}`;
+
+        // Populate VIP status card
+        if (data.vipInfo) {
+          const vipTag = document.getElementById('vip-level-tag');
+          const vipName = document.getElementById('vip-tier-name');
+          const vipL1 = document.getElementById('vip-stat-l1');
+          const vip3L = document.getElementById('vip-stat-3level');
+          const vipSal = document.getElementById('vip-stat-salary');
+          const vipPromo = document.getElementById('vip-stat-promo');
+          const noteEl = document.getElementById('vip-claim-status-note');
+          const claimBtn = document.getElementById('btn-claim-vip-promo');
+
+          if (vipTag) vipTag.textContent = data.vipInfo.level;
+          if (vipName) vipName.textContent = data.vipInfo.name;
+          if (vipL1) vipL1.textContent = data.directMembers || 0;
+          if (vip3L) vip3L.textContent = data.total3LevelMembers || 0;
+          if (vipSal) vipSal.textContent = `$${data.vipInfo.salary10Days.toFixed(2)}`;
+          if (vipPromo) vipPromo.textContent = `$${data.vipInfo.promotionReward.toFixed(2)}`;
+
+          // Highlight row in VIP matrix table
+          for (let i = 1; i <= 9; i++) {
+            const r = document.getElementById(`row-vip${i}`);
+            if (r) {
+              if (`VIP${i}` === data.vipInfo.level) {
+                r.style.background = 'rgba(245, 158, 11, 0.2)';
+                r.style.borderLeft = '3px solid #f59e0b';
+              } else {
+                r.style.background = 'transparent';
+                r.style.borderLeft = 'none';
+              }
+            }
+          }
+
+          if (data.vipInfo.level === 'VIP0') {
+            if (noteEl) noteEl.textContent = 'Requirement for VIP 1: 5 Direct Members ($30 Salary / 10 days + $100 Promotion Reward)';
+            if (claimBtn) { claimBtn.disabled = true; claimBtn.style.opacity = '0.5'; }
+          } else {
+            const hasClaimed = data.promotionClaims && data.promotionClaims.some(c => c.vip_level === data.vipInfo.level);
+            if (hasClaimed) {
+              const claimRec = data.promotionClaims.find(c => c.vip_level === data.vipInfo.level);
+              if (noteEl) noteEl.textContent = `Promotion Reward Status: ${claimRec.status.toUpperCase()}`;
+              if (claimBtn) { claimBtn.textContent = `Claimed (${claimRec.status})`; claimBtn.disabled = true; claimBtn.style.opacity = '0.6'; }
+            } else {
+              if (noteEl) noteEl.textContent = `Eligible for ${data.vipInfo.level} Promotion Reward ($${data.vipInfo.promotionReward})!`;
+              if (claimBtn) { claimBtn.disabled = false; claimBtn.style.opacity = '1'; }
+            }
+          }
+        }
 
         const listEl = document.getElementById('referred-members-list');
         if (listEl) {
