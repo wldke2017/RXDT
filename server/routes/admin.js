@@ -706,17 +706,16 @@ router.post('/trigger-salary-payout', requireAdminSecret, async (req, res) => {
 
         // Record account change log for transparency
         await query(
-          `INSERT INTO account_changes (id, user_id, type, amount, before_balance, after_balance, description)
-           VALUES ($1, $2, 'salary_payout', $3, $4, $5, $6)`,
+          `INSERT INTO account_changes (id, user_id, type, amount, balance_after, remark)
+           VALUES ($1, $2, 'salary_payout', $3, $4, $5)`,
           [
             `AC_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
             u.id,
             salaryAmount,
-            parseFloat(u.available_balance || 0),
             parseFloat(u.available_balance || 0) + salaryAmount,
             `10-Day System Salary Payout for ${vipInfo.level}`
           ]
-        ).catch(() => {});
+        ).catch(() => { });
 
         payoutResults.push({
           userId: u.id,

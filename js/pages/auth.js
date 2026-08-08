@@ -223,64 +223,270 @@ function renderForgetPwd() {
 // ---- KYC ----
 function renderKYC() {
   const user = store.getUser();
-  const status = user ? user.kycStatus : 'pending';
+  // Always fetch live status from API and re-render accordingly
+  const status = user ? (user.kycStatus || 'unverified') : 'unverified';
 
+  // ── VERIFIED ─────────────────────────────────────────────────────────────
   if (status === 'pass') {
     return `
     <div class="auth-page">
-      <div class="auth-card">
-        <div style="text-align:center;padding:40px 0;">
-          <div style="font-size:64px;margin-bottom:16px;">✅</div>
-          <h2 style="font-size:22px;font-weight:600;color:var(--color-up);margin-bottom:8px;">Identity Verified</h2>
-          <p style="color:var(--text-sub);">Your identity authentication has been approved.</p>
-          <button class="btn-primary" style="margin-top:24px;" onclick="navigateTo('assets')">Go to Assets</button>
+      <div class="auth-card" style="max-width:520px;">
+
+        <!-- Animated verified badge -->
+        <div style="text-align:center;padding:32px 0 20px;">
+          <div style="position:relative;display:inline-block;">
+            <div style="width:90px;height:90px;border-radius:50%;background:linear-gradient(135deg,#10b981,#059669);display:flex;align-items:center;justify-content:center;font-size:44px;margin:0 auto 4px;box-shadow:0 0 0 12px rgba(16,185,129,0.12),0 0 0 24px rgba(16,185,129,0.06);">✅</div>
+          </div>
+          <h2 style="font-size:24px;font-weight:700;color:#10b981;margin:18px 0 6px;">Identity Verified</h2>
+          <p style="color:var(--text-sub);font-size:14px;">Your RXDT account is fully verified and secure.</p>
         </div>
+
+        <!-- Verified badge card -->
+        <div style="background:linear-gradient(135deg,rgba(16,185,129,0.12),rgba(5,150,105,0.06));border:1px solid rgba(16,185,129,0.35);border-radius:14px;padding:18px 20px;margin-bottom:16px;">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+            <div style="width:36px;height:36px;border-radius:8px;background:rgba(16,185,129,0.2);display:flex;align-items:center;justify-content:center;font-size:18px;">🛡️</div>
+            <div>
+              <div style="font-weight:700;color:#10b981;font-size:14px;">KYC Verification Certificate</div>
+              <div style="font-size:11px;color:var(--text-muted);">RXDT Exchange · Verified Identity</div>
+            </div>
+            <div style="margin-left:auto;background:#10b981;color:#000;font-size:10px;font-weight:800;padding:3px 10px;border-radius:20px;letter-spacing:0.5px;">VERIFIED</div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            <div style="background:rgba(0,0,0,0.2);border-radius:8px;padding:10px 12px;">
+              <div style="font-size:10px;color:var(--text-muted);margin-bottom:3px;">STATUS</div>
+              <div style="font-size:13px;font-weight:700;color:#10b981;">✓ Approved</div>
+            </div>
+            <div style="background:rgba(0,0,0,0.2);border-radius:8px;padding:10px 12px;">
+              <div style="font-size:10px;color:var(--text-muted);margin-bottom:3px;">PLATFORM</div>
+              <div style="font-size:13px;font-weight:700;color:var(--text-main);">RXDT Exchange</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- What's Unlocked -->
+        <div style="margin-bottom:20px;">
+          <div style="font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">🔓 What You've Unlocked</div>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:rgba(16,185,129,0.07);border:1px solid rgba(16,185,129,0.2);border-radius:10px;">
+              <span style="font-size:18px;">💸</span>
+              <div>
+                <div style="font-size:13px;font-weight:600;color:var(--text-main);">Full Withdrawal Access</div>
+                <div style="font-size:11px;color:var(--text-sub);">Withdraw your earnings anytime</div>
+              </div>
+              <span style="margin-left:auto;color:#10b981;font-size:16px;">✓</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:rgba(16,185,129,0.07);border:1px solid rgba(16,185,129,0.2);border-radius:10px;">
+              <span style="font-size:18px;">🤖</span>
+              <div>
+                <div style="font-size:13px;font-weight:600;color:var(--text-main);">AI Trading Models</div>
+                <div style="font-size:11px;color:var(--text-sub);">Full access to all quantitative models</div>
+              </div>
+              <span style="margin-left:auto;color:#10b981;font-size:16px;">✓</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:rgba(16,185,129,0.07);border:1px solid rgba(16,185,129,0.2);border-radius:10px;">
+              <span style="font-size:18px;">🏆</span>
+              <div>
+                <div style="font-size:13px;font-weight:600;color:var(--text-main);">VIP Salary Rewards</div>
+                <div style="font-size:11px;color:var(--text-sub);">Eligible for 10-day salary payouts</div>
+              </div>
+              <span style="margin-left:auto;color:#10b981;font-size:16px;">✓</span>
+            </div>
+          </div>
+        </div>
+
+        <button class="btn-primary" style="width:100%;" onclick="navigateTo('assets')">💸 Go to Assets & Withdraw</button>
+        <button class="btn-outline" style="width:100%;margin-top:10px;" onclick="navigateTo('profile')">← Back to Profile</button>
       </div>
     </div>`;
   }
 
+  // ── PENDING ──────────────────────────────────────────────────────────────
   if (status === 'pending') {
     return `
     <div class="auth-page">
-      <div class="auth-card">
-        <div style="text-align:center;padding:40px 0;">
-          <div style="font-size:64px;margin-bottom:16px;">⏳</div>
-          <h2 style="font-size:22px;font-weight:600;color:#f59e0b;margin-bottom:8px;">Under Review</h2>
-          <p style="color:var(--text-sub);">Your KYC identity verification has been submitted and is awaiting approval.</p>
-          <p style="color:var(--text-muted);font-size:13px;margin-top:8px;">This usually takes less than 24 hours. You'll be able to withdraw once approved.</p>
-          <button class="btn-primary" style="margin-top:24px;" onclick="navigateTo('assets')">Go to Assets</button>
+      <div class="auth-card" style="max-width:520px;">
+
+        <!-- Header -->
+        <div style="text-align:center;padding:28px 0 16px;">
+          <div style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,rgba(245,158,11,0.25),rgba(180,83,9,0.15));border:2px solid rgba(245,158,11,0.5);display:flex;align-items:center;justify-content:center;font-size:38px;margin:0 auto 14px;animation:kyc-pulse 2s ease-in-out infinite;">⏳</div>
+          <h2 style="font-size:22px;font-weight:700;color:#f59e0b;margin-bottom:6px;">Under Review</h2>
+          <p style="color:var(--text-sub);font-size:13px;">Your KYC application is being reviewed by our compliance team.</p>
         </div>
+
+        <!-- Review Timeline -->
+        <div style="position:relative;padding:0 4px;margin-bottom:20px;">
+          <!-- Line -->
+          <div style="position:absolute;left:19px;top:20px;bottom:20px;width:2px;background:linear-gradient(to bottom,#10b981 40%,rgba(245,158,11,0.6) 40%,rgba(245,158,11,0.6) 70%,rgba(255,255,255,0.1) 70%);"></div>
+
+          <!-- Step 1: Submitted -->
+          <div style="display:flex;align-items:flex-start;gap:14px;padding:10px 0;">
+            <div style="flex-shrink:0;width:38px;height:38px;border-radius:50%;background:#10b981;display:flex;align-items:center;justify-content:center;font-size:16px;z-index:1;">✓</div>
+            <div style="padding-top:8px;">
+              <div style="font-weight:700;font-size:14px;color:#10b981;">Submitted</div>
+              <div style="font-size:12px;color:var(--text-sub);">Documents received successfully</div>
+            </div>
+          </div>
+
+          <!-- Step 2: Under Review (active) -->
+          <div style="display:flex;align-items:flex-start;gap:14px;padding:10px 0;">
+            <div style="flex-shrink:0;width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#f59e0b,#d97706);display:flex;align-items:center;justify-content:center;font-size:16px;z-index:1;box-shadow:0 0 12px rgba(245,158,11,0.5);animation:kyc-pulse 1.5s ease-in-out infinite;">👁</div>
+            <div style="padding-top:8px;">
+              <div style="font-weight:700;font-size:14px;color:#f59e0b;">Compliance Review <span style="font-size:11px;animation:kyc-dots 1.5s steps(3,end) infinite;">...</span></div>
+              <div style="font-size:12px;color:var(--text-sub);">Our team is verifying your documents · Usually &lt;24h</div>
+            </div>
+          </div>
+
+          <!-- Step 3: Decision -->
+          <div style="display:flex;align-items:flex-start;gap:14px;padding:10px 0;opacity:0.4;">
+            <div style="flex-shrink:0;width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,0.08);border:2px dashed rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:16px;z-index:1;">🏁</div>
+            <div style="padding-top:8px;">
+              <div style="font-weight:700;font-size:14px;color:var(--text-sub);">Decision</div>
+              <div style="font-size:12px;color:var(--text-muted);">Approval or additional info requested</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Submitted details card -->
+        <div id="kyc-pending-details" style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:14px 16px;margin-bottom:18px;">
+          <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">📋 Submitted Details</div>
+          <div style="font-size:13px;color:var(--text-sub);">Loading your submission details...</div>
+        </div>
+
+        <!-- Info note -->
+        <div style="background:rgba(245,158,11,0.07);border:1px solid rgba(245,158,11,0.25);border-radius:10px;padding:12px 14px;margin-bottom:20px;">
+          <div style="font-size:12px;color:#fcd34d;line-height:1.7;">
+            💡 <strong>What happens next?</strong> Once approved, you will have full withdrawal access. If additional information is needed, we will notify you here.
+          </div>
+        </div>
+
+        <button class="btn-outline" style="width:100%;" onclick="navigateTo('assets')">← Continue to Assets</button>
       </div>
-    </div>`;
+    </div>
+    <style>
+      @keyframes kyc-pulse { 0%,100%{opacity:1;} 50%{opacity:0.55;} }
+      @keyframes kyc-dots { 0%{content:'';} 33%{content:'.';} 66%{content:'..';} 100%{content:'...';} }
+    </style>`;
   }
 
+  // ── REJECTED — show reason + fresh form to resubmit ──────────────────────
   if (status === 'rejected') {
     return `
     <div class="auth-page">
-      <div class="auth-card">
-        <div style="text-align:center;padding:40px 0;">
-          <div style="font-size:64px;margin-bottom:16px;">❌</div>
-          <h2 style="font-size:22px;font-weight:600;color:#ff4d4d;margin-bottom:8px;">KYC Rejected</h2>
-          <p style="color:var(--text-sub);margin-bottom:8px;">Your identity verification was not approved.</p>
-          <div id="kyc-reject-reason" style="background:rgba(255,77,77,0.1);border:1px solid rgba(255,77,77,0.3);border-radius:10px;padding:14px 18px;margin:16px 0;text-align:left;font-size:13px;color:#ffaaaa;">
-            <strong>Reason:</strong> <span id="kyc-reject-reason-text">Loading reason...</span>
+      <div class="auth-card" style="max-width:560px;">
+
+        <!-- Rejection Banner -->
+        <div style="background:linear-gradient(135deg,rgba(239,68,68,0.18),rgba(185,28,28,0.1));border:1px solid rgba(239,68,68,0.45);border-radius:14px;padding:18px 20px;margin-bottom:24px;">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;">
+            <div style="width:40px;height:40px;border-radius:50%;background:rgba(239,68,68,0.2);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">❌</div>
+            <div>
+              <div style="font-weight:700;font-size:16px;color:#f87171;">Verification Not Approved</div>
+              <div style="font-size:12px;color:var(--text-sub);">Please review the reason and resubmit below</div>
+            </div>
           </div>
-          <p style="color:var(--text-muted);font-size:13px;margin-top:8px;">Please review the reason above, correct the issues, and resubmit your verification.</p>
-          <button class="btn-primary" style="margin-top:24px;" onclick="retryKYC()">🔄 Retry Verification</button>
-          <button class="btn-outline" style="margin-top:12px;" onclick="navigateTo('assets')">Go to Assets</button>
+          <div style="background:rgba(0,0,0,0.25);border-radius:10px;padding:12px 14px;">
+            <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">REJECTION REASON</div>
+            <div id="kyc-reject-reason-text" style="font-size:13px;color:#fca5a5;line-height:1.6;">Loading reason...</div>
+          </div>
         </div>
+
+        <!-- Divider with instruction -->
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;">
+          <div style="flex:1;height:1px;background:rgba(255,255,255,0.1);"></div>
+          <div style="font-size:12px;color:var(--text-sub);white-space:nowrap;">📝 Resubmit Your Verification</div>
+          <div style="flex:1;height:1px;background:rgba(255,255,255,0.1);"></div>
+        </div>
+
+        <!-- Fresh form -->
+        <div class="form-group">
+          <label class="form-label">Document Type</label>
+          <select class="form-control" id="kyc-id-type">
+            <option value="">Please select document type</option>
+            <option value="idCard">ID Card</option>
+            <option value="passport">Passport</option>
+            <option value="driverLicense">Driver License</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Country / Nationality</label>
+          <div class="country-search-wrapper" style="position:relative;">
+            <input type="text" id="kyc-country-search" class="form-control" placeholder="🔍 Search or select country..."
+              oninput="filterKycCountries(this.value)" onfocus="showKycCountryDropdown()" autocomplete="off"/>
+            <input type="hidden" id="kyc-nationality" value=""/>
+            <div id="kyc-country-dropdown" class="country-dropdown-list" style="display:none;position:absolute;top:100%;left:0;right:0;max-height:220px;overflow-y:auto;background:var(--bg-card);border:1px solid var(--border-color);border-radius:8px;z-index:100;box-shadow:0 10px 25px rgba(0,0,0,0.5);margin-top:4px;">
+              ${COUNTRIES.map(c => `
+                <div class="country-item" onclick="selectKycCountry('${c.replace(/'/g, "\\'")}')" style="padding:10px 14px;cursor:pointer;font-size:14px;border-bottom:1px solid rgba(255,255,255,0.05);color:var(--text-main);">
+                  ${c}
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Real Name</label>
+          <input type="text" id="kyc-name" class="form-control" placeholder="Please enter your real name"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">ID Number</label>
+          <input type="text" id="kyc-id-number" class="form-control" placeholder="Please enter your ID number"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Front Photo of ID <span style="color:#f87171;font-size:11px;">(re-upload clear photo)</span></label>
+          <div class="upload-box" onclick="document.getElementById('kyc-front').click()">
+            <div class="upload-icon">📄</div><div>Upload front photo of your ID</div>
+            <input type="file" id="kyc-front" accept="image/*" style="display:none;" onchange="previewUpload(this,'kyc-front-preview')"/>
+            <img id="kyc-front-preview" style="display:none;max-width:100%;margin-top:8px;border-radius:4px;"/>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Back Photo of ID <span style="color:#f87171;font-size:11px;">(re-upload clear photo)</span></label>
+          <div class="upload-box" onclick="document.getElementById('kyc-back').click()">
+            <div class="upload-icon">📄</div><div>Upload back photo of your ID</div>
+            <input type="file" id="kyc-back" accept="image/*" style="display:none;" onchange="previewUpload(this,'kyc-back-preview')"/>
+            <img id="kyc-back-preview" style="display:none;max-width:100%;margin-top:8px;border-radius:4px;"/>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Selfie Holding Your ID <span style="color:#f87171;font-size:11px;">(face + ID must be clearly visible)</span></label>
+          <div class="upload-box" onclick="document.getElementById('kyc-handheld').click()" style="border-color:var(--el-color-primary);">
+            <div class="upload-icon">🤳</div><div>Upload a clear selfie holding your ID document</div>
+            <input type="file" id="kyc-handheld" accept="image/*" style="display:none;" onchange="previewUpload(this,'kyc-handheld-preview')"/>
+            <img id="kyc-handheld-preview" style="display:none;max-width:100%;margin-top:8px;border-radius:4px;"/>
+          </div>
+        </div>
+        <button class="btn-dark auth-submit" style="background:linear-gradient(135deg,#f59e0b,#d97706);border:none;" onclick="submitKYC()">🔄 Resubmit Verification</button>
+        <p style="text-align:center;font-size:11px;color:var(--text-muted);margin-top:10px;">Make sure all photos are clear, well-lit, and unobstructed.</p>
       </div>
     </div>`;
   }
 
+  // ── FORM (unverified / first time) ───────────────────────────────────────
   return `
   <div class="auth-page">
     <div class="auth-card" style="max-width:560px;">
       <div class="auth-brand">
-        <div class="auth-tagline">Identity Verification (KYC)</div>
+        <div class="auth-tagline">🆔 Identity Verification (KYC)</div>
+        <p class="auth-subtitle" style="font-size:13px;">Complete KYC to unlock full withdrawal access. Takes less than 5 minutes.</p>
       </div>
 
-      <button class="btn-outline" style="width:100%;height:44px;font-size:14px;margin-bottom:20px;border-radius:10px;color:var(--text-sub);border-color:rgba(255,255,255,0.15);" onclick="navigateTo('assets')">Skip for now →</button>
+      <!-- Progress steps -->
+      <div style="display:flex;align-items:center;gap:0;margin-bottom:24px;">
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;">
+          <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--el-color-primary),#7c3aed);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff;">1</div>
+          <div style="font-size:10px;color:var(--el-color-primary);font-weight:600;">Fill Details</div>
+        </div>
+        <div style="flex:1;height:2px;background:linear-gradient(to right,var(--el-color-primary),rgba(255,255,255,0.1));margin-bottom:16px;"></div>
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;">
+          <div style="width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,0.1);border:2px dashed rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:var(--text-muted);">2</div>
+          <div style="font-size:10px;color:var(--text-muted);">Under Review</div>
+        </div>
+        <div style="flex:1;height:2px;background:rgba(255,255,255,0.1);margin-bottom:16px;"></div>
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;">
+          <div style="width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,0.1);border:2px dashed rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:var(--text-muted);">3</div>
+          <div style="font-size:10px;color:var(--text-muted);">Verified</div>
+        </div>
+      </div>
+
+      <button class="btn-outline" style="width:100%;height:40px;font-size:13px;margin-bottom:20px;border-radius:10px;color:var(--text-sub);border-color:rgba(255,255,255,0.12);" onclick="navigateTo('assets')">Skip for now →</button>
 
       <div class="form-group">
         <label class="form-label">Document Type</label>
@@ -344,8 +550,8 @@ function renderKYC() {
         </div>
       </div>
 
-      <button class="btn-dark auth-submit" onclick="submitKYC()">Submit Verification</button>
-      <p style="text-align:center;font-size:11px;color:var(--text-muted);margin-top:10px;">You can complete identity verification later from Security Settings.</p>
+      <button class="btn-dark auth-submit" onclick="submitKYC()">🚀 Submit Verification</button>
+      <p style="text-align:center;font-size:11px;color:var(--text-muted);margin-top:10px;">Your data is encrypted and only used for compliance purposes.</p>
     </div>
   </div>`;
 }
@@ -778,8 +984,8 @@ export function init(page) {
     }
   });
 
-  // Fetch KYC rejection reason from the API and display it
-  async function loadKycRejectReason() {
+  // Fetch full KYC record (rejection reason + submitted details)
+  async function loadKycDetails() {
     try {
       const token = localStorage.getItem('rxdt_token');
       if (!token) return;
@@ -787,39 +993,61 @@ export function init(page) {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await res.json();
-      if (data.record && data.record.reject_reason) {
-        const reasonEl = document.getElementById('kyc-reject-reason-text');
-        if (reasonEl) reasonEl.textContent = data.record.reject_reason;
-      } else {
-        const reasonEl = document.getElementById('kyc-reject-reason-text');
-        if (reasonEl) reasonEl.textContent = 'Documents were not clear enough. Please ensure all photos are well-lit and clearly readable.';
+      const record = data.record;
+
+      // --- Rejection reason ---
+      const reasonEl = document.getElementById('kyc-reject-reason-text');
+      if (reasonEl) {
+        reasonEl.textContent = record?.reject_reason ||
+          'Documents were not clear enough. Please ensure all photos are well-lit and clearly readable.';
+      }
+
+      // --- Pending submitted details ---
+      const detailsEl = document.getElementById('kyc-pending-details');
+      if (detailsEl && record) {
+        const docLabel = { idCard: 'ID Card', passport: 'Passport', driverLicense: "Driver's License" };
+        const fmt = (d) => d ? new Date(d).toLocaleDateString('en-US', { year:'numeric', month:'short', day:'numeric' }) : '—';
+        detailsEl.innerHTML = `
+          <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">📋 Submitted Details</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+            <div style="background:rgba(0,0,0,0.2);border-radius:8px;padding:9px 12px;">
+              <div style="font-size:10px;color:var(--text-muted);margin-bottom:2px;">FULL NAME</div>
+              <div style="font-size:13px;color:var(--text-main);font-weight:600;">${record.real_name || '—'}</div>
+            </div>
+            <div style="background:rgba(0,0,0,0.2);border-radius:8px;padding:9px 12px;">
+              <div style="font-size:10px;color:var(--text-muted);margin-bottom:2px;">DOCUMENT</div>
+              <div style="font-size:13px;color:var(--text-main);font-weight:600;">${docLabel[record.document_type] || record.document_type || '—'}</div>
+            </div>
+            <div style="background:rgba(0,0,0,0.2);border-radius:8px;padding:9px 12px;">
+              <div style="font-size:10px;color:var(--text-muted);margin-bottom:2px;">NATIONALITY</div>
+              <div style="font-size:13px;color:var(--text-main);font-weight:600;">${record.nationality || '—'}</div>
+            </div>
+            <div style="background:rgba(0,0,0,0.2);border-radius:8px;padding:9px 12px;">
+              <div style="font-size:10px;color:var(--text-muted);margin-bottom:2px;">SUBMITTED ON</div>
+              <div style="font-size:13px;color:var(--text-main);font-weight:600;">${fmt(record.created_at)}</div>
+            </div>
+          </div>`;
+      } else if (detailsEl) {
+        detailsEl.innerHTML = `<div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">📋 Submitted Details</div><div style="font-size:13px;color:var(--text-sub);">Details not available.</div>`;
       }
     } catch (e) {
-      console.warn('Failed to fetch KYC reject reason:', e);
+      console.warn('Failed to fetch KYC details:', e);
     }
   }
 
-  // Load rejection reason if on the rejected KYC page
+  // Load details on KYC page for pending and rejected states
   if (page === 'kyc') {
     const user = store.getUser();
-    if (user && user.kycStatus === 'rejected') {
-      loadKycRejectReason();
+    const kycStatus = user?.kycStatus;
+    if (kycStatus === 'rejected' || kycStatus === 'pending') {
+      loadKycDetails();
     }
   }
 
-  // Retry KYC: reset the user's kycStatus locally and re-render the form
+  // retryKYC is no longer needed (rejected state shows the form inline)
+  // Kept as no-op for any lingering references
   window.retryKYC = function () {
-    if (store.getUser()) {
-      store.getUser().kycStatus = 'unverified';
-      localStorage.setItem('rxdt_user', JSON.stringify(store.getUser()));
-    }
-    // Re-render the KYC page by navigating to it
-    const container = document.getElementById('page-content');
-    if (container) {
-      container.innerHTML = renderKYC();
-      // Re-init the page handlers since we re-rendered
-      init(page);
-    }
+    // No-op: rejected state already shows the resubmit form inline
   };
 
   window.submitKYC = async function () {
@@ -839,11 +1067,21 @@ export function init(page) {
 
     try {
       await store.submitKyc({ documentType: idType, nationality, realName: name, idNumber: idNum, frontImg, backImg, handheldImg });
-      toast('KYC submitted! Under review, please wait.', 'success');
-      setTimeout(() => { window.location.hash = '#/kyc'; }, 800);
+      toast('✅ KYC submitted! Our team is now reviewing your documents.', 'success');
+      // Update local user state to pending so the pending view renders immediately
+      const u = store.getUser();
+      if (u) {
+        u.kycStatus = 'pending';
+        localStorage.setItem('rxdt_user', JSON.stringify(u));
+      }
+      // Re-render KYC page in place (stay on #/kyc, show pending state)
+      const container = document.getElementById('page-content');
+      if (container) {
+        container.innerHTML = renderKYC();
+        init(page);
+      }
     } catch (err) {
       toast(err.message || 'Failed to submit KYC', 'error');
-    } finally {
       if (btn) { btn.disabled = false; btn.textContent = 'Submit Verification'; }
     }
   };

@@ -218,7 +218,7 @@ function renderInvite() {
       </div>
 
       <div style="margin-top:16px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
-        <span style="font-size:12px;color:var(--text-sub);" id="vip-claim-status-note">Requirements: 5 Direct Members to unlock VIP 1 ($30 Salary / 10 days + $100 Promotion Reward)</span>
+        <span style="font-size:12px;color:var(--text-sub);" id="vip-claim-status-note">Requirements: 5 Qualified Direct Members (Deposit + 1 Signal + Successful Trade) to unlock VIP 1 ($30 Salary / 10 days + $100 Promotion Reward)</span>
         <button class="btn-primary" style="padding:8px 18px;font-size:13px;font-weight:700;border-radius:8px;background:linear-gradient(135deg,#f59e0b,#d97706);border:none;" id="btn-claim-vip-promo" onclick="claimVipPromotionReward()">🎁 Claim Promotion Reward</button>
       </div>
     </div>
@@ -270,22 +270,23 @@ function renderInvite() {
             </tr>
           </thead>
           <tbody>
-            <tr id="row-vip1"><td><strong style="color:#f59e0b;">VIP 1</strong></td><td>5 Direct Members</td><td style="color:#10b981;font-weight:700;">$30</td><td style="color:#f59e0b;font-weight:700;">$100</td></tr>
-            <tr id="row-vip2"><td><strong style="color:#f59e0b;">VIP 2</strong></td><td>5 Direct & Total 3-Level > 30</td><td style="color:#10b981;font-weight:700;">$70</td><td style="color:#f59e0b;font-weight:700;">$200</td></tr>
-            <tr id="row-vip3"><td><strong style="color:#f59e0b;">VIP 3</strong></td><td>5 Direct & Total 3-Level > 100</td><td style="color:#10b981;font-weight:700;">$150</td><td style="color:#f59e0b;font-weight:700;">$300</td></tr>
-            <tr id="row-vip4"><td><strong style="color:#f59e0b;">VIP 4</strong></td><td>5 Direct & Total 3-Level > 200</td><td style="color:#10b981;font-weight:700;">$200</td><td style="color:#f59e0b;font-weight:700;">$500</td></tr>
-            <tr id="row-vip5"><td><strong style="color:#f59e0b;">VIP 5</strong></td><td>5 Direct & Total 3-Level > 500</td><td style="color:#10b981;font-weight:700;">$400</td><td style="color:#f59e0b;font-weight:700;">$700</td></tr>
-            <tr id="row-vip6"><td><strong style="color:#f59e0b;">VIP 6</strong></td><td>5 Direct & Total 3-Level > 1000</td><td style="color:#10b981;font-weight:700;">$800</td><td style="color:#f59e0b;font-weight:700;">$1,100</td></tr>
-            <tr id="row-vip7"><td><strong style="color:#f59e0b;">VIP 7</strong></td><td>5 Direct & Total 3-Level > 2000</td><td style="color:#10b981;font-weight:700;">$1,000</td><td style="color:#f59e0b;font-weight:700;">$2,000</td></tr>
-            <tr id="row-vip8"><td><strong style="color:#f59e0b;">VIP 8</strong></td><td>5 Direct & Total 3-Level > 3000</td><td style="color:#10b981;font-weight:700;">$1,500</td><td style="color:#f59e0b;font-weight:700;">$5,000</td></tr>
-            <tr id="row-vip9"><td><strong style="color:#f59e0b;">VIP 9</strong></td><td>5 Direct & Total 3-Level > 5000</td><td style="color:#10b981;font-weight:700;">$3,000</td><td style="color:#f59e0b;font-weight:700;">$11,000</td></tr>
+            <tr id="row-vip1"><td><strong style="color:#f59e0b;">VIP 1</strong></td><td>5 Qualified Direct Members</td><td style="color:#10b981;font-weight:700;">$30</td><td style="color:#f59e0b;font-weight:700;">$100</td></tr>
+            <tr id="row-vip2"><td><strong style="color:#f59e0b;">VIP 2</strong></td><td>5 Qualified Direct & Qualified 3-Level > 30</td><td style="color:#10b981;font-weight:700;">$70</td><td style="color:#f59e0b;font-weight:700;">$200</td></tr>
+            <tr id="row-vip3"><td><strong style="color:#f59e0b;">VIP 3</strong></td><td>5 Qualified Direct & Qualified 3-Level > 100</td><td style="color:#10b981;font-weight:700;">$150</td><td style="color:#f59e0b;font-weight:700;">$300</td></tr>
+            <tr id="row-vip4"><td><strong style="color:#f59e0b;">VIP 4</strong></td><td>5 Qualified Direct & Qualified 3-Level > 200</td><td style="color:#10b981;font-weight:700;">$200</td><td style="color:#f59e0b;font-weight:700;">$500</td></tr>
+            <tr id="row-vip5"><td><strong style="color:#f59e0b;">VIP 5</strong></td><td>5 Qualified Direct & Qualified 3-Level > 500</td><td style="color:#10b981;font-weight:700;">$400</td><td style="color:#f59e0b;font-weight:700;">$700</td></tr>
+            <tr id="row-vip6"><td><strong style="color:#f59e0b;">VIP 6</strong></td><td>5 Qualified Direct & Qualified 3-Level > 1000</td><td style="color:#10b981;font-weight:700;">$800</td><td style="color:#f59e0b;font-weight:700;">$1,100</td></tr>
+            <tr id="row-vip7"><td><strong style="color:#f59e0b;">VIP 7</strong></td><td>5 Qualified Direct & Qualified 3-Level > 2000</td><td style="color:#10b981;font-weight:700;">$1,000</td><td style="color:#f59e0b;font-weight:700;">$2,000</td></tr>
+            <tr id="row-vip8"><td><strong style="color:#f59e0b;">VIP 8</strong></td><td>5 Qualified Direct & Qualified 3-Level > 3000</td><td style="color:#10b981;font-weight:700;">$1,500</td><td style="color:#f59e0b;font-weight:700;">$5,000</td></tr>
+            <tr id="row-vip9"><td><strong style="color:#f59e0b;">VIP 9</strong></td><td>5 Qualified Direct & Qualified 3-Level > 5000</td><td style="color:#10b981;font-weight:700;">$3,000</td><td style="color:#f59e0b;font-weight:700;">$11,000</td></tr>
           </tbody>
         </table>
       </div>
       <div style="margin-top:14px;padding:12px;background:rgba(255,255,255,0.03);border-radius:8px;font-size:12px;color:var(--text-sub);line-height:1.6;">
         <strong style="color:#fff;">📌 Official Rules & Terms:</strong><br/>
-        1. Salaries are automatically distributed by the system on the <strong>3rd, 13th, and 23rd</strong> of each month to your salary/available account.<br/>
-        2. VIP Promotion Rewards are funded by community leaders. Claim reward directly here to submit your record for processing.
+        1. <strong style="color:#f59e0b;">Qualified Member</strong> = a referred user who has (a) made a successful deposit, (b) received at least 1 signal, and (c) completed at least 1 profitable trade. Users who merely register/join do not count toward your VIP team.<br/>
+        2. Salaries are automatically distributed by the system on the <strong>3rd, 13th, and 23rd</strong> of each month to your salary/available account.<br/>
+        3. VIP Promotion Rewards are funded by community leaders. Claim reward directly here to submit your record for processing.
       </div>
     </div>
 
@@ -626,7 +627,7 @@ export function init(page) {
           }
 
           if (data.vipInfo.level === 'VIP0') {
-            if (noteEl) noteEl.textContent = 'Requirement for VIP 1: 5 Direct Members ($30 Salary / 10 days + $100 Promotion Reward)';
+            if (noteEl) noteEl.textContent = 'Requirement for VIP 1: 5 Qualified Direct Members (Deposit + 1 Signal + Successful Trade each) ($30 Salary / 10 days + $100 Promotion Reward)';
             if (claimBtn) { claimBtn.disabled = true; claimBtn.style.opacity = '0.5'; }
           } else {
             const hasClaimed = data.promotionClaims && data.promotionClaims.some(c => c.vip_level === data.vipInfo.level);

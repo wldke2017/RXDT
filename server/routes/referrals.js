@@ -48,7 +48,50 @@ export function getNextSalaryDate() {
   return new Date(Date.UTC(year, month + 1, 3, 0, 0, 0));
 }
 
-// Helper to calculate 3-level team counts for a user
+/**
+ * QUALIFICATION RULE FOR VIP TEAM COUNTING
+ * -----------------------------------------
+ * A referred member counts toward a referrer's VIP team ONLY if they have:
+ *   1. Made a successful deposit  → deposits.status = 'success' AND audit_status = 'approved'
+ *   2. Received at least 1 signal  → exists a row in signal_trades for that user
+ *   3. Traded successfully         → exists a COMPLETED signal_trade with profit > 0
+ *
+ * Merely referring a user and having them register/join does NOT qualify that
+ * member for the referrer's VIP team size, salary or promotion rewards.
+ */
+async function getQualifiedMemberIds(userIds) {
+  if (!userIds || userIds.length === 0) return new Set();
+
+  const res = await query(
+    `SELECT DISTINCT u.id
+     FROM users u
+     WHERE u.id = ANY($1::text[])
+       AND EXISTS (
+         SELECT 1 FROM deposits d
+         WHERE d.user_id = u.id AND d.status = 'success' AND d.audit_status = 'approved'
+       )
+       AND EXISTS (
+         SELECT 1 FROM signal_trades st
+         WHERE st.user_id = u.id
+       )
+       AND EXISTS (
+         SELECT 1 FROM signal_trades st2
+         WHERE st2.user_id = u.id AND st2.status = 'completed' AND st2.profit > 0
+       )`,
+    [userIds]
+  );
+  return new Set(res.rows.map(r => r.id));
+}
+
+// Filter a member list down to only the members that qualify for VIP counting.
+function filterQualifiedMembers(members, qualifiedSet) {
+  return members.filter(m => qualifiedSet.has(m.id));
+}
+
+// Helper to calculate 3-level team counts for a user.
+// IMPORTANT: only referred members who have deposited, received at least one
+// signal AND traded successfully count toward the VIP team. Members who merely
+// registered/joined are excluded.
 export async function calculate3LevelTeam(userId, inviteCode) {
   // Level 1 (Direct)
   const directRes = await query(
@@ -59,11 +102,10 @@ export async function calculate3LevelTeam(userId, inviteCode) {
     [userId, inviteCode]
   );
   const directMembers = directRes.rows;
-  const directCount = directMembers.length;
 
   // Level 2
   let level2Members = [];
-  if (directCount > 0) {
+  if (directMembers.length > 0) {
     const directIds = directMembers.map(m => m.id);
     const l2Res = await query(
       `SELECT id, name, phone, email, created_at, available_balance, total_assets 
@@ -73,11 +115,10 @@ export async function calculate3LevelTeam(userId, inviteCode) {
     );
     level2Members = l2Res.rows;
   }
-  const level2Count = level2Members.length;
 
   // Level 3
   let level3Members = [];
-  if (level2Count > 0) {
+  if (level2Members.length > 0) {
     const l2Ids = level2Members.map(m => m.id);
     const l3Res = await query(
       `SELECT id, name, phone, email, created_at, available_balance, total_assets 
@@ -87,18 +128,30 @@ export async function calculate3LevelTeam(userId, inviteCode) {
     );
     level3Members = l3Res.rows;
   }
-  const level3Count = level3Members.length;
 
-  const total3LevelCount = directCount + level2Count + level3Count;
+  // Determine which of the 3-level members are "qualified" for VIP counting.
+  const allMemberIds = [
+    ...directMembers.map(m => m.id),
+    ...level2Members.map(m => m.id),
+    ...level3Members.map(m => m.id)
+  ];
+  const qualifiedSet = await getQualifiedMemberIds(allMemberIds);
+
+  // Filter each level down to qualified members only.
+  const qualifiedDirect = filterQualifiedMembers(directMembers, qualifiedSet);
+  const qualifiedLevel2 = filterQualifiedMembers(level2Members, qualifiedSet);
+  const qualifiedLevel3 = filterQualifiedMembers(level3Members, qualifiedSet);
+
+  const total3LevelCount = qualifiedDirect.length + qualifiedLevel2.length + qualifiedLevel3.length;
 
   return {
-    directCount,
-    level2Count,
-    level3Count,
+    directCount: qualifiedDirect.length,
+    level2Count: qualifiedLevel2.length,
+    level3Count: qualifiedLevel3.length,
     total3LevelCount,
-    directMembers,
-    level2Members,
-    level3Members
+    directMembers: qualifiedDirect,
+    level2Members: qualifiedLevel2,
+    level3Members: qualifiedLevel3
   };
 }
 
