@@ -1006,7 +1006,7 @@ export function init(page) {
       const detailsEl = document.getElementById('kyc-pending-details');
       if (detailsEl && record) {
         const docLabel = { idCard: 'ID Card', passport: 'Passport', driverLicense: "Driver's License" };
-        const fmt = (d) => d ? new Date(d).toLocaleDateString('en-US', { year:'numeric', month:'short', day:'numeric' }) : '—';
+        const fmt = (d) => d ? new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : '—';
         detailsEl.innerHTML = `
           <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">📋 Submitted Details</div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
@@ -1041,6 +1041,57 @@ export function init(page) {
     const kycStatus = user?.kycStatus;
     if (kycStatus === 'rejected' || kycStatus === 'pending') {
       loadKycDetails();
+    }
+
+    // ── LIVE KYC STATUS POLLING ──────────────────────────────────────────
+    // While the user is on the KYC page with a pending submission, poll the
+    // backend every 5 seconds. When the admin approves or rejects, the page
+    // re-renders IN PLACE so the user sees the verified certificate or the
+    // rejection + fresh resubmit form without needing to refresh/navigate.
+    if (kycStatus === 'pending') {
+      // Clear any previous poller (e.g. if the page was re-rendered)
+      if (window.__kycPollTimer) { clearInterval(window.__kycPollTimer); window.__kycPollTimer = null; }
+
+      window.__kycPollTimer = setInterval(async () => {
+        try {
+          const token = localStorage.getItem('rxdt_token');
+          if (!token) return;
+          const res = await fetch('/api/kyc/status', {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          const data = await res.json();
+          const liveStatus = data.kycStatus;
+
+          // Only re-render if the status actually changed from pending
+          if (liveStatus && liveStatus !== 'pending') {
+            // Stop polling — status resolved
+            if (window.__kycPollTimer) { clearInterval(window.__kycPollTimer); window.__kycPollTimer = null; }
+
+            // Update local user state so the renderer shows the new status
+            const u = store.getUser();
+            if (u) {
+              u.kycStatus = liveStatus;
+              localStorage.setItem('rxdt_user', JSON.stringify(u));
+            }
+
+            // Re-render the KYC page in place
+            const container = document.getElementById('page-content');
+            if (container) {
+              container.innerHTML = renderKYC();
+              init(page);
+            }
+
+            // Notify the user of the status change
+            if (liveStatus === 'pass') {
+              toast('🎉 Congratulations! Your KYC has been approved.', 'success');
+            } else if (liveStatus === 'rejected') {
+              toast('Your KYC was not approved. Please review the reason and resubmit.', 'error');
+            }
+          }
+        } catch (e) {
+          // Silent — transient network errors shouldn't spam the user
+        }
+      }, 5000);
     }
   }
 
@@ -1082,7 +1133,12 @@ export function init(page) {
       }
     } catch (err) {
       toast(err.message || 'Failed to submit KYC', 'error');
-      if (btn) { btn.disabled = false; btn.textContent = 'Submit Verification'; }
+      if (btn) {
+        btn.disabled = false;
+        // Restore the correct label based on the current page state
+        const u = store.getUser();
+        btn.textContent = u?.kycStatus === 'rejected' ? '🔄 Resubmit Verification' : '🚀 Submit Verification';
+      }
     }
   };
 

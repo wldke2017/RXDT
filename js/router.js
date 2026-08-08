@@ -52,6 +52,13 @@ const authRequired = [
 async function navigate(path) {
   const page = path.replace(/^\//, '').split('?')[0] || 'home';
 
+  // Clean up any page-specific timers/pollers from the previous page
+  // (e.g. the KYC status poller must stop when leaving the KYC page)
+  if (window.__kycPollTimer) {
+    clearInterval(window.__kycPollTimer);
+    window.__kycPollTimer = null;
+  }
+
   // Synchronous auth check via localStorage token
   const isLoggedIn = !!localStorage.getItem('rxdt_token');
 
