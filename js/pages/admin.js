@@ -481,10 +481,37 @@ function initDashboard() {
           </div>
         </div>
 
-        <!-- VIP Rewards Banner Preview Card -->
-        <div style="background:#090d16;border:1px solid #d97706;border-radius:14px;padding:16px;margin-bottom:20px;text-align:center;">
-          <div style="font-size:13px;font-weight:700;color:#f59e0b;margin-bottom:10px;">🖼️ Brand Reward Schedule Image Asset (Live on User & Admin Dashboards)</div>
-          <img src="assets/images/rxdt_vip_rewards.png" alt="RXDT VIP Banner" style="width:100%;max-width:650px;border-radius:10px;border:1px solid rgba(245,158,11,0.3);" />
+        <!-- Brand Strategy Posters & VIP Rewards Banner Preview Card -->
+        <div style="background:#090d16;border:1px solid #d97706;border-radius:14px;padding:18px;margin-bottom:20px;">
+          <div style="font-size:14px;font-weight:700;color:#f59e0b;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;">
+            <span>🖼️ Brand Strategy Posters & VIP Rewards Schedule</span>
+            <span style="font-size:11px;color:var(--text-sub);font-weight:normal;">Official 30-Day Growth Schedules</span>
+          </div>
+
+          <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(210px, 1fr));gap:14px;margin-bottom:16px;">
+            <div style="text-align:center;background:rgba(255,255,255,0.02);padding:10px;border-radius:10px;border:1px solid rgba(245,158,11,0.2);">
+              <div style="font-size:12px;font-weight:700;color:#f59e0b;margin-bottom:6px;">Tier 1: $100 Plan (1.4% Daily)</div>
+              <img src="assets/images/rxdt_100_strategy.png" alt="RXDT $100 Strategy" style="width:100%;border-radius:8px;margin-bottom:8px;" />
+              <a href="assets/images/rxdt_100_strategy.png" download="RXDT_100_Strategy.png" class="btn-outline" style="font-size:11px;padding:4px 10px;display:inline-block;border-color:#f59e0b;color:#f59e0b;">📥 Download PNG</a>
+            </div>
+
+            <div style="text-align:center;background:rgba(255,255,255,0.02);padding:10px;border-radius:10px;border:1px solid rgba(245,158,11,0.2);">
+              <div style="font-size:12px;font-weight:700;color:#f59e0b;margin-bottom:6px;">Tier 2: $300 Plan (2.4% Daily)</div>
+              <img src="assets/images/rxdt_300_strategy.png" alt="RXDT $300 Strategy" style="width:100%;border-radius:8px;margin-bottom:8px;" />
+              <a href="assets/images/rxdt_300_strategy.png" download="RXDT_300_Strategy.png" class="btn-outline" style="font-size:11px;padding:4px 10px;display:inline-block;border-color:#f59e0b;color:#f59e0b;">📥 Download PNG</a>
+            </div>
+
+            <div style="text-align:center;background:rgba(255,255,255,0.02);padding:10px;border-radius:10px;border:1px solid rgba(245,158,11,0.2);">
+              <div style="font-size:12px;font-weight:700;color:#f59e0b;margin-bottom:6px;">Tier 3: $1,000 Plan (3.1% Daily)</div>
+              <img src="assets/images/rxdt_1000_strategy.png" alt="RXDT $1000 Strategy" style="width:100%;border-radius:8px;margin-bottom:8px;" />
+              <a href="assets/images/rxdt_1000_strategy.png" download="RXDT_1000_Strategy.png" class="btn-outline" style="font-size:11px;padding:4px 10px;display:inline-block;border-color:#f59e0b;color:#f59e0b;">📥 Download PNG</a>
+            </div>
+          </div>
+
+          <div style="text-align:center;">
+            <div style="font-size:12px;font-weight:700;color:#a5b4fc;margin-bottom:6px;">🏆 VIP Monthly Salary & Promotion Schedule</div>
+            <img src="assets/images/rxdt_vip_rewards.png" alt="RXDT VIP Banner" style="width:100%;max-width:650px;border-radius:10px;border:1px solid rgba(245,158,11,0.3);" />
+          </div>
         </div>
 
         <!-- Promotion Claims Section -->

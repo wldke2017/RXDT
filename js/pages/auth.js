@@ -374,18 +374,53 @@ function renderEarnGuide() {
       </div>
 
       <!-- Step 2: AI Signal Copy Trading -->
-      <div class="earn-guide-step" style="display:flex;gap:14px;align-items:flex-start;padding:16px;background:rgba(255,255,255,0.03);border:1px solid var(--border-color);border-radius:12px;margin-bottom:12px;">
-        <div style="flex-shrink:0;width:40px;height:40px;border-radius:50%;background:rgba(0,242,254,0.15);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:var(--el-color-primary);">2</div>
+      <div class="earn-guide-step" style="display:flex;gap:14px;align-items:flex-start;padding:18px;background:linear-gradient(135deg, rgba(0,242,254,0.06), rgba(167,139,250,0.03));border:1px solid rgba(0,242,254,0.3);border-radius:14px;margin-bottom:12px;">
+        <div style="flex-shrink:0;width:40px;height:40px;border-radius:50%;background:rgba(0,242,254,0.2);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:var(--el-color-primary);">2</div>
         <div style="flex:1;">
-          <div style="font-weight:700;font-size:16px;color:var(--el-color-primary);margin-bottom:4px;">📡 Join AI Signal Copy Trading</div>
-          <div style="font-size:13px;color:var(--text-sub);line-height:1.6;">
-            Go to the <strong style="color:#fff;">Contract</strong> page and join live AI signals at <strong style="color:#00f2fe;">5:00 PM, 6:00 PM, or 7:00 PM EAT</strong>. Your tier determines how many signals you can join daily:
-            <div style="margin-top:8px;padding:10px;background:rgba(0,0,0,0.2);border-radius:8px;font-size:12px;">
-              <div>🔹 <strong>Tier 1</strong> ($100–$299): 1 signal/day · <span style="color:var(--color-up);">1.4% daily profit</span></div>
-              <div>🔹 <strong>Tier 2</strong> ($300–$999): 2 signals/day · <span style="color:var(--color-up);">2.4% daily profit</span></div>
-              <div>🔹 <strong>Tier 3</strong> ($1000+): 3 signals/day · <span style="color:var(--color-up);">3.1% daily profit</span></div>
-            </div>
+          <div style="font-weight:700;font-size:16px;color:var(--el-color-primary);margin-bottom:4px;">📡 Join AI Signal Copy Trading & Official Strategy Plans</div>
+          <div style="font-size:13px;color:var(--text-sub);line-height:1.6;margin-bottom:14px;">
+            Go to the <strong style="color:#fff;">Contract</strong> page and join live AI signals at <strong style="color:#00f2fe;">5:00 PM, 6:00 PM, or 7:00 PM EAT</strong>. Your deposit tier determines daily signals & compound return rates:
           </div>
+
+          <!-- 3-Tier Strategy Cards Grid -->
+          <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(210px, 1fr));gap:14px;margin-bottom:14px;">
+            
+            <!-- Tier 1 Card ($100 - $299) -->
+            <div style="background:#090d16;border:1px solid #d97706;border-radius:12px;padding:12px;text-align:center;box-shadow:0 6px 16px rgba(0,0,0,0.4);">
+              <div style="font-size:12px;font-weight:700;color:#f59e0b;text-transform:uppercase;margin-bottom:4px;">Tier 1 ($100 – $299)</div>
+              <div style="font-size:11px;color:var(--text-sub);margin-bottom:8px;">1 Signal Daily (5:00 PM EAT) · <span style="color:#10b981;font-weight:700;">1.4% Daily</span></div>
+              <img src="assets/images/rxdt_100_strategy.png" alt="RXDT $100 Strategy Poster" style="width:100%;border-radius:8px;cursor:pointer;border:1px solid rgba(245,158,11,0.3);" onclick="openStrategyModal('100')" />
+              <button class="btn-outline" style="width:100%;margin-top:8px;font-size:11px;padding:4px 0;border-color:#f59e0b;color:#f59e0b;" onclick="openStrategyModal('100')">🔍 Zoom $100 Plan</button>
+            </div>
+
+            <!-- Tier 2 Card ($300 - $999) -->
+            <div style="background:#090d16;border:1px solid #d97706;border-radius:12px;padding:12px;text-align:center;box-shadow:0 6px 16px rgba(0,0,0,0.4);">
+              <div style="font-size:12px;font-weight:700;color:#f59e0b;text-transform:uppercase;margin-bottom:4px;">Tier 2 ($300 – $999)</div>
+              <div style="font-size:11px;color:var(--text-sub);margin-bottom:8px;">2 Signals Daily (5 & 6 PM) · <span style="color:#10b981;font-weight:700;">2.4% Daily</span></div>
+              <img src="assets/images/rxdt_300_strategy.png" alt="RXDT $300 Strategy Poster" style="width:100%;border-radius:8px;cursor:pointer;border:1px solid rgba(245,158,11,0.3);" onclick="openStrategyModal('300')" />
+              <button class="btn-outline" style="width:100%;margin-top:8px;font-size:11px;padding:4px 0;border-color:#f59e0b;color:#f59e0b;" onclick="openStrategyModal('300')">🔍 Zoom $300 Plan</button>
+            </div>
+
+            <!-- Tier 3 Card ($1,000+) -->
+            <div style="background:#090d16;border:1px solid #d97706;border-radius:12px;padding:12px;text-align:center;box-shadow:0 6px 16px rgba(0,0,0,0.4);">
+              <div style="font-size:12px;font-weight:700;color:#f59e0b;text-transform:uppercase;margin-bottom:4px;">Tier 3 ($1,000+)</div>
+              <div style="font-size:11px;color:var(--text-sub);margin-bottom:8px;">3 Signals Daily (5, 6 & 7 PM) · <span style="color:#10b981;font-weight:700;">3.1% Daily</span></div>
+              <img src="assets/images/rxdt_1000_strategy.png" alt="RXDT $1000 Strategy Poster" style="width:100%;border-radius:8px;cursor:pointer;border:1px solid rgba(245,158,11,0.3);" onclick="openStrategyModal('1000')" />
+              <button class="btn-outline" style="width:100%;margin-top:8px;font-size:11px;padding:4px 0;border-color:#f59e0b;color:#f59e0b;" onclick="openStrategyModal('1000')">🔍 Zoom $1,000 Plan</button>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <!-- Strategy Zoom Modal -->
+      <div class="modal-overlay" id="strategy-poster-modal" onclick="closeStrategyModal()" style="display:none;z-index:9999;">
+        <div class="modal-content" style="max-width:850px;background:#090d16;border:1px solid #f59e0b;border-radius:16px;padding:20px;text-align:center;" onclick="event.stopPropagation()">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+            <strong style="color:#f59e0b;font-size:16px;" id="strategy-modal-title">RXDT 30-Day Investment Growth Strategy</strong>
+            <button class="btn-outline" style="padding:4px 12px;" onclick="closeStrategyModal()">✕ Close</button>
+          </div>
+          <img id="strategy-modal-img" src="" style="width:100%;max-height:80vh;object-fit:contain;border-radius:8px;" />
         </div>
       </div>
 
@@ -473,6 +508,30 @@ function renderEarnGuide() {
 }
 
 export function init(page) {
+  window.openStrategyModal = function (tier) {
+    const modal = document.getElementById('strategy-poster-modal');
+    const title = document.getElementById('strategy-modal-title');
+    const img = document.getElementById('strategy-modal-img');
+    if (!modal || !img) return;
+
+    if (tier === '100') {
+      title.textContent = 'RXDT $100 Investment Strategy (1.4% Daily · 1 Signal/Day)';
+      img.src = 'assets/images/rxdt_100_strategy.png';
+    } else if (tier === '300') {
+      title.textContent = 'RXDT $300 Investment Strategy (2.4% Daily · 2 Signals/Day)';
+      img.src = 'assets/images/rxdt_300_strategy.png';
+    } else if (tier === '1000') {
+      title.textContent = 'RXDT $1,000 Investment Strategy (3.1% Daily · 3 Signals/Day)';
+      img.src = 'assets/images/rxdt_1000_strategy.png';
+    }
+    modal.style.display = 'flex';
+  };
+
+  window.closeStrategyModal = function () {
+    const modal = document.getElementById('strategy-poster-modal');
+    if (modal) modal.style.display = 'none';
+  };
+
   // Expose helpers globally for inline handlers
   window.switchLoginTab = function (tab) {
     document.getElementById('tab-phone').classList.toggle('active', tab === 'phone');
