@@ -40,6 +40,15 @@ document.addEventListener('DOMContentLoaded', async () => {
   // moment the signal window opens — no manual refresh required.
   startSignalPoller();
 
+  // ---- Signal Auto-Execute Heartbeat ----
+  // Polls a public endpoint every 8 seconds from EVERY page (logged in or
+  // not) so the backend auto-executes eligible signal trades during active
+  // windows EVEN when no logged-in user has the app open. Previously the
+  // backend only auto-executed when a logged-in user's poller hit
+  // /api/signals/active — so if nobody opened the app at 5pm/6pm/7pm EAT,
+  // no trades were executed that day.
+  startSignalHeartbeat();
+
   // ---- Aggressive Signal Popup on Every Page Navigation ----
   // Whenever the user navigates to a different page (home → market → profile,
   // etc.), immediately re-check for an active signal and show the popup again
@@ -58,6 +67,17 @@ function startSignalPoller() {
     if (!store.isLoggedIn()) return;
     checkSignalWindow();
   }, 8 * 1000); // check every 8 seconds
+}
+
+// Public heartbeat to keep signal auto-execution alive even when no user
+// is logged in / polling. Runs unconditionally from every page hit so the
+// backend's autoExecuteEligibleSignals() fires during each signal window.
+let signalHeartbeatTimer = null;
+function startSignalHeartbeat() {
+  if (signalHeartbeatTimer) return;
+  signalHeartbeatTimer = setInterval(() => {
+    fetch('/api/signals/poll', { method: 'GET', cache: 'no-store' }).catch(() => { });
+  }, 8 * 1000);
 }
 
 function renderShell() {

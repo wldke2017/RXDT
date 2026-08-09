@@ -161,26 +161,34 @@ export async function autoExecuteEligibleSignals() {
     const signal = await getActiveSignal();
     if (!signal) return { executed: 0, skipped: 0, message: 'No active signal' };
 
-    // Rate limit: run the full auto-execute at most once per 45 seconds.
-    // This prevents excessive DB churn from the 8-second frontend poller,
-    // while still catching users who deposit mid-window.
-    const lastRunKey = 'auto_exec_last_run';
-    const lastRunRes = await query(
-      `SELECT value FROM system_settings WHERE key = $1`, [lastRunKey]
+    // Debounce: run the full auto-execute at most once per 10 seconds per
+    // signal window. This prevents excessive DB churn from concurrent
+    // serverless invocations / the 8-second poller, while still catching
+    // users who deposit mid-window (each window gets ~180 retry slots).
+    //
+    // NOTE: previously a single GLOBAL "auto_exec_last_run" key was used.
+    // That key could block the current day's first run if the previous
+    // day's last run happened within 45s, and more critically a serverless
+    // timeout mid-run would block ALL retries for 45 seconds on every
+    // subsequent invocation — leaving many users untraded for the window.
+    // The per-window key + short 10s debounce means a timed-out invocation
+    // only delays retries by a few seconds.
+    const today = new Date().toISOString().split('T')[0];
+    const debounceKey = `auto_exec_${today}_${signal.signalId}`;
+    const debRes = await query(
+      `SELECT value FROM system_settings WHERE key = $1`, [debounceKey]
     ).catch(() => ({ rows: [] }));
-    if (lastRunRes.rows.length > 0) {
-      const lastRunMs = parseInt(lastRunRes.rows[0].value || '0');
-      if (Date.now() - lastRunMs < 45000) {
+    if (debRes.rows.length > 0) {
+      const lastRunMs = parseInt(debRes.rows[0].value || '0');
+      if (Date.now() - lastRunMs < 10000) {
         return { executed: 0, skipped: 0, message: 'Auto-execute already ran recently' };
       }
     }
     await query(
       `INSERT INTO system_settings (key, value, updated_at) VALUES ($1, $2, NOW())
        ON CONFLICT (key) DO UPDATE SET value = $2, updated_at = NOW()`,
-      [lastRunKey, String(Date.now())]
+      [debounceKey, String(Date.now())]
     ).catch(() => { });
-
-    const today = new Date().toISOString().split('T')[0];
 
     // Find all eligible users
     const usersRes = await query(`
@@ -487,6 +495,28 @@ router.get('/active', requireAuth, async (req, res) => {
   }
 });
 
+// ---- GET /api/signals/poll ----
+// Public heartbeat endpoint. The frontend polls this every 8 seconds from
+// EVERY page (logged in or not) so the backend auto-executes eligible
+// signal trades even when no logged-in user has the app open. This is the
+// reliability fix for "no signals traded today" — previously auto-execution
+// only ran when a logged-in user's poller hit /active, so if nobody had the
+// app open at 5pm/6pm/7pm EAT, no trades executed.
+//
+// Safe to expose publicly: it only auto-executes trades for users who are
+// already eligible and opted-in (auto_signal_exec = true), and the
+// per-user row-lock + in-transaction duplicate check prevents any double
+// execution. No user data is returned.
+router.get('/poll', async (req, res) => {
+  try {
+    const result = await autoExecuteEligibleSignals();
+    res.json({ ok: true, ...result });
+  } catch (err) {
+    console.error('Signal poll error:', err);
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
 // ---- Helper: Auto-settle completed signal trades when release_at has passed ----
 // Race-condition safe: each due trade is atomically claimed with
 //   UPDATE signal_trades SET status = 'processing'
@@ -741,6 +771,101 @@ router.get('/history', requireAuth, async (req, res) => {
   }
 });
 
+
+// ---- GET /api/signals/missed ----
+// Returns signal windows (last 7 days) the user was eligible for but did
+// not execute a trade on. This powers the "Missed" tab in Copy Trade History
+// so users can review signals they missed (e.g. app closed, no balance,
+// auto-exec disabled) — and be reminded to stay active for the next window.
+router.get('/missed', requireAuth, async (req, res) => {
+  try {
+    await processDueSignalTrades(req.userId);
+
+    const userRes = await query(
+      `SELECT total_deposits, free_signal_credits, created_at FROM users WHERE id = $1`,
+      [req.userId]
+    );
+    const user = userRes.rows[0];
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    const totalDeposits = parseFloat(user.total_deposits || 0);
+    const freeSignalCredits = parseInt(user.free_signal_credits || 0);
+    const accountCreatedAt = new Date(user.created_at);
+
+    const tier = getTier(totalDeposits);
+
+    // Load every signal trade the user has executed so we can determine
+    // which windows were actually traded.
+    const tradesRes = await query(
+      `SELECT signal_id, DATE(created_at) AS trade_date
+       FROM signal_trades
+       WHERE user_id = $1
+       ORDER BY created_at DESC`,
+      [req.userId]
+    ).catch(() => ({ rows: [] }));
+
+    const executed = new Set(
+      tradesRes.rows.map(r => {
+        const d = r.trade_date instanceof Date
+          ? r.trade_date.toISOString().slice(0, 10)
+          : String(r.trade_date).slice(0, 10);
+        return `${d}_${r.signal_id}`;
+      })
+    );
+
+    const missed = [];
+    const now = new Date();
+
+    // Look back over the last 7 days
+    for (let dayOffset = 0; dayOffset < 7; dayOffset++) {
+      const day = new Date(now);
+      day.setUTCDate(day.getUTCDate() - dayOffset);
+      const dayStr = day.toISOString().slice(0, 10);
+
+      for (const w of SIGNAL_WINDOWS) {
+        const windowEnd = new Date(day);
+        windowEnd.setUTCHours(w.utcHour, w.utcMinEnd, 0, 0);
+
+        // Skip windows that haven't ended yet (current/future)
+        if (windowEnd > now) continue;
+
+        // Skip windows before the user's account was created
+        if (windowEnd < accountCreatedAt) continue;
+
+        // Already traded this window
+        const key = `${dayStr}_${w.id}`;
+        if (executed.has(key)) continue;
+
+        // Determine eligibility for this window
+        let qualified = false;
+        if (w.isFreeSignal) {
+          qualified = freeSignalCredits > 0;
+        } else {
+          qualified = !!tier && tier.signals.includes(w.id);
+        }
+        if (!qualified) continue;
+
+        // Format EAT time labels (signal windows are defined in UTC)
+        const eatStartHour = (w.utcHour + 3) % 24;
+        const timeEAT = `${String(eatStartHour).padStart(2, '0')}:${String(w.utcMinStart).padStart(2, '0')} - ` +
+          `${String(eatStartHour).padStart(2, '0')}:${String(w.utcMinEnd).padStart(2, '0')}`;
+
+        missed.push({
+          signalId: w.id,
+          date: dayStr,
+          timeEAT,
+          isFreeSignal: !!w.isFreeSignal,
+          tradingPair: 'BTC/USDT',
+        });
+      }
+    }
+
+    res.json({ missed });
+  } catch (err) {
+    console.error('Missed signals error:', err);
+    res.status(500).json({ error: err.message, missed: [] });
+  }
+});
 
 // ---- GET /api/signals/consume-record ----
 router.get('/consume-record', requireAuth, async (req, res) => {

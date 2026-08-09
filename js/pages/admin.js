@@ -107,6 +107,28 @@ function renderDashboard() {
       <div class="admin-stat-card asc-green" id="stat-sig"><div class="asc-val">—</div><div class="asc-label">Signal Trades</div></div>
     </div>
 
+    <!-- Brand Assets (Arthur Vance & Logo) -->
+    <div style="background:linear-gradient(135deg, #0f172a, #1e1b4b);border:1px solid #00f2fe;border-radius:14px;padding:16px 20px;margin-bottom:20px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
+        <div>
+          <h3 style="margin:0;font-size:15px;font-weight:800;color:#fff;">🖼️ Brand Assets</h3>
+          <div style="font-size:12px;color:var(--text-sub);margin-top:2px;">Official founder image & logo — downloadable for marketing & support use.</div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;">
+        <div style="text-align:center;background:rgba(255,255,255,0.03);padding:12px;border-radius:10px;border:1px solid rgba(0,242,254,0.2);">
+          <div style="font-size:12px;font-weight:700;color:#00f2fe;margin-bottom:8px;">👤 Arthur Vance — Founder & CEO</div>
+          <img src="assets/images/warren_pennington.png" alt="Arthur Vance" style="width:100%;max-width:160px;height:auto;border-radius:10px;border:2px solid #00f2fe;margin-bottom:8px;object-fit:cover;" />
+          <a href="assets/images/warren_pennington.png" download="Arthur_Vance.png" class="btn-outline" style="font-size:12px;padding:6px 14px;display:inline-block;border-color:#00f2fe;color:#00f2fe;">📥 Download Image</a>
+        </div>
+        <div style="text-align:center;background:rgba(255,255,255,0.03);padding:12px;border-radius:10px;border:1px solid rgba(0,242,254,0.2);">
+          <div style="font-size:12px;font-weight:700;color:#00f2fe;margin-bottom:8px;">🚀 RXDT Exchange Logo</div>
+          <img src="assets/images/rxdt_logo.png" alt="RXDT Logo" style="width:100%;max-width:160px;height:auto;border-radius:10px;border:2px solid #00f2fe;margin-bottom:8px;object-fit:contain;background:rgba(255,255,255,0.05);" />
+          <a href="assets/images/rxdt_logo.png" download="RXDT_Logo.png" class="btn-outline" style="font-size:12px;padding:6px 14px;display:inline-block;border-color:#00f2fe;color:#00f2fe;">📥 Download Logo</a>
+        </div>
+      </div>
+    </div>
+
     <!-- Tabs -->
     <div class="tabs-header" style="margin-bottom:20px;">
       <button class="tab-btn active" onclick="switchAdminTab('deposits',this)">💰 Deposits</button>

@@ -166,10 +166,11 @@ export function render() {
 
         <!-- Copy Trade History -->
         <div id="signal-history-panel" style="display:none;">
-          <!-- Submitted / Finished Sub-sub-tabs -->
+          <!-- Submitted / Finished / Missed Sub-sub-tabs -->
           <div class="signal-history-tabs">
             <button class="sh-tab" id="shtab-submitted" onclick="switchHistoryTab('submitted')">Submitted</button>
             <button class="sh-tab active" id="shtab-finished" onclick="switchHistoryTab('finished')">Finished</button>
+            <button class="sh-tab" id="shtab-missed" onclick="switchHistoryTab('missed')">Missed</button>
           </div>
           <div id="shtab-submitted-panel" style="display:none;">
             <div id="signal-submitted-list">
@@ -179,6 +180,11 @@ export function render() {
           <div id="shtab-finished-panel">
             <div id="signal-history-list">
               <div style="text-align:center;padding:24px;color:var(--text-muted);font-size:13px;">Loading history...</div>
+            </div>
+          </div>
+          <div id="shtab-missed-panel" style="display:none;">
+            <div id="signal-missed-list">
+              <div style="text-align:center;padding:24px;color:var(--text-muted);font-size:13px;">Loading missed signals...</div>
             </div>
           </div>
         </div>
@@ -645,19 +651,24 @@ export async function init() {
     toast(type === 'perpetual' ? 'Perpetual trading mode (coming soon)' : 'Delivery contract mode active', 'info');
   };
 
-  // ---- Submitted / Finished History Sub-sub-tab ----
+  // ---- Submitted / Finished / Missed History Sub-sub-tab ----
   window.switchHistoryTab = function (tab) {
     const submittedPanel = document.getElementById('shtab-submitted-panel');
     const finishedPanel = document.getElementById('shtab-finished-panel');
+    const missedPanel = document.getElementById('shtab-missed-panel');
     const submittedBtn = document.getElementById('shtab-submitted');
     const finishedBtn = document.getElementById('shtab-finished');
+    const missedBtn = document.getElementById('shtab-missed');
     if (!submittedPanel || !finishedPanel) return;
     submittedPanel.style.display = tab === 'submitted' ? 'block' : 'none';
     finishedPanel.style.display = tab === 'finished' ? 'block' : 'none';
+    if (missedPanel) missedPanel.style.display = tab === 'missed' ? 'block' : 'none';
     if (submittedBtn) submittedBtn.classList.toggle('active', tab === 'submitted');
     if (finishedBtn) finishedBtn.classList.toggle('active', tab === 'finished');
+    if (missedBtn) missedBtn.classList.toggle('active', tab === 'missed');
     if (tab === 'finished') loadSignalHistory();
     if (tab === 'submitted') loadSubmittedOrders();
+    if (tab === 'missed') loadMissedSignals();
   };
 
   // ---- Load Consume Record (account_changes) ----
@@ -930,11 +941,11 @@ export async function init() {
           </div>
           <div class="ctrade-row">
             <span class="ctrade-lbl">Purchase price</span>
-            <span class="ctrade-val">${purchasePrice > 0 ? purchasePrice.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:4}) : '--'}</span>
+            <span class="ctrade-val">${purchasePrice > 0 ? purchasePrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 }) : '--'}</span>
           </div>
           <div class="ctrade-row">
             <span class="ctrade-lbl">Settlement price</span>
-            <span class="ctrade-val">${settlementPrice > 0 ? settlementPrice.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:4}) : '--'}</span>
+            <span class="ctrade-val">${settlementPrice > 0 ? settlementPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 }) : '--'}</span>
           </div>
           <div class="ctrade-row">
             <span class="ctrade-lbl">P/L</span>
@@ -988,7 +999,7 @@ export async function init() {
           </div>
           <div class="ctrade-row">
             <span class="ctrade-lbl">Purchase price</span>
-            <span class="ctrade-val">${purchasePrice > 0 ? purchasePrice.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:4}) : '--'}</span>
+            <span class="ctrade-val">${purchasePrice > 0 ? purchasePrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 }) : '--'}</span>
           </div>
           <div class="ctrade-row">
             <span class="ctrade-lbl">Expiration time</span>
@@ -1002,6 +1013,51 @@ export async function init() {
       }).join('');
     } catch (e) {
       if (el) el.innerHTML = `<div style="text-align:center;padding:24px;color:var(--text-muted);">No submitted orders</div>`;
+    }
+  }
+
+  // ---- Load Missed Signals ----
+  async function loadMissedSignals() {
+    if (!store.isLoggedIn()) return;
+    const el = document.getElementById('signal-missed-list');
+    if (!el) return;
+    try {
+      const res = await fetch('/api/signals/missed', { headers: authHeaders });
+      const data = await res.json();
+      const missed = data.missed || [];
+      if (!missed.length) {
+        el.innerHTML = `<div style="text-align:center;padding:32px;color:var(--text-muted);font-size:13px;">🎉 No missed signals — you traded all your eligible windows!</div>`;
+        return;
+      }
+      el.innerHTML = missed.map(m => {
+        const isFree = !!m.isFreeSignal;
+        return `
+        <div class="ctrade-card ctrade-missed-card">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+            <span class="ctrade-missed-badge">⚠️ Missed</span>
+            <span class="ctrade-missed-date">${m.date}</span>
+          </div>
+          <div class="ctrade-row">
+            <span class="ctrade-lbl">Signal</span>
+            <span class="ctrade-val">Signal ${m.signalId}${isFree ? ' (Free)' : ''}</span>
+          </div>
+          <div class="ctrade-row">
+            <span class="ctrade-lbl">Time (EAT)</span>
+            <span class="ctrade-val">${m.timeEAT}</span>
+          </div>
+          <div class="ctrade-row">
+            <span class="ctrade-lbl">Trading pair</span>
+            <span class="ctrade-val">${m.tradingPair}</span>
+          </div>
+          <div class="ctrade-row" style="margin-bottom:0;">
+            <span class="ctrade-lbl">Status</span>
+            <span class="ctrade-val ctrade-missed-status">Missed — no trade executed</span>
+          </div>
+        </div>`;
+      }).join('');
+    } catch (e) {
+      console.warn('Missed signals error:', e);
+      el.innerHTML = `<div style="text-align:center;padding:24px;color:var(--text-muted);font-size:13px;">Failed to load missed signals</div>`;
     }
   }
 
