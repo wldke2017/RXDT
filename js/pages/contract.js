@@ -68,75 +68,8 @@ export function render() {
       <div class="cstat"><span class="cstat-lbl">Funding Rate</span><span class="cstat-val color-up" id="cs-idx">0.01%</span></div>
     </div>
 
-    <!-- Trade Panel -->
-    <div class="contract-trade-panel">
-      <div class="ctp-section-title">⚡ Open Position</div>
-
-      <!-- Leverage -->
-      <div class="form-group">
-        <label class="form-label">Leverage</label>
-        <div class="leverage-selector">
-          <button class="lev-btn active" data-lev="10" onclick="selectLeverage(10)">10x</button>
-          <button class="lev-btn" data-lev="20" onclick="selectLeverage(20)">20x</button>
-          <button class="lev-btn" data-lev="50" onclick="selectLeverage(50)">50x</button>
-          <button class="lev-btn" data-lev="100" onclick="selectLeverage(100)">100x</button>
-        </div>
-      </div>
-
-      <!-- Amount -->
-      <div class="form-group">
-        <label class="form-label">Margin (USDT)</label>
-        <div style="position:relative;">
-          <input type="number" id="contract-amount" class="form-control" placeholder="Min. $10 USDT" min="10" oninput="updateCalc()"/>
-          <span style="position:absolute;right:14px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:13px;">USDT</span>
-        </div>
-        <!-- Quick amounts -->
-        <div class="quick-amounts">
-          <button class="qa-btn" onclick="setQuickAmount(10)">$10</button>
-          <button class="qa-btn" onclick="setQuickAmount(50)">$50</button>
-          <button class="qa-btn" onclick="setQuickAmount(100)">$100</button>
-          <button class="qa-btn" onclick="setQuickAmount(500)">$500</button>
-        </div>
-      </div>
-
-      <!-- Calculated Info -->
-      <div class="contract-calc-info" id="contract-calc">
-        <div class="calc-row"><span>Notional Position</span><span id="calc-notional">--</span></div>
-        <div class="calc-row"><span>Est. P&L (±1%)</span><span id="calc-pnl">--</span></div>
-        <div class="calc-row"><span>Liquidation Price</span><span id="calc-liq" class="color-down">--</span></div>
-      </div>
-
-      <!-- Long / Short Buttons -->
-      <div class="contract-action-btns">
-        <button class="btn-long" id="btn-open-long" onclick="openPosition('long')">
-          ▲ Open Long
-        </button>
-        <button class="btn-short" id="btn-open-short" onclick="openPosition('short')">
-          ▼ Open Short
-        </button>
-      </div>
-    </div>
-
-    <!-- Open Positions -->
-    <div class="card" style="margin-bottom:0;">
-      <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
-        📋 Open Positions
-        <button class="btn-outline" style="padding:4px 12px;font-size:12px;" onclick="loadPositions()">Refresh</button>
-      </div>
-      <div id="positions-list">
-        <div style="text-align:center;padding:24px;color:var(--text-muted);font-size:14px;">Loading positions...</div>
-      </div>
-    </div>
-
-    <!-- Position History -->
-    <div class="card" style="margin-bottom:0;">
-      <div class="card-title">📜 Position History</div>
-      <div id="history-list">
-        <div style="text-align:center;padding:24px;color:var(--text-muted);font-size:14px;">Loading history...</div>
-      </div>
-    </div>
-
     <!-- Consume Record / Invited Me Tabs -->
+
     <div class="card signal-tabs-card">
       <div class="signal-main-tabs">
         <button class="signal-main-tab active" id="tab-consume" onclick="switchSignalTab('consume')">Consume Record</button>
