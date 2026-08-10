@@ -97,7 +97,23 @@ router.post('/bind-email', requireAuth, async (req, res) => {
   const { email, otp } = req.body;
   if (!email || !otp) return res.status(400).json({ error: 'Email and OTP required' });
 
+  const cleanEmail = String(email).trim().toLowerCase();
+  const cleanOtp = String(otp).trim();
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+    return res.status(400).json({ error: 'Valid email address required' });
+  }
+
   try {
+    // Check if this email is already bound to another account
+    const existingCheck = await query(
+      `SELECT id FROM users WHERE (email_bound = $1 OR email = $1) AND id != $2`,
+      [cleanEmail, req.userId]
+    );
+    if (existingCheck.rows.length > 0) {
+      return res.status(400).json({ error: 'This email address is already bound to another account.' });
+    }
+
     const result = await query(
       `SELECT email_otp, email_otp_expires FROM users WHERE id = $1`,
       [req.userId]
@@ -105,25 +121,26 @@ router.post('/bind-email', requireAuth, async (req, res) => {
     const user = result.rows[0];
     if (!user) return res.status(404).json({ error: 'User not found' });
 
-    if (!user.email_otp || user.email_otp !== otp) {
-      return res.status(400).json({ error: 'Incorrect verification code' });
+    if (!user.email_otp || String(user.email_otp).trim() !== cleanOtp) {
+      return res.status(400).json({ error: 'Incorrect verification code. Please check and try again.' });
     }
     if (new Date() > new Date(user.email_otp_expires)) {
-      return res.status(400).json({ error: 'Verification code has expired. Please request a new one.' });
+      return res.status(400).json({ error: 'Verification code has expired. Please request a new code.' });
     }
 
     // Bind the email and clear OTP
     await query(
-      `UPDATE users SET email_bound = $1, email_otp = NULL, email_otp_expires = NULL WHERE id = $2`,
-      [email, req.userId]
+      `UPDATE users SET email_bound = $1, email = COALESCE(email, $1), email_otp = NULL, email_otp_expires = NULL WHERE id = $2`,
+      [cleanEmail, req.userId]
     );
 
-    res.json({ success: true, message: 'Email bound successfully', emailBound: email });
+    res.json({ success: true, message: 'Email bound successfully', emailBound: cleanEmail });
   } catch (err) {
     console.error('Bind email error:', err);
-    res.status(500).json({ error: 'Failed to bind email' });
+    res.status(500).json({ error: err.message || 'Failed to bind email' });
   }
 });
+
 
 // Change password with OTP verification (login or transaction password)
 router.post('/change-password', requireAuth, async (req, res) => {

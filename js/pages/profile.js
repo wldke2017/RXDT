@@ -848,21 +848,32 @@ export function init(page) {
   };
 
   window.submitBindEmail = async function () {
-    const email = document.getElementById('bind-email-input')?.value;
-    const otp = document.getElementById('bind-email-code')?.value;
+    const email = document.getElementById('bind-email-input')?.value?.trim();
+    const otp = document.getElementById('bind-email-code')?.value?.trim();
 
     if (!email || !otp) { toast('Please enter email and verification code', 'error'); return; }
 
     try {
       const data = await authFetch('/api/email/bind-email', { method: 'POST', body: JSON.stringify({ email, otp }) });
-      if (data.error) throw new Error(data.error);
+      if (data.error || !data.success) throw new Error(data.error || 'Failed to bind email');
+      
+      // Update local store so user object reflects new email_bound
+      const currentUser = store.getUser();
+      if (currentUser) {
+        currentUser.emailBound = data.emailBound || email;
+        currentUser.email = data.emailBound || email;
+        store.setUser(currentUser);
+      }
+
       toast('✅ Email bound successfully!', 'success');
       closeBindEmailModal();
       checkEmailStatus();
+      if (store.checkAuth) store.checkAuth();
     } catch (err) {
-      toast(err.message, 'error');
+      toast(err.message || 'Failed to bind email', 'error');
     }
   };
+
 
   window.openChangePwd = async function (type) {
     // Check if email is bound first
