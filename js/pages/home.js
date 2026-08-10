@@ -81,56 +81,59 @@ export function render() {
     <!-- Auto Scroll Horizontality Carousel -->
     <div class="signals-carousel-wrapper">
       <div class="signals-carousel-track" id="signalsCarouselTrack">
+        <!-- Signal 1: 5:00 PM EAT -->
         <div class="signals-card-item card-glass" onclick="navigateTo('follow')">
           <div class="signals-img-box">
-            <img src="assets/images/ai_signals_banner_1.png" alt="RXDT AI Quant Signals" class="signals-banner-img"/>
-            <div class="signals-img-badge">⚡ Live Signals Feed</div>
+            <img src="assets/images/daily_signal_1_5pm.png" alt="AI Signal 1 - 5:00 PM EAT" class="signals-banner-img"/>
+            <div class="signals-img-badge">⏰ 5:00 PM EAT (14:00 UTC)</div>
           </div>
           <div class="signals-card-body">
             <div class="signals-card-header">
-              <span class="signals-title">RXDT Neural Engine Alpha</span>
-              <span class="chip chip-green">Win Rate 94.8%</span>
+              <span class="signals-title">Daily AI Signal #1</span>
+              <span class="chip chip-green">1.4% Yield</span>
             </div>
-            <p class="signals-desc">Real-time buy/sell triggers with automated sub-millisecond order execution.</p>
+            <p class="signals-desc">First daily quantitative trade window for Tier 1 traders & above ($100+ deposit).</p>
             <div class="signals-meta">
-              <span>Avg Daily Profit: <strong style="color:var(--color-up);">+2.45%</strong></span>
-              <button class="btn-primary btn-sm" onclick="event.stopPropagation(); navigateTo('follow')">Follow Signal</button>
+              <span>Time Window: <strong style="color:var(--el-color-primary);">5:00 - 5:30 PM</strong></span>
+              <button class="btn-primary btn-sm" onclick="event.stopPropagation(); navigateTo('follow')">Join 5 PM Signal</button>
             </div>
           </div>
         </div>
 
+        <!-- Signal 2: 6:00 PM EAT -->
         <div class="signals-card-item card-glass" onclick="navigateTo('follow')">
           <div class="signals-img-box">
-            <img src="assets/images/ai_signals_banner_2.png" alt="AI High Frequency Signals" class="signals-banner-img"/>
-            <div class="signals-img-badge">🔥 Top Performer</div>
+            <img src="assets/images/daily_signal_2_6pm.png" alt="AI Signal 2 - 6:00 PM EAT" class="signals-banner-img"/>
+            <div class="signals-img-badge">⏰ 6:00 PM EAT (15:00 UTC)</div>
           </div>
           <div class="signals-card-body">
             <div class="signals-card-header">
-              <span class="signals-title">RXDT High-Frequency Arbitrage v4</span>
-              <span class="chip chip-cyan">Win Rate 92.3%</span>
+              <span class="signals-title">Daily AI Signal #2</span>
+              <span class="chip chip-cyan">2.4% Yield</span>
             </div>
-            <p class="signals-desc">Captures global cross-exchange liquidity spreads automatically 24/7.</p>
+            <p class="signals-desc">Second daily quantitative trade window for Tier 2 traders & above ($300+ deposit).</p>
             <div class="signals-meta">
-              <span>Avg Daily Profit: <strong style="color:var(--color-up);">+2.10%</strong></span>
-              <button class="btn-primary btn-sm" onclick="event.stopPropagation(); navigateTo('follow')">Follow Signal</button>
+              <span>Time Window: <strong style="color:var(--el-color-primary);">6:00 - 6:30 PM</strong></span>
+              <button class="btn-primary btn-sm" onclick="event.stopPropagation(); navigateTo('follow')">Join 6 PM Signal</button>
             </div>
           </div>
         </div>
 
+        <!-- Signal 3: 7:00 PM EAT -->
         <div class="signals-card-item card-glass" onclick="navigateTo('follow')">
           <div class="signals-img-box">
-            <img src="assets/images/ai_signals_banner_3.png" alt="Automated AI Execution" class="signals-banner-img"/>
-            <div class="signals-img-badge">🛡️ Low Risk</div>
+            <img src="assets/images/daily_signal_3_7pm.png" alt="AI Signal 3 - 7:00 PM EAT" class="signals-banner-img"/>
+            <div class="signals-img-badge">🔥 7:00 PM EAT (16:00 UTC)</div>
           </div>
           <div class="signals-card-body">
             <div class="signals-card-header">
-              <span class="signals-title">RXDT Institutional Trend Guard</span>
-              <span class="chip chip-green">Win Rate 96.1%</span>
+              <span class="signals-title">Daily AI Signal #3</span>
+              <span class="chip chip-green">3.1% Max Yield</span>
             </div>
-            <p class="signals-desc">Deep momentum analytics protecting against volatility while maximizing yields.</p>
+            <p class="signals-desc">Third daily quantitative trade window for Tier 3 traders & VIPs ($1,000+ deposit).</p>
             <div class="signals-meta">
-              <span>Avg Daily Profit: <strong style="color:var(--color-up);">+1.95%</strong></span>
-              <button class="btn-primary btn-sm" onclick="event.stopPropagation(); navigateTo('follow')">Follow Signal</button>
+              <span>Time Window: <strong style="color:var(--el-color-primary);">7:00 - 7:30 PM</strong></span>
+              <button class="btn-primary btn-sm" onclick="event.stopPropagation(); navigateTo('follow')">Join 7 PM Signal</button>
             </div>
           </div>
         </div>

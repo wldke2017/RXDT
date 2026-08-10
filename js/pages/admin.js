@@ -1565,12 +1565,34 @@ Our team is available 24/7 to assist you!`
 
   const DEFAULT_BRAND_IMAGES = [
     { 
+      id: 'img-daily-signal-1', 
+      name: 'AI Signal 1 (5:00 PM EAT / 14:00 UTC) Poster', 
+      category: 'Daily AI Signals', 
+      path: 'assets/images/daily_signal_1_5pm.png',
+      caption: `⏰ *DAILY AI SIGNAL #1 IS LIVE! (5:00 PM EAT)* ⏰\n\n🎯 Signal Time: 5:00 PM - 5:30 PM EAT\n📈 Daily Return: 1.4% Yield\n💰 Tier 1 ($100+ Total Deposit)\n\n👉 Join live signal copy-trading now on RXDT Exchange!\n💬 Telegram Support: @RXDT888`
+    },
+    { 
+      id: 'img-daily-signal-2', 
+      name: 'AI Signal 2 (6:00 PM EAT / 15:00 UTC) Poster', 
+      category: 'Daily AI Signals', 
+      path: 'assets/images/daily_signal_2_6pm.png',
+      caption: `🚀 *DAILY AI SIGNAL #2 IS LIVE! (6:00 PM EAT)* 🚀\n\n🎯 Signal Time: 6:00 PM - 6:30 PM EAT\n📈 Daily Return: 2.4% Cumulative Yield\n💰 Tier 2 ($300+ Total Deposit)\n\n👉 Connect your account to automated AI execution today!\n💬 CEO Telegram: @RXDT888`
+    },
+    { 
+      id: 'img-daily-signal-3', 
+      name: 'AI Signal 3 (7:00 PM EAT / 16:00 UTC) Poster', 
+      category: 'Daily AI Signals', 
+      path: 'assets/images/daily_signal_3_7pm.png',
+      caption: `🔥 *DAILY AI SIGNAL #3 MAX YIELD! (7:00 PM EAT)* 🔥\n\n🎯 Signal Time: 7:00 PM - 7:30 PM EAT\n📈 Daily Return: 3.1% Max Yield\n💰 Tier 3 ($1,000+ Deposit) & VIP Ranks\n\n👉 Maximize your passive income with verified AI signal feeds!\n💬 CEO Telegram: @RXDT888`
+    },
+    { 
       id: 'img-sig-banner-1', 
       name: 'RXDT AI Quant Signals Banner', 
       category: 'AI Signals', 
       path: 'assets/images/ai_signals_banner_1.png',
       caption: `🚀 *RXDT AI QUANT SIGNALS LIVE!* 🚀\n\nExperience next-gen automated high-frequency crypto trading with 94.8% win accuracy.\n⚡ Real-time Buy/Sell triggers\n💹 1.8% – 2.8% Average Daily Returns\n🛡️ USA Colorado State Compliant (Entity ID: 20261325716)\n\n👉 Join live signal copy-trading now on RXDT Exchange!\n💬 Telegram Support: @RXDT888`
     },
+
     { 
       id: 'img-sig-banner-2', 
       name: 'RXDT High-Frequency Arbitrage Banner', 
