@@ -362,7 +362,8 @@ function formatUser(u) {
     totalDeposits: parseFloat(u.total_deposits || 0),
     initialDeposit: parseFloat(u.initial_deposit || 0),
     freeSignalCredits: parseInt(u.free_signal_credits || 0),
-    doubledCapital: !!u.doubled_capital
+    doubledCapital: !!u.doubled_capital,
+    autoSignalExec: u.auto_signal_exec !== false
   };
 }
 
