@@ -1564,13 +1564,76 @@ Our team is available 24/7 to assist you!`
   ];
 
   const DEFAULT_BRAND_IMAGES = [
-    { id: 'img-founder', name: 'Arthur Vance — Founder & CEO', category: 'Founder', path: 'assets/images/warren_pennington.png' },
-    { id: 'img-logo', name: 'RXDT Exchange Official Logo', category: 'Branding', path: 'assets/images/rxdt_logo.png' },
-    { id: 'img-tier1', name: 'Tier 1 ($100 Plan) Strategy Poster', category: 'Strategy Posters', path: 'assets/images/rxdt_100_strategy.png' },
-    { id: 'img-tier2', name: 'Tier 2 ($300 Plan) Strategy Poster', category: 'Strategy Posters', path: 'assets/images/rxdt_300_strategy.png' },
-    { id: 'img-tier3', name: 'Tier 3 ($1,000 Plan) Strategy Poster', category: 'Strategy Posters', path: 'assets/images/rxdt_1000_strategy.png' },
-    { id: 'img-vip-matrix', name: 'VIP Monthly Salary & Promotion Reward Matrix', category: 'VIP Banners', path: 'assets/images/rxdt_vip_rewards.png' },
-    { id: 'img-signal-popup', name: 'Strategy Copy Trading Signal Popup Header', category: 'Signals', path: 'assets/images/signal_popup.png' }
+    { 
+      id: 'img-sig-banner-1', 
+      name: 'RXDT AI Quant Signals Banner', 
+      category: 'AI Signals', 
+      path: 'assets/images/ai_signals_banner_1.png',
+      caption: `🚀 *RXDT AI QUANT SIGNALS LIVE!* 🚀\n\nExperience next-gen automated high-frequency crypto trading with 94.8% win accuracy.\n⚡ Real-time Buy/Sell triggers\n💹 1.8% – 2.8% Average Daily Returns\n🛡️ USA Colorado State Compliant (Entity ID: 20261325716)\n\n👉 Join live signal copy-trading now on RXDT Exchange!\n💬 Telegram Support: @RXDT888`
+    },
+    { 
+      id: 'img-sig-banner-2', 
+      name: 'RXDT High-Frequency Arbitrage Banner', 
+      category: 'AI Signals', 
+      path: 'assets/images/ai_signals_banner_2.png',
+      caption: `⚡ *RXDT HIGH-FREQUENCY ARBITRAGE V4* ⚡\n\nAutomated cross-exchange liquidity arbitrage operating 24/7!\n📈 Daily Return: 1.8% – 2.8%\n⏱️ Doubling Cycle: 26–34 Days\n🤖 92.3% Win Rate\n\n👉 Connect your deposit to automated AI signal execution today!\n💬 CEO Telegram: @RXDT888`
+    },
+    { 
+      id: 'img-sig-banner-3', 
+      name: 'Automated AI Execution Guard Banner', 
+      category: 'AI Signals', 
+      path: 'assets/images/ai_signals_banner_3.png',
+      caption: `🛡️ *AUTOMATED AI EXECUTION & TREND GUARD* 🛡️\n\nInstitutional-grade momentum analytics protecting capital while maximizing returns.\n🎯 96.1% Win Rate\n💰 Passive Daily Yields\n\n👉 Start copying verified AI signals on RXDT Exchange!\n💬 Official CEO Contact: @RXDT888`
+    },
+    { 
+      id: 'img-founder', 
+      name: 'Arthur Vance — Founder & CEO', 
+      category: 'Founder', 
+      path: 'assets/images/warren_pennington.png',
+      caption: `👤 *MEET ARTHUR VANCE — RXDT FOUNDER & CEO*\n\nLeading the future of AI quantitative trading. RXDT Exchange operates under USA Colorado State Compliance (Entity ID: 20261325716).\n\n💬 Official Telegram: @RXDT888`
+    },
+    { 
+      id: 'img-logo', 
+      name: 'RXDT Exchange Official Logo', 
+      category: 'Branding', 
+      path: 'assets/images/rxdt_logo.png',
+      caption: `🚀 *RXDT EXCHANGE OFFICIAL LOGO*\n\nYour trusted partner in AI quantitative crypto trading. Join our global community today!`
+    },
+    { 
+      id: 'img-tier1', 
+      name: 'Tier 1 ($100 Plan) Strategy Poster', 
+      category: 'Strategy Posters', 
+      path: 'assets/images/rxdt_100_strategy.png',
+      caption: `🔥 *START TRADING WITH JUST $100 ON RXDT!* 🔥\n\nUnlock Tier 1 AI Quantitative Signals and earn steady daily returns!\n👉 Register today and access live signals!`
+    },
+    { 
+      id: 'img-tier2', 
+      name: 'Tier 2 ($300 Plan) Strategy Poster', 
+      category: 'Strategy Posters', 
+      path: 'assets/images/rxdt_300_strategy.png',
+      caption: `📈 *GROW YOUR PORTFOLIO WITH RXDT TIER 2 ($300)!* 📈\n\nAccelerated returns powered by high-frequency AI quantitative trading.`
+    },
+    { 
+      id: 'img-tier3', 
+      name: 'Tier 3 ($1,000 Plan) Strategy Poster', 
+      category: 'Strategy Posters', 
+      path: 'assets/images/rxdt_1000_strategy.png',
+      caption: `💎 *MAXIMIZE YIELDS WITH RXDT TIER 3 ($1,000)!* 💎\n\nInstitutional-grade AI signal feeds designed for high capital growth!`
+    },
+    { 
+      id: 'img-vip-matrix', 
+      name: 'VIP Monthly Salary & Promotion Reward Matrix', 
+      category: 'VIP Banners', 
+      path: 'assets/images/rxdt_vip_rewards.png',
+      caption: `🏆 *RXDT VIP SALARY & REWARD MATRIX* 🏆\n\nBuild your team and earn 10-day salaries up to $3,000 ($9,000/mo) plus promotion bonuses up to $11,000 USDT!`
+    },
+    { 
+      id: 'img-signal-popup', 
+      name: 'Strategy Copy Trading Signal Popup Header', 
+      category: 'Signals', 
+      path: 'assets/images/signal_popup.png',
+      caption: `📡 *LIVE AI COPY-TRADING SIGNALS ACTIVE!* 📡\n\nCopy verified signals at 5pm, 6pm & 7pm EAT!`
+    }
   ];
 
   const VIP_TIER_DATA = [
@@ -1599,6 +1662,13 @@ Our team is available 24/7 to assist you!`
     if (!images) {
       images = DEFAULT_BRAND_IMAGES;
       localStorage.setItem('rxdt_admin_images', JSON.stringify(images));
+    } else {
+      // Refresh default images if missing AI Signal Banners
+      const hasSignalBanners = images.some(img => img.id && img.id.startsWith('img-sig-banner'));
+      if (!hasSignalBanners) {
+        images = [...DEFAULT_BRAND_IMAGES, ...images.filter(i => i.isCustom)];
+        localStorage.setItem('rxdt_admin_images', JSON.stringify(images));
+      }
     }
 
     container.innerHTML = `
@@ -1678,25 +1748,35 @@ Our team is available 24/7 to assist you!`
 
       <!-- SUB-SECTION 3: Brand & Image Library -->
       <div id="mkt-subtab-images" style="display:none;">
-        <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(230px, 1fr));gap:16px;">
-          ${images.map(img => `
-            <div style="background:#090d16;border:1px solid rgba(0,242,254,0.25);border-radius:14px;padding:14px;text-align:center;display:flex;flex-direction:column;justify-content:space-between;">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(280px, 1fr));gap:16px;">
+          ${images.map(img => {
+            const captionText = img.caption || `🚀 *${img.name}*\n\nOfficial RXDT Exchange AI Quantitative Trading Asset.\n👉 Join live signal copy trading on RXDT Exchange!\n💬 Telegram: @RXDT888`;
+            return `
+            <div style="background:#090d16;border:1px solid rgba(0,242,254,0.25);border-radius:14px;padding:14px;display:flex;flex-direction:column;justify-content:space-between;">
               <div>
-                <span style="font-size:10px;padding:2px 8px;border-radius:10px;background:rgba(0,242,254,0.15);color:#00f2fe;font-weight:700;display:inline-block;margin-bottom:6px;">${img.category}</span>
-                <div style="font-size:13px;font-weight:700;color:#fff;margin-bottom:10px;">${img.name}</div>
-                <div style="background:rgba(0,0,0,0.4);border-radius:10px;padding:8px;margin-bottom:10px;min-height:140px;display:flex;align-items:center;justify-content:center;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                  <span style="font-size:10px;padding:2px 8px;border-radius:10px;background:rgba(0,242,254,0.15);color:#00f2fe;font-weight:700;">${img.category}</span>
+                </div>
+                <div style="font-size:13px;font-weight:700;color:#fff;margin-bottom:8px;">${img.name}</div>
+                <div style="background:rgba(0,0,0,0.4);border-radius:10px;padding:8px;margin-bottom:10px;min-height:140px;display:flex;align-items:center;justify-content:center;border:1px solid rgba(255,255,255,0.05);">
                   <img src="${img.path}" alt="${img.name}" style="max-width:100%;max-height:130px;object-fit:contain;border-radius:6px;" />
+                </div>
+                <div style="margin-bottom:10px;">
+                  <label style="font-size:11px;color:var(--text-sub);display:block;margin-bottom:4px;">📱 Social Media Post Caption (WhatsApp/Telegram)</label>
+                  <textarea readonly style="width:100%;height:85px;background:rgba(0,0,0,0.3);color:#cbd5e1;border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:6px 8px;font-size:11px;font-family:monospace;resize:none;line-height:1.35;">${captionText}</textarea>
                 </div>
               </div>
               <div style="display:flex;gap:6px;flex-wrap:wrap;">
-                <a href="${img.path}" download="${img.name.replace(/[^a-zA-Z0-9]/g, '_')}.png" class="btn-outline" style="flex:1;font-size:11px;padding:6px 0;border-color:#00f2fe;color:#00f2fe;text-align:center;display:block;">📥 Download</a>
-                <button class="btn-outline" style="flex:1;font-size:11px;padding:6px 0;border-color:rgba(255,255,255,0.3);color:#fff;" onclick="copyToClipboard('${img.path}', 'Image Path')">📋 Path</button>
-                ${img.isCustom ? `<button class="btn-outline" style="font-size:11px;padding:6px 8px;border-color:#ff4d4d;color:#ff4d4d;" onclick="deleteCustomImage('${img.id}')">🗑️</button>` : ''}
+                <button class="btn-dark" style="flex:1;font-size:11px;padding:7px 0;background:#00f2fe;color:#000;font-weight:700;" onclick="copyToClipboard(\`${captionText.replace(/`/g, '\\`').replace(/'/g, "\\'")}\`, '${img.name.replace(/'/g, "\\'")} Post Text')">📋 Copy Post Text</button>
+                <a href="${img.path}" download="${img.name.replace(/[^a-zA-Z0-9]/g, '_')}.png" class="btn-outline" style="flex:1;font-size:11px;padding:7px 0;border-color:#00f2fe;color:#00f2fe;text-align:center;display:block;">📥 Download Image</a>
+                ${img.isCustom ? `<button class="btn-outline" style="font-size:11px;padding:7px 8px;border-color:#ff4d4d;color:#ff4d4d;" onclick="deleteCustomImage('${img.id}')">🗑️</button>` : ''}
               </div>
             </div>
-          `).join('')}
+            `;
+          }).join('')}
         </div>
       </div>
+
 
       <!-- Add Message Modal -->
       <div class="modal-overlay" id="add-message-modal" style="display:none;z-index:9999;">

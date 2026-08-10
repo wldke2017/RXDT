@@ -7,24 +7,21 @@ function fmt(n, d = 2) {
 export function render() {
   const user = store.getUser();
   const isLoggedIn = store.isLoggedIn();
-  const market = store.getMarketData();
-  const hot = market.filter(m => m.hot);
-  const aiModels = store.getAnalysts();
 
   return `
-  <!-- Home Hero Section with Generated Brand Image -->
+  <!-- Home Hero Section with AI Signals Focus -->
   <div class="home-hero-container">
     <div class="home-hero-bg" style="background-image: url('assets/images/rxdt_home_hero_bg.png');"></div>
     <div class="home-hero-overlay"></div>
     
     <div class="home-hero-inner">
-      <!-- Top Bar: Account Balance Widget -->
+      <!-- Top Bar: Account Balance & Brand Header -->
       <div class="home-balance-header card-glass">
         <div class="hbh-brand">
           <img src="assets/images/rxdt_logo.png" alt="RXDT Logo" class="hbh-logo-img"/>
           <div class="hbh-brand-text">
             <span class="hbh-title">RXDT EXCHANGE</span>
-            <span class="hbh-tag">AI QUANT VI</span>
+            <span class="hbh-tag">AI QUANT SIGNALS</span>
           </div>
         </div>
 
@@ -55,120 +52,150 @@ export function render() {
       <div class="home-hero-main">
         <div class="hero-badge">⚡ U.S. State of Colorado Compliant · Entity ID: 20261325716</div>
         <h1 class="hero-title-main">
-          Next-Generation <span class="highlight-cyan">AI Quantitative</span> Trading
+          Next-Gen <span class="highlight-cyan">AI Trading Signals</span> & Auto Execution
         </h1>
         <p class="hero-subtitle-main">
-          Empowering global crypto investors with high-frequency automated algorithmic trading models. Average daily return of 1.8% to 2.8%.
+          High-accuracy real-time AI signal feeds with automated high-frequency execution. Average daily return of 1.8% to 2.8%.
         </p>
 
         <div class="home-quick-actions">
-          <button class="btn-dark action-btn" onclick="navigateTo('follow')">🤖 Start AI Trading</button>
-          <button class="btn-outline action-btn" onclick="navigateTo('market')">📊 Live Markets</button>
+          <button class="btn-dark action-btn" onclick="navigateTo('follow')">⚡ Access AI Signals</button>
+          <button class="btn-outline action-btn" onclick="navigateTo('market')">📊 Live Signal Feeds</button>
           <button class="btn-outline action-btn" onclick="navigateTo('invite-friends')">🎁 Refer & Earn</button>
-          <button class="btn-outline action-btn" onclick="navigateTo('earn-guide')">📈 How to Earn</button>
+          <button class="btn-outline action-btn" onclick="navigateTo('earn-guide')">📈 Signals Guide</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- AI Signals Visual Showcase (Auto-scrolling Image Carousel) -->
+  <div class="card" style="margin-top:24px; padding:20px;">
+    <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <img src="assets/images/rxdt_logo.png" alt="RXDT Logo" style="width:28px;height:28px;filter:drop-shadow(0 0 6px rgba(0,242,254,0.6));"/>
+        <span style="font-size:18px;font-weight:700;">RXDT AI Signal Engines & Strategy Showcase</span>
+      </div>
+      <button class="btn-outline" style="font-size:13px;padding:6px 14px;" onclick="navigateTo('follow')">Start Copying Signals →</button>
+    </div>
+
+    <!-- Auto Scroll Horizontality Carousel -->
+    <div class="signals-carousel-wrapper">
+      <div class="signals-carousel-track" id="signalsCarouselTrack">
+        <div class="signals-card-item card-glass" onclick="navigateTo('follow')">
+          <div class="signals-img-box">
+            <img src="assets/images/ai_signals_banner_1.png" alt="RXDT AI Quant Signals" class="signals-banner-img"/>
+            <div class="signals-img-badge">⚡ Live Signals Feed</div>
+          </div>
+          <div class="signals-card-body">
+            <div class="signals-card-header">
+              <span class="signals-title">RXDT Neural Engine Alpha</span>
+              <span class="chip chip-green">Win Rate 94.8%</span>
+            </div>
+            <p class="signals-desc">Real-time buy/sell triggers with automated sub-millisecond order execution.</p>
+            <div class="signals-meta">
+              <span>Avg Daily Profit: <strong style="color:var(--color-up);">+2.45%</strong></span>
+              <button class="btn-primary btn-sm" onclick="event.stopPropagation(); navigateTo('follow')">Follow Signal</button>
+            </div>
+          </div>
         </div>
 
-        <div class="hero-stats-row">
-          <div class="hstat-box">
-            <span class="hstat-val">$50T</span>
-            <span class="hstat-lbl">Managed Asset Heritage</span>
+        <div class="signals-card-item card-glass" onclick="navigateTo('follow')">
+          <div class="signals-img-box">
+            <img src="assets/images/ai_signals_banner_2.png" alt="AI High Frequency Signals" class="signals-banner-img"/>
+            <div class="signals-img-badge">🔥 Top Performer</div>
           </div>
-          <div class="hstat-box">
-            <span class="hstat-val">1.8% – 2.8%</span>
-            <span class="hstat-lbl">Daily AI Returns</span>
+          <div class="signals-card-body">
+            <div class="signals-card-header">
+              <span class="signals-title">RXDT High-Frequency Arbitrage v4</span>
+              <span class="chip chip-cyan">Win Rate 92.3%</span>
+            </div>
+            <p class="signals-desc">Captures global cross-exchange liquidity spreads automatically 24/7.</p>
+            <div class="signals-meta">
+              <span>Avg Daily Profit: <strong style="color:var(--color-up);">+2.10%</strong></span>
+              <button class="btn-primary btn-sm" onclick="event.stopPropagation(); navigateTo('follow')">Follow Signal</button>
+            </div>
           </div>
-          <div class="hstat-box">
-            <span class="hstat-val">26–34 Days</span>
-            <span class="hstat-lbl">Doubling Cycle</span>
+        </div>
+
+        <div class="signals-card-item card-glass" onclick="navigateTo('follow')">
+          <div class="signals-img-box">
+            <img src="assets/images/ai_signals_banner_3.png" alt="Automated AI Execution" class="signals-banner-img"/>
+            <div class="signals-img-badge">🛡️ Low Risk</div>
+          </div>
+          <div class="signals-card-body">
+            <div class="signals-card-header">
+              <span class="signals-title">RXDT Institutional Trend Guard</span>
+              <span class="chip chip-green">Win Rate 96.1%</span>
+            </div>
+            <p class="signals-desc">Deep momentum analytics protecting against volatility while maximizing yields.</p>
+            <div class="signals-meta">
+              <span>Avg Daily Profit: <strong style="color:var(--color-up);">+1.95%</strong></span>
+              <button class="btn-primary btn-sm" onclick="event.stopPropagation(); navigateTo('follow')">Follow Signal</button>
+            </div>
           </div>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- AI Quantitative Models Showcase -->
-  <div class="card" style="margin-top:24px;">
-    <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
-      <span>🤖 Featured AI Quantitative Models</span>
-      <button class="btn-outline" style="font-size:13px;padding:6px 14px;" onclick="navigateTo('follow')">Explore All Models →</button>
-    </div>
-    
-    <div class="grid-2" style="gap:16px;">
-      ${aiModels.slice(0, 2).map(a => `
-        <div class="card-glass" style="padding:16px;border-radius:12px;border:1px solid var(--border-color);display:flex;gap:12px;align-items:center;transition:border-color 0.2s, transform 0.2s;">
-          <div style="font-size:36px;width:54px;height:54px;display:flex;align-items:center;justify-content:center;background:rgba(0,242,254,0.1);border-radius:50%;border:1px solid rgba(0,242,254,0.2);">${a.avatar}</div>
-          <div style="flex:1;">
-            <div style="font-weight:700;font-size:16px;color:var(--el-color-primary);">${a.name}</div>
-            <div style="font-size:13px;color:var(--text-sub);margin-top:4px;">
-              <span class="chip chip-green" style="margin-right:6px;">Win ${a.winRate}%</span>
-              <span class="chip chip-cyan">1D +${a.oneDayReturnRate.toFixed(2)}%</span>
-            </div>
-          </div>
-          <button class="btn-primary" style="padding:6px 14px;font-size:13px;" onclick="navigateTo('follow')">Follow</button>
-        </div>
-      `).join('')}
-    </div>
-  </div>
-
-  <!-- Live Market Tickers -->
-  <div class="card">
-    <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
-      <span>🔥 Live AI Markets</span>
-      <button class="btn-outline" style="font-size:13px;padding:6px 14px;" onclick="navigateTo('market')">View All Markets →</button>
-    </div>
-    <div class="hot-tickers">
-      ${hot.map(item => `
-        <div class="ticker-card" onclick="navigateTo('market')">
-          <div class="ticker-symbol">${item.symbol}</div>
-          <div class="ticker-name">${item.name}</div>
-          <div class="ticker-price">$${fmt(item.price)}</div>
-          <div class="${item.changeRate >= 0 ? 'price-up' : 'price-down'}">
-            ${item.changeRate >= 0 ? '▲' : '▼'} ${Math.abs(item.changeRate).toFixed(2)}%
-          </div>
-        </div>
-      `).join('')}
-    </div>
-  </div>
-
-  <!-- Platform Stats -->
-  <div class="grid-3" style="gap:12px;margin-bottom:20px;">
-    <div class="stat-card-icon">
-      <div class="sci-icon">💹</div>
+  <!-- AI Signals Key Metrics & Value Proposition -->
+  <div class="grid-3" style="gap:16px;margin-top:20px;margin-bottom:20px;">
+    <div class="stat-card-icon card-glass" style="padding:16px;border-radius:12px;border:1px solid rgba(0,242,254,0.2);">
+      <div class="sci-icon" style="font-size:28px;">⚡</div>
       <div class="sci-info">
-        <div class="sci-label">Daily AI Return</div>
+        <div class="sci-label">AI Signal Accuracy</div>
+        <div class="sci-value" style="color:var(--el-color-primary);">92% – 96.5%</div>
+      </div>
+    </div>
+    <div class="stat-card-icon card-glass" style="padding:16px;border-radius:12px;border:1px solid rgba(0,242,254,0.2);">
+      <div class="sci-icon" style="font-size:28px;">💹</div>
+      <div class="sci-info">
+        <div class="sci-label">Daily AI Signal Return</div>
         <div class="sci-value" style="color:var(--color-up);">1.8% – 2.8%</div>
       </div>
     </div>
-    <div class="stat-card-icon">
-      <div class="sci-icon">⚡</div>
+    <div class="stat-card-icon card-glass" style="padding:16px;border-radius:12px;border:1px solid rgba(0,242,254,0.2);">
+      <div class="sci-icon" style="font-size:28px;">🛡️</div>
       <div class="sci-info">
         <div class="sci-label">Doubling Cycle</div>
-        <div class="sci-value" style="color:var(--el-color-primary);">26–34 Days</div>
-      </div>
-    </div>
-    <div class="stat-card-icon">
-      <div class="sci-icon">🛡️</div>
-      <div class="sci-info">
-        <div class="sci-label">Compliance</div>
-        <div class="sci-value" style="color:#a78bfa;font-size:14px;">Colorado Entity ID: 20261325716</div>
+        <div class="sci-value" style="color:#a78bfa;">26–34 Days</div>
       </div>
     </div>
   </div>
 
-  <!-- Institutional Background Teaser -->
+  <!-- Institutional Background & Compliance Teaser -->
   <div class="card" style="background:linear-gradient(135deg,#0d1322,#161e31);border:1px solid rgba(0,242,254,0.3);">
     <div style="display:flex;gap:20px;align-items:center;flex-wrap:wrap;">
+      <img src="assets/images/rxdt_logo.png" alt="RXDT Logo" style="width:70px;height:70px;object-fit:contain;filter:drop-shadow(0 0 10px rgba(0,242,254,0.5));flex-shrink:0;"/>
       <div style="flex:1;min-width:240px;">
-        <div class="badge badge-info" style="margin-bottom:8px;">INSTITUTIONAL FOUNDER</div>
-        <h3 style="font-size:20px;font-weight:700;color:#fff;margin-bottom:6px;">Arthur Vance & RXDT Exchange</h3>
+        <div class="badge badge-info" style="margin-bottom:8px;">POWERED BY RXDT AI SIGNALS</div>
+        <h3 style="font-size:20px;font-weight:700;color:#fff;margin-bottom:6px;">Automated Algorithmic AI Signal Execution</h3>
         <p style="color:var(--text-sub);font-size:14px;line-height:1.6;margin-bottom:12px;">
-          Founded by Arthur Vance, RXDT Exchange operates under USA Colorado State Compliance (Entity ID: 20261325716). Backed by Vanguard FinTech quantitative algorithms and Voyage Investment.
+          RXDT Exchange operates under USA Colorado State Compliance (Entity ID: 20261325716). Our proprietary AI signal models connect directly to copy-trading pools for hands-free passive yield.
         </p>
       </div>
-      <img src="assets/images/warren_pennington.png" alt="Arthur Vance" style="width:100px;height:100px;object-fit:cover;border-radius:12px;border:2px solid var(--el-color-primary);flex-shrink:0;"/>
+      <button class="btn-primary" style="padding:12px 24px;font-size:15px;font-weight:700;" onclick="navigateTo('follow')">Start AI Trading Now</button>
     </div>
   </div>
   `;
 }
 
-export function init() { }
+export function init() {
+  // Setup smooth infinite horizontal auto-scrolling for AI Signal Cards
+  const track = document.getElementById('signalsCarouselTrack');
+  if (!track) return;
+
+  let isHovered = false;
+  track.addEventListener('mouseenter', () => { isHovered = true; });
+  track.addEventListener('mouseleave', () => { isHovered = false; });
+
+  setInterval(() => {
+    if (isHovered) return;
+    if (track.scrollLeft + track.clientWidth >= track.scrollWidth - 10) {
+      track.scrollTo({ left: 0, behavior: 'smooth' });
+    } else {
+      track.scrollBy({ left: 340, behavior: 'smooth' });
+    }
+  }, 3500);
+}
+
