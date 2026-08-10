@@ -3239,6 +3239,95 @@
   padding: 16px;
 }
 
+/* ---- Auto/Manual Signal Execution Toggle ---- */
+.signal-auto-toggle-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.signal-toggle {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.signal-toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.signal-toggle-slider {
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid var(--border-color);
+  border-radius: 24px;
+  transition: all 0.3s;
+}
+
+.signal-toggle-slider::before {
+  content: '';
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  left: 2px;
+  top: 2px;
+  background: #fff;
+  border-radius: 50%;
+  transition: transform 0.3s;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+.signal-toggle input:checked+.signal-toggle-slider {
+  background: linear-gradient(135deg, #00c49a, #00f2fe);
+  border-color: #00f2fe;
+}
+
+.signal-toggle input:checked+.signal-toggle-slider::before {
+  transform: translateX(20px);
+}
+
+.signal-toggle-label {
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* Popup mode row */
+.rxdt-signal-mode-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+}
+
+.rxdt-signal-mode-label {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.rxdt-signal-manual-note {
+  margin-top: 10px;
+  padding: 8px 12px;
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  border-radius: 8px;
+  font-size: 12px;
+  color: #f59e0b;
+  line-height: 1.5;
+}
+
 .signal-detail-row {
   display: flex;
   justify-content: space-between;
@@ -3769,7 +3858,7 @@
     padding: 12px 10px;
     gap: 10px;
   }
-  
+
   .earn-guide-step-2 {
     padding: 14px 12px;
   }
@@ -3781,7 +3870,8 @@
   }
 
   .earn-guide-tiers-grid {
-    grid-template-columns: 1fr; /* Stack vertically on phones for clean reading */
+    grid-template-columns: 1fr;
+    /* Stack vertically on phones for clean reading */
     gap: 12px;
   }
 
@@ -3809,12 +3899,15 @@
   overflow-x: auto;
   scroll-behavior: smooth;
   padding-bottom: 10px;
-  -ms-overflow-style: none;  /* IE and Edge */
-  scrollbar-width: none;  /* Firefox */
+  -ms-overflow-style: none;
+  /* IE and Edge */
+  scrollbar-width: none;
+  /* Firefox */
 }
 
 .signals-carousel-track::-webkit-scrollbar {
-  display: none; /* Chrome, Safari, Opera */
+  display: none;
+  /* Chrome, Safari, Opera */
 }
 
 .signals-card-item {

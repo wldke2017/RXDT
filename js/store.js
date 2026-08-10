@@ -349,6 +349,16 @@ const store = {
     return res;
   },
 
+  async setSignalPreference(autoSignalExec) {
+    const res = await api.setSignalPreference(autoSignalExec);
+    if (state.user) {
+      state.user.autoSignalExec = res.autoSignalExec;
+      localStorage.setItem('rxdt_user', JSON.stringify(state.user));
+      emit('user', state.user);
+    }
+    return res;
+  },
+
   navigateTo(page) {
     state.currentPage = page;
     emit('navigate', page);

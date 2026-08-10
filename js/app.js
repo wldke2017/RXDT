@@ -309,6 +309,9 @@ function showSignalPopup(signalData) {
 
   const signal = signalData.activeSignal;
   const tier = signalData.tier;
+  // Whether the user prefers auto-execution (default true). When false,
+  // the popup should clearly indicate they need to execute manually.
+  const autoExec = signalData.autoSignalExec !== false;
 
   const overlay = document.createElement('div');
   overlay.id = 'rxdt-signal-popup';
@@ -324,9 +327,20 @@ function showSignalPopup(signalData) {
     <div class="rxdt-signal-content">
       <div class="rxdt-signal-title">Strategy Copy Trading</div>
       <div class="rxdt-signal-sub">AI-powered signals — 3 sessions daily at 5pm, 6pm, 7pm EAT. ${tier ? tier.description : ''}</div>
+      <div class="rxdt-signal-mode-row">
+        <span class="rxdt-signal-mode-label">Auto Execute</span>
+        <label class="signal-toggle">
+          <input type="checkbox" id="popup-auto-exec-toggle" ${autoExec ? 'checked' : ''} onchange="togglePopupAutoExec(this.checked)"/>
+          <span class="signal-toggle-slider"></span>
+        </label>
+        <span class="signal-toggle-label" id="popup-auto-exec-label" style="color:${autoExec ? '#00c49a' : '#f59e0b'};">${autoExec ? 'Auto' : 'Manual'}</span>
+      </div>
+      <div class="rxdt-signal-manual-note" id="popup-manual-note" style="${autoExec ? 'display:none;' : ''}">
+        ⚠️ Manual mode: You will execute this trade yourself. Click the button below to confirm.
+      </div>
     </div>
     <div class="rxdt-signal-footer">
-      <span class="rxdt-signal-join-text">Join Copy Trading</span>
+      <span class="rxdt-signal-join-text">${autoExec ? 'Join Copy Trading' : 'Execute Manually'}</span>
       <button class="rxdt-signal-join-btn" onclick="document.getElementById('rxdt-signal-popup').remove();dismissCopyTradePopup();navigateTo('contract');setTimeout(()=>{const t=document.getElementById('tab-invited');if(t)t.click();},600);">
         <svg viewBox="0 0 24 24" width="20" height="20"><path d="M8 5v14l11-7z" fill="currentColor"/></svg>
       </button>
@@ -336,4 +350,24 @@ function showSignalPopup(signalData) {
   overlay.addEventListener('click', () => overlay.remove());
   document.body.appendChild(overlay);
 }
+
+// Toggle auto-exec preference from the signal popup
+window.togglePopupAutoExec = async function (checked) {
+  const label = document.getElementById('popup-auto-exec-label');
+  const note = document.getElementById('popup-manual-note');
+  const joinText = document.querySelector('.rxdt-signal-join-text');
+  try {
+    await store.setSignalPreference(checked);
+    if (label) {
+      label.textContent = checked ? 'Auto' : 'Manual';
+      label.style.color = checked ? '#00c49a' : '#f59e0b';
+    }
+    if (note) note.style.display = checked ? 'none' : '';
+    if (joinText) joinText.textContent = checked ? 'Join Copy Trading' : 'Execute Manually';
+  } catch (err) {
+    console.warn('Failed to update signal preference:', err);
+    const toggle = document.getElementById('popup-auto-exec-toggle');
+    if (toggle) toggle.checked = !checked;
+  }
+};
 

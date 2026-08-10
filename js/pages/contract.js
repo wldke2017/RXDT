@@ -780,6 +780,8 @@ export async function init() {
         operateHtml = `<span style="color:#ff4d4d;font-size:13px;">⚠️ Signal ${signal.signalId} not included in your tier (${tier.label})</span>`;
       }
 
+      const autoPref = data.autoSignalExec !== false;
+
       card.innerHTML = `
       <div class="signal-card">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
@@ -793,14 +795,48 @@ export async function init() {
         ${tier ? `<div class="signal-detail-row"><span class="sd-label">Your Tier</span><span class="sd-val" style="color:#00f2fe;">${tier.label} · ${tier.description}</span></div>` : ''}
         ${isFreeSignal ? `<div class="signal-detail-row"><span class="sd-label">Free Credits</span><span class="sd-val" style="color:#00f2fe;">${freeSignalCredits} available</span></div>` : ''}
         <div class="signal-detail-row">
+          <span class="sd-label">Auto Execute</span>
+          <span class="signal-auto-toggle-wrap">
+            <label class="signal-toggle">
+              <input type="checkbox" id="signal-auto-exec-toggle" ${autoPref ? 'checked' : ''} onchange="toggleSignalAutoExec(this.checked)"/>
+              <span class="signal-toggle-slider"></span>
+            </label>
+            <span class="signal-toggle-label" id="signal-auto-exec-label" style="color:${autoPref ? '#00c49a' : '#f59e0b'};">${autoPref ? 'Auto' : 'Manual'}</span>
+          </span>
+        </div>
+        <div class="signal-detail-row">
           <span class="sd-label">Operate</span>
           <span>${operateHtml}</span>
+        </div>
+        <div class="signal-detail-row manual-hint" id="signal-manual-hint" style="${autoPref ? 'display:none;' : ''}">
+          <span class="sd-label" style="font-size:12px;color:#f59e0b;">Manual mode</span>
+          <span style="font-size:12px;color:#f59e0b;text-align:right;max-width:220px;">You will be notified when a signal is active. Click "Confirm Copy Trade" to execute manually.</span>
         </div>
       </div>`;
     } catch (e) {
       console.warn('Signal load error:', e);
     }
   }
+
+  // ---- Toggle Auto/Manual Signal Execution ----
+  window.toggleSignalAutoExec = async function (checked) {
+    const label = document.getElementById('signal-auto-exec-label');
+    const hint = document.getElementById('signal-manual-hint');
+    try {
+      await store.setSignalPreference(checked);
+      if (label) {
+        label.textContent = checked ? 'Auto' : 'Manual';
+        label.style.color = checked ? '#00c49a' : '#f59e0b';
+      }
+      if (hint) hint.style.display = checked ? 'none' : '';
+      toast(checked ? '✅ Auto execution enabled — signals will be executed automatically' : 'ℹ️ Manual mode enabled — you will be notified and can execute signals manually', checked ? 'success' : 'info');
+    } catch (err) {
+      toast('Failed to update signal preference: ' + err.message, 'error');
+      // Revert the toggle
+      const toggle = document.getElementById('signal-auto-exec-toggle');
+      if (toggle) toggle.checked = !checked;
+    }
+  };
 
   // ---- Open Confirm Modal ----
   window.openSignalModal = function () {

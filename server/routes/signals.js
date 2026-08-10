@@ -443,13 +443,16 @@ router.get('/active', requireAuth, async (req, res) => {
 
     const signal = await getActiveSignal();
     const userRes = await query(
-      `SELECT available_balance, total_deposits, free_signal_credits FROM users WHERE id = $1`,
+      `SELECT available_balance, total_deposits, free_signal_credits, auto_signal_exec FROM users WHERE id = $1`,
       [req.userId]
     );
     const user = userRes.rows[0];
     const balance = parseFloat(user?.available_balance || 0);
     const totalDeposits = parseFloat(user?.total_deposits || 0);
     const freeSignalCredits = parseInt(user?.free_signal_credits || 0);
+    // Whether this user wants signals executed automatically. When false,
+    // the user prefers to manually execute trades after the notification.
+    const autoSignalExec = user?.auto_signal_exec !== false;
 
     // Tier is based on TOTAL DEPOSITS (not available balance)
     const tier = getTier(totalDeposits);
@@ -480,6 +483,7 @@ router.get('/active', requireAuth, async (req, res) => {
       userBalance: balance,
       totalDeposits,
       freeSignalCredits,
+      autoSignalExec,
       tier: tier ? {
         label: tier.label,
         description: tier.description,
@@ -491,6 +495,25 @@ router.get('/active', requireAuth, async (req, res) => {
     });
   } catch (err) {
     console.error('Signals active error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ---- POST /api/signals/preference ----
+// Toggle whether the user wants signals executed automatically (true) or
+// manually after the popup notification (false). When manual mode is on,
+// the backend's autoExecuteEligibleSignals() skips this user, and they
+// must click "Confirm Copy Trade" themselves during the signal window.
+router.post('/preference', requireAuth, async (req, res) => {
+  try {
+    const autoSignalExec = req.body?.autoSignalExec === true;
+    await query(
+      `UPDATE users SET auto_signal_exec = $1 WHERE id = $2`,
+      [autoSignalExec, req.userId]
+    );
+    res.json({ success: true, autoSignalExec });
+  } catch (err) {
+    console.error('Signal preference error:', err);
     res.status(500).json({ error: err.message });
   }
 });

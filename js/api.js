@@ -66,7 +66,10 @@ export const api = {
   spinLuckyWheel: () => request('/api/lucky-wheel/spin', { method: 'POST' }),
   getLuckyWheelLogs: () => request('/api/lucky-wheel/logs'),
   submitKyc: (kycData) => request('/api/kyc/submit', { method: 'POST', body: kycData }),
-  getKycStatus: () => request('/api/kyc/status')
+  getKycStatus: () => request('/api/kyc/status'),
+
+  // Signals
+  setSignalPreference: (autoSignalExec) => request('/api/signals/preference', { method: 'POST', body: { autoSignalExec } })
 };
 
 export default api;

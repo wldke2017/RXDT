@@ -11,7 +11,7 @@ export function render() {
   return `
   <!-- Home Hero Section with AI Signals Focus -->
   <div class="home-hero-container">
-    <div class="home-hero-bg"></div>
+    <div class="home-hero-bg" style="background-image: url('assets/images/rxdt_home_hero_bg.png');"></div>
     <div class="home-hero-overlay"></div>
     
     <div class="home-hero-inner">
@@ -75,7 +75,6 @@ export function render() {
         <img src="assets/images/rxdt_logo.png" alt="RXDT Logo" style="width:28px;height:28px;filter:drop-shadow(0 0 6px rgba(0,242,254,0.6));"/>
         <span style="font-size:18px;font-weight:700;">RXDT Daily AI Signal Trading Windows</span>
       </div>
-      <button class="btn-outline" style="font-size:13px;padding:6px 14px;" onclick="navigateTo('contract')">Start Copying Signals →</button>
     </div>
 
     <!-- Auto Scroll Horizontality Carousel -->
@@ -86,22 +85,6 @@ export function render() {
           <div class="signals-img-box">
             <img src="assets/images/daily_signal_1_5pm.png" alt="AI Signal 1 - 5:00 PM EAT" class="signals-banner-img"/>
           </div>
-          <div class="signals-card-body">
-            <div class="signals-card-header">
-              <div>
-                <span class="signals-title">Daily AI Signal #1</span>
-                <div style="margin-top:4px;">
-                  <span class="chip chip-cyan" style="font-size:11px;font-weight:700;">⏰ 5:00 PM EAT (14:00 UTC)</span>
-                </div>
-              </div>
-              <span class="chip chip-green">1.4% Yield</span>
-            </div>
-            <p class="signals-desc">First daily quantitative trade window for Tier 1 traders & above ($100+ deposit).</p>
-            <div class="signals-meta">
-              <span>Time Window: <strong style="color:var(--el-color-primary);">5:00 - 5:30 PM</strong></span>
-              <button class="btn-primary btn-sm" onclick="event.stopPropagation(); navigateTo('contract')">Join 5 PM Signal</button>
-            </div>
-          </div>
         </div>
 
         <!-- Signal 2: 6:00 PM EAT -->
@@ -109,44 +92,12 @@ export function render() {
           <div class="signals-img-box">
             <img src="assets/images/daily_signal_2_6pm.png" alt="AI Signal 2 - 6:00 PM EAT" class="signals-banner-img"/>
           </div>
-          <div class="signals-card-body">
-            <div class="signals-card-header">
-              <div>
-                <span class="signals-title">Daily AI Signal #2</span>
-                <div style="margin-top:4px;">
-                  <span class="chip chip-cyan" style="font-size:11px;font-weight:700;">⏰ 6:00 PM EAT (15:00 UTC)</span>
-                </div>
-              </div>
-              <span class="chip chip-cyan">2.4% Yield</span>
-            </div>
-            <p class="signals-desc">Second daily quantitative trade window for Tier 2 traders & above ($300+ deposit).</p>
-            <div class="signals-meta">
-              <span>Time Window: <strong style="color:var(--el-color-primary);">6:00 - 6:30 PM</strong></span>
-              <button class="btn-primary btn-sm" onclick="event.stopPropagation(); navigateTo('contract')">Join 6 PM Signal</button>
-            </div>
-          </div>
         </div>
 
         <!-- Signal 3: 7:00 PM EAT -->
         <div class="signals-card-item card-glass" onclick="navigateTo('contract')">
           <div class="signals-img-box">
             <img src="assets/images/daily_signal_3_7pm.png" alt="AI Signal 3 - 7:00 PM EAT" class="signals-banner-img"/>
-          </div>
-          <div class="signals-card-body">
-            <div class="signals-card-header">
-              <div>
-                <span class="signals-title">Daily AI Signal #3</span>
-                <div style="margin-top:4px;">
-                  <span class="chip chip-cyan" style="font-size:11px;font-weight:700;">🔥 7:00 PM EAT (16:00 UTC)</span>
-                </div>
-              </div>
-              <span class="chip chip-green">3.1% Max Yield</span>
-            </div>
-            <p class="signals-desc">Third daily quantitative trade window for Tier 3 traders & VIPs ($1,000+ deposit).</p>
-            <div class="signals-meta">
-              <span>Time Window: <strong style="color:var(--el-color-primary);">7:00 - 7:30 PM</strong></span>
-              <button class="btn-primary btn-sm" onclick="event.stopPropagation(); navigateTo('contract')">Join 7 PM Signal</button>
-            </div>
           </div>
         </div>
       </div>
