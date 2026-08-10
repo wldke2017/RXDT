@@ -9,159 +9,105 @@ export function render() {
   const isLoggedIn = store.isLoggedIn();
 
   return `
-  <!-- Home Hero Section with AI Signals Focus -->
-  <div class="home-hero-container">
-    <div class="home-hero-bg" style="background-image: url('assets/images/rxdt_home_hero_bg.png');"></div>
-    <div class="home-hero-overlay"></div>
-    
-    <div class="home-hero-inner">
-      <!-- Top Bar: Account Balance & Brand Header -->
-      <div class="home-balance-header card-glass">
-        <div class="hbh-brand">
-          <img src="assets/images/rxdt_logo.png" alt="RXDT Logo" class="hbh-logo-img"/>
-          <div class="hbh-brand-text">
-            <span class="hbh-title">RXDT EXCHANGE</span>
-            <span class="hbh-tag">AI QUANT SIGNALS</span>
-          </div>
-        </div>
-
-        <div class="hbh-balance-group">
-          ${isLoggedIn && user ? `
-            <div class="hbh-stat-item">
-              <span class="hbh-lbl">Account Balance</span>
-              <span class="hbh-val">$${fmt(user.availableBalance)} <small>USDT</small></span>
-            </div>
-            <div class="hbh-stat-item desktop-only">
-              <span class="hbh-lbl">Total Assets</span>
-              <span class="hbh-val">$${fmt(user.totalAssets)} <small>USDT</small></span>
-            </div>
-            <div class="hbh-actions">
-              <button class="btn-primary btn-sm" onclick="navigateTo('recharge')">Deposit</button>
-              <button class="btn-outline btn-sm" onclick="navigateTo('withdraw')">Withdraw</button>
-            </div>
-          ` : `
-            <div class="hbh-stat-item">
-              <span class="hbh-lbl">Global Quantitative Platform</span>
-              <span class="hbh-val" style="font-size:15px;color:var(--el-color-primary);">AI Trading Engine VI Active</span>
-            </div>
-          `}
-        </div>
+  <!-- ======== HOME: COMPACT BRAND HEADER ======== -->
+  <div class="home-brand-bar">
+    <div class="hbb-left">
+      <img src="assets/images/rxdt_logo.png" alt="RXDT" class="hbb-logo"/>
+      <div class="hbb-titles">
+        <span class="hbb-name">RXDT EXCHANGE</span>
+        <span class="hbb-sub">AI Quant Signals Platform</span>
       </div>
-
-      <!-- Main Banner Headline -->
-      <div class="home-hero-main">
-        <div class="hero-badge">⚡ U.S. State of Colorado Compliant · Entity ID: 20261325716</div>
-        <h1 class="hero-title-main">
-          Next-Gen <span class="highlight-cyan">AI Trading Signals</span> & Auto Execution
-        </h1>
-        <p class="hero-subtitle-main">
-          High-accuracy real-time AI signal feeds with automated high-frequency execution. Average daily return of 1.8% to 2.8%.
-        </p>
-
-        <div class="home-quick-actions">
-          <button class="btn-dark action-btn" onclick="navigateTo('contract')">⚡ Access AI Signals</button>
-          <button class="btn-outline action-btn" onclick="navigateTo('market')">📊 Live Signal Feeds</button>
-          <button class="btn-outline action-btn" onclick="navigateTo('invite-friends')">🎁 Refer & Earn</button>
-          <button class="btn-outline action-btn" onclick="navigateTo('earn-guide')">📈 Signals Guide</button>
+    </div>
+    <div class="hbb-right">
+      ${isLoggedIn && user ? `
+        <div class="hbb-balance">
+          <span class="hbb-bal-label">Balance</span>
+          <span class="hbb-bal-value">$${fmt(user.availableBalance)} <small>USDT</small></span>
         </div>
+        <div class="hbb-btns">
+          <button class="btn-primary btn-xs" onclick="navigateTo('recharge')">Deposit</button>
+          <button class="btn-outline btn-xs" onclick="navigateTo('withdraw')">Withdraw</button>
+        </div>
+      ` : `
+        <button class="btn-primary btn-sm hbb-cta" onclick="navigateTo('login')">Get Started</button>
+      `}
+    </div>
+  </div>
+
+  <!-- ======== HOME: SIGNAL CARDS HERO ======== -->
+  <div class="home-signals-hero">
+
+    <!-- Live indicator pill -->
+    <div class="home-live-pill">
+      <span class="live-dot"></span>
+      <span>3 Daily AI Signal Windows &middot; Live</span>
+    </div>
+
+    <!-- Signal Card 1 -->
+    <div class="home-sig-card" onclick="navigateTo('contract')">
+      <img src="assets/images/daily_signal_1_5pm.png" alt="AI Signal 1 – 5:00 PM EAT" class="home-sig-img"/>
+      <div class="home-sig-tap-hint">Tap to Start Trading</div>
+    </div>
+
+    <!-- Signal Card 2 -->
+    <div class="home-sig-card" onclick="navigateTo('contract')">
+      <img src="assets/images/daily_signal_2_6pm.png" alt="AI Signal 2 – 6:00 PM EAT" class="home-sig-img"/>
+      <div class="home-sig-tap-hint">Tap to Start Trading</div>
+    </div>
+
+    <!-- Signal Card 3 -->
+    <div class="home-sig-card" onclick="navigateTo('contract')">
+      <img src="assets/images/daily_signal_3_7pm.png" alt="AI Signal 3 – 7:00 PM EAT" class="home-sig-img"/>
+      <div class="home-sig-tap-hint">Tap to Start Trading</div>
+    </div>
+  </div>
+
+  <!-- ======== HOME: KEY STATS ROW ======== -->
+  <div class="home-stats-row">
+    <div class="home-stat-chip">
+      <span class="hsc-icon">⚡</span>
+      <div>
+        <div class="hsc-value">92–96.5%</div>
+        <div class="hsc-label">Accuracy</div>
+      </div>
+    </div>
+    <div class="home-stat-chip">
+      <span class="hsc-icon">💹</span>
+      <div>
+        <div class="hsc-value" style="color:var(--color-up);">1.8–2.8%</div>
+        <div class="hsc-label">Daily Return</div>
+      </div>
+    </div>
+    <div class="home-stat-chip">
+      <span class="hsc-icon">🔁</span>
+      <div>
+        <div class="hsc-value" style="color:#a78bfa;">26–34 Days</div>
+        <div class="hsc-label">Doubling Cycle</div>
       </div>
     </div>
   </div>
 
-  <!-- AI Signals Visual Showcase (Auto-scrolling Image Carousel) -->
-  <div class="card" style="margin-top:24px; padding:20px;">
-    <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
-      <div style="display:flex;align-items:center;gap:10px;">
-        <img src="assets/images/rxdt_logo.png" alt="RXDT Logo" style="width:28px;height:28px;filter:drop-shadow(0 0 6px rgba(0,242,254,0.6));"/>
-        <span style="font-size:18px;font-weight:700;">RXDT Daily AI Signal Trading Windows</span>
-      </div>
-    </div>
-
-    <!-- Auto Scroll Horizontality Carousel -->
-    <div class="signals-carousel-wrapper">
-      <div class="signals-carousel-track" id="signalsCarouselTrack">
-        <!-- Signal 1: 5:00 PM EAT -->
-        <div class="signals-card-item card-glass" onclick="navigateTo('contract')">
-          <div class="signals-img-box">
-            <img src="assets/images/daily_signal_1_5pm.png" alt="AI Signal 1 - 5:00 PM EAT" class="signals-banner-img"/>
-          </div>
-        </div>
-
-        <!-- Signal 2: 6:00 PM EAT -->
-        <div class="signals-card-item card-glass" onclick="navigateTo('contract')">
-          <div class="signals-img-box">
-            <img src="assets/images/daily_signal_2_6pm.png" alt="AI Signal 2 - 6:00 PM EAT" class="signals-banner-img"/>
-          </div>
-        </div>
-
-        <!-- Signal 3: 7:00 PM EAT -->
-        <div class="signals-card-item card-glass" onclick="navigateTo('contract')">
-          <div class="signals-img-box">
-            <img src="assets/images/daily_signal_3_7pm.png" alt="AI Signal 3 - 7:00 PM EAT" class="signals-banner-img"/>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- AI Signals Key Metrics & Value Proposition -->
-  <div class="grid-3" style="gap:16px;margin-top:20px;margin-bottom:20px;">
-    <div class="stat-card-icon card-glass" style="padding:16px;border-radius:12px;border:1px solid rgba(0,242,254,0.2);">
-      <div class="sci-icon" style="font-size:28px;">⚡</div>
-      <div class="sci-info">
-        <div class="sci-label">AI Signal Accuracy</div>
-        <div class="sci-value" style="color:var(--el-color-primary);">92% – 96.5%</div>
-      </div>
-    </div>
-    <div class="stat-card-icon card-glass" style="padding:16px;border-radius:12px;border:1px solid rgba(0,242,254,0.2);">
-      <div class="sci-icon" style="font-size:28px;">💹</div>
-      <div class="sci-info">
-        <div class="sci-label">Daily AI Signal Return</div>
-        <div class="sci-value" style="color:var(--color-up);">1.8% – 2.8%</div>
-      </div>
-    </div>
-    <div class="stat-card-icon card-glass" style="padding:16px;border-radius:12px;border:1px solid rgba(0,242,254,0.2);">
-      <div class="sci-icon" style="font-size:28px;">🛡️</div>
-      <div class="sci-info">
-        <div class="sci-label">Doubling Cycle</div>
-        <div class="sci-value" style="color:#a78bfa;">26–34 Days</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Institutional Background & Compliance Teaser -->
-  <div class="card" style="background:linear-gradient(135deg,#0d1322,#161e31);border:1px solid rgba(0,242,254,0.3);">
-    <div style="display:flex;gap:20px;align-items:center;flex-wrap:wrap;">
-      <img src="assets/images/rxdt_logo.png" alt="RXDT Logo" style="width:70px;height:70px;object-fit:contain;filter:drop-shadow(0 0 10px rgba(0,242,254,0.5));flex-shrink:0;"/>
-      <div style="flex:1;min-width:240px;">
-        <div class="badge badge-info" style="margin-bottom:8px;">POWERED BY RXDT AI SIGNALS</div>
-        <h3 style="font-size:20px;font-weight:700;color:#fff;margin-bottom:6px;">Automated Algorithmic AI Signal Execution</h3>
-        <p style="color:var(--text-sub);font-size:14px;line-height:1.6;margin-bottom:12px;">
-          RXDT Exchange operates under USA Colorado State Compliance (Entity ID: 20261325716). Our proprietary AI signal models connect directly to copy-trading pools for hands-free passive yield.
-        </p>
-      </div>
-      <button class="btn-primary" style="padding:12px 24px;font-size:15px;font-weight:700;" onclick="navigateTo('follow')">Start AI Trading Now</button>
-    </div>
+  <!-- ======== HOME: PRIMARY CTA ======== -->
+  <div class="home-cta-row">
+    <button class="btn-primary home-main-cta" onclick="navigateTo('contract')">
+      ⚡ Access AI Signals Now
+    </button>
+    <button class="btn-outline home-sec-cta" onclick="navigateTo('follow')">
+      📋 Copy Top Traders
+    </button>
   </div>
   `;
 }
 
 export function init() {
-  // Setup smooth infinite horizontal auto-scrolling for AI Signal Cards
-  const track = document.getElementById('signalsCarouselTrack');
-  if (!track) return;
-
-  let isHovered = false;
-  track.addEventListener('mouseenter', () => { isHovered = true; });
-  track.addEventListener('mouseleave', () => { isHovered = false; });
-
-  setInterval(() => {
-    if (isHovered) return;
-    if (track.scrollLeft + track.clientWidth >= track.scrollWidth - 10) {
-      track.scrollTo({ left: 0, behavior: 'smooth' });
-    } else {
-      track.scrollBy({ left: 340, behavior: 'smooth' });
-    }
-  }, 3500);
+  // Touch tap detection for signal cards
+  const cards = document.querySelectorAll('.home-sig-card');
+  cards.forEach(card => {
+    let startX = 0;
+    card.addEventListener('touchstart', e => { startX = e.touches[0].clientX; }, { passive: true });
+    card.addEventListener('touchend', e => {
+      const diff = Math.abs(e.changedTouches[0].clientX - startX);
+      if (diff < 8) card.click();
+    }, { passive: true });
+  });
 }
-
