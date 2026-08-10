@@ -9,12 +9,12 @@ import { query } from '../db.js';
  * 3. All database invariants remain 100% consistent across available_balance, frozen_balance, and total_assets.
  */
 export async function runPositionAndBalanceAudit() {
-  console.log('?? Starting automatic position & balance integrity audit...');
+  console.log('🔍 Starting automatic position & balance integrity audit...');
   let repairedUsersCount = 0;
   let totalAdjustedAmount = 0;
 
   try {
-    const usersRes = await query(
+    const usersRes = await query(`
       SELECT id, username, available_balance, frozen_balance, total_assets 
       FROM users 
       WHERE frozen_balance != 0 OR id IN (
@@ -22,19 +22,19 @@ export async function runPositionAndBalanceAudit() {
         UNION
         SELECT user_id FROM signal_trades WHERE status = 'open'
       )
-    );
+    `);
 
     for (const user of usersRes.rows) {
       const userId = user.id;
 
       const contractOrdersRes = await query(
-        SELECT COALESCE(SUM(amount), 0) AS total FROM contract_orders WHERE user_id = \ AND status = 'open',
+        `SELECT COALESCE(SUM(amount), 0) AS total FROM contract_orders WHERE user_id = $1 AND status = 'open'`,
         [userId]
       );
       const activeContractMargin = parseFloat(contractOrdersRes.rows[0]?.total || 0);
 
       const signalTradesRes = await query(
-        SELECT COALESCE(SUM(trade_amount), 0) AS total FROM signal_trades WHERE user_id = \ AND status = 'open',
+        `SELECT COALESCE(SUM(trade_amount), 0) AS total FROM signal_trades WHERE user_id = $1 AND status = 'open'`,
         [userId]
       );
       const activeSignalMargin = parseFloat(signalTradesRes.rows[0]?.total || 0);
@@ -45,27 +45,27 @@ export async function runPositionAndBalanceAudit() {
       const diff = actualFrozenBalance - expectedFrozenBalance;
 
       if (Math.abs(diff) > 0.0001) {
-        console.warn('?? Discrepancy found for user ' + userId + ': Actual frozen=$' + actualFrozenBalance + ', Expected frozen=$' + expectedFrozenBalance + '. Adjusting diff=$' + diff);
+        console.warn('⚠️ Discrepancy found for user ' + userId + ': Actual frozen=$' + actualFrozenBalance + ', Expected frozen=$' + expectedFrozenBalance + '. Adjusting diff=$' + diff);
 
         await query('BEGIN');
         try {
-          const lockRes = await query(SELECT available_balance, frozen_balance, total_assets FROM users WHERE id = \ FOR UPDATE, [userId]);
+          const lockRes = await query(`SELECT available_balance, frozen_balance, total_assets FROM users WHERE id = $1 FOR UPDATE`, [userId]);
           if (lockRes.rows.length === 0) {
             await query('ROLLBACK');
             continue;
           }
 
           await query(
-            UPDATE users 
-             SET frozen_balance = \,
-                 available_balance = available_balance + \
-             WHERE id = \,
+            `UPDATE users 
+             SET frozen_balance = $1,
+                 available_balance = available_balance + $2
+             WHERE id = $3`,
             [expectedFrozenBalance, diff > 0 ? diff : 0, userId]
           );
 
           await query(
-            INSERT INTO account_changes (id, user_id, type, amount, balance_after, remark)
-             VALUES (\, \, 'audit_repair', \, (SELECT available_balance FROM users WHERE id = \), \),
+            `INSERT INTO account_changes (id, user_id, type, amount, balance_after, remark)
+             VALUES ($1, $2, 'audit_repair', $3, (SELECT available_balance FROM users WHERE id = $2), $4)`,
             [
               'AUD' + Date.now() + '_' + userId.substring(0, 4),
               userId,
@@ -84,10 +84,11 @@ export async function runPositionAndBalanceAudit() {
       }
     }
 
-    console.log('? Audit complete: Audited ' + usersRes.rows.length + ' users, Repaired ' + repairedUsersCount + ' accounts, Recovered $' + totalAdjustedAmount.toFixed(2) + ' stuck balances.');
+    console.log('✅ Audit complete: Audited ' + usersRes.rows.length + ' users, Repaired ' + repairedUsersCount + ' accounts, Recovered $' + totalAdjustedAmount.toFixed(2) + ' stuck balances.');
     return { ok: true, audited: usersRes.rows.length, repaired: repairedUsersCount, recovered: totalAdjustedAmount };
   } catch (err) {
     console.error('Position audit tool error:', err);
     return { ok: false, error: err.message };
   }
 }
+
