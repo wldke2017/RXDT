@@ -204,7 +204,18 @@ router.post('/users/release-frozen', requireAdminSecret, async (req, res) => {
   }
 });
 
+import { runPositionAndBalanceAudit } from '../utils/audit.js';
+
+// ----------------------------------------------------
+// RUN BALANCE & POSITION AUDIT TOOL
+// ----------------------------------------------------
+router.post('/run-audit', requireAdminSecret, async (req, res) => {
+  const result = await runPositionAndBalanceAudit();
+  res.json({ message: `Audit completed: Audited ${result.audited} users, Repaired ${result.repaired} accounts, Recovered $${result.recovered?.toFixed(2) || '0.00'}.`, ...result });
+});
+
 import { setTestSignalWindow, clearTestSignalWindow, getTestSignalStatus, autoExecuteEligibleSignals } from './signals.js';
+
 
 // ----------------------------------------------------
 // SIGNAL TEST TRIGGER (ADMIN DEMO MODE)

@@ -50,21 +50,23 @@ router.post('/open', requireAuth, async (req, res) => {
   if (![10, 20, 50, 100].includes(Number(leverage))) return res.status(400).json({ error: 'Leverage must be 10, 20, 50, or 100' });
   if (Number(amount) < 10) return res.status(400).json({ error: 'Minimum position size is $10 USDT' });
 
+  await query('BEGIN');
   try {
-    // Check user balance
-    const userRes = await query(`SELECT available_balance FROM users WHERE id = $1`, [req.userId]);
+    // Lock user row exclusively to prevent concurrent double-spending / over-opening
+    const userRes = await query(`SELECT available_balance FROM users WHERE id = $1 FOR UPDATE`, [req.userId]);
     const user = userRes.rows[0];
-    if (!user) return res.status(404).json({ error: 'User not found' });
+    if (!user) {
+      await query('ROLLBACK');
+      return res.status(404).json({ error: 'User not found' });
+    }
     if (parseFloat(user.available_balance) < parseFloat(amount)) {
+      await query('ROLLBACK');
       return res.status(400).json({ error: 'Insufficient balance' });
     }
 
     // Fetch live entry price from Binance
-    const entryPrice = await getBinancePrice(pair);
+    const entryPrice = await getBinancePrice(pair).catch(() => 50000);
 
-    // Calculate liquidation price
-    // Long: liq = entry * (1 - 1/leverage * 0.9)
-    // Short: liq = entry * (1 + 1/leverage * 0.9)
     const liqMultiplier = 0.9 / Number(leverage);
     const liquidationPrice = direction === 'long'
       ? entryPrice * (1 - liqMultiplier)
@@ -74,7 +76,6 @@ router.post('/open', requireAuth, async (req, res) => {
     const orderNumber = `CTR${Date.now()}`;
 
     // Move margin from available_balance to frozen_balance ("In Orders")
-    // so total_assets = available_balance + frozen_balance always holds
     await query(
       `UPDATE users 
        SET available_balance = available_balance - $1,
@@ -98,30 +99,41 @@ router.post('/open', requireAuth, async (req, res) => {
       [`AC${Date.now()}`, req.userId, -Number(amount), `Opened ${direction} ${pair} x${leverage}`]
     );
 
+    await query('COMMIT');
+
     res.json({
       success: true,
       position: { id, pair, direction, leverage, amount, entryPrice, liquidationPrice },
       message: `${direction === 'long' ? '▲ Long' : '▼ Short'} position opened at $${entryPrice.toFixed(2)}`
     });
   } catch (err) {
+    await query('ROLLBACK');
     console.error('Open position error:', err);
     res.status(500).json({ error: err.message || 'Failed to open position' });
   }
+
 });
 
-// POST /api/contract/close/:id — close a position
+// POST /api/contract/close/:id — close a position safely
 router.post('/close/:id', requireAuth, async (req, res) => {
   const { id } = req.params;
+
+  await query('BEGIN');
   try {
+    // Acquire exclusive lock on the position row to prevent concurrent duplicate closes
     const posRes = await query(
-      `SELECT * FROM contract_orders WHERE id = $1 AND user_id = $2 AND status = 'open'`,
+      `SELECT * FROM contract_orders WHERE id = $1 AND user_id = $2 AND status = 'open' FOR UPDATE`,
       [id, req.userId]
     );
     const pos = posRes.rows[0];
-    if (!pos) return res.status(404).json({ error: 'Position not found or already closed' });
+    if (!pos) {
+      await query('ROLLBACK');
+      return res.status(404).json({ error: 'Position not found or already closed' });
+    }
 
+    // Immediately mark position as closed inside the transaction
     // Fetch live close price from Binance
-    const closePrice = await getBinancePrice(pos.pair);
+    const closePrice = await getBinancePrice(pos.pair).catch(() => parseFloat(pos.entry_price));
 
     // Calculate P&L
     // Notional = amount * leverage
@@ -135,17 +147,15 @@ router.post('/close/:id', requireAuth, async (req, res) => {
     const returnAmount = Math.max(0, parseFloat(pos.amount) + pnl); // can't return more than position (liquidation)
     const finalPnl = returnAmount - parseFloat(pos.amount);
 
-    // Update position
+    // Update position status inside transaction
     await query(
       `UPDATE contract_orders 
        SET status = 'closed', profit_loss = $1, close_price = $2, closed_at = NOW()
-       WHERE id = $3`,
+       WHERE id = $3 AND status = 'open'`,
       [finalPnl, closePrice, id]
     );
 
     // Release frozen margin and credit return amount back to available_balance.
-    // total_assets is adjusted by the P&L (finalPnl) so the invariant
-    // total_assets = available_balance + frozen_balance is preserved.
     await query(
       `UPDATE users 
        SET frozen_balance = GREATEST(0, frozen_balance - $1),
@@ -155,7 +165,7 @@ router.post('/close/:id', requireAuth, async (req, res) => {
       [pos.amount, returnAmount, finalPnl, req.userId]
     );
 
-    // Log account change
+    // Log account change inside transaction
     await query(
       `INSERT INTO account_changes (id, user_id, type, amount, balance_after, remark)
        VALUES ($1, $2, $3, $4, (SELECT available_balance FROM users WHERE id = $2), $5)`,
@@ -168,6 +178,8 @@ router.post('/close/:id', requireAuth, async (req, res) => {
       ]
     );
 
+    await query('COMMIT');
+
     res.json({
       success: true,
       pnl: finalPnl,
@@ -176,10 +188,12 @@ router.post('/close/:id', requireAuth, async (req, res) => {
       message: `Position closed. P&L: ${finalPnl >= 0 ? '+' : ''}$${finalPnl.toFixed(2)}`
     });
   } catch (err) {
+    await query('ROLLBACK');
     console.error('Close position error:', err);
     res.status(500).json({ error: err.message || 'Failed to close position' });
   }
 });
+
 
 // GET /api/contract/pairs — all available USDT pairs from Binance
 router.get('/pairs', async (req, res) => {

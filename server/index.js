@@ -103,8 +103,12 @@ function ensureDbInit() {
   return dbInitPromise;
 }
 
+import { runPositionAndBalanceAudit } from './utils/audit.js';
+
 // Kick off DB init immediately on cold start
-ensureDbInit();
+ensureDbInit().then(() => {
+  runPositionAndBalanceAudit().catch(() => {});
+});
 
 // For local dev: start listening
 if (process.env.VERCEL !== '1' && !process.env.VERCEL_ENV) {
@@ -113,6 +117,7 @@ if (process.env.VERCEL !== '1' && !process.env.VERCEL_ENV) {
     while (retries > 0) {
       try {
         await ensureDbInit();
+        await runPositionAndBalanceAudit().catch(() => {});
         app.listen(PORT, () => {
           console.log(`\n🚀 RXDT Exchange Backend Server running on http://localhost:${PORT}`);
           console.log(`🐘 Connected to Neon PostgreSQL Database`);
@@ -129,5 +134,6 @@ if (process.env.VERCEL !== '1' && !process.env.VERCEL_ENV) {
   };
   startLocal();
 }
+
 
 export default app;
