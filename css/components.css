@@ -3909,3 +3909,50 @@
   padding-top: 10px;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
+
+/* Mobile Responsiveness for AI Signals Cards */
+@media (max-width: 576px) {
+  .signals-carousel-track {
+    gap: 12px;
+    scroll-snap-type: x mandatory;
+  }
+
+  .signals-card-item {
+    min-width: 85vw;
+    max-width: 88vw;
+    scroll-snap-align: center;
+  }
+
+  .signals-img-box {
+    height: 150px;
+  }
+
+  .signals-banner-img {
+    object-fit: cover;
+    object-position: center;
+  }
+
+  .signals-card-body {
+    padding: 12px;
+  }
+
+  .signals-title {
+    font-size: 14px;
+  }
+
+  .signals-desc {
+    font-size: 12px;
+    margin-bottom: 10px;
+  }
+}
+
+@media (max-width: 380px) {
+  .signals-card-item {
+    min-width: 88vw;
+    max-width: 90vw;
+  }
+
+  .signals-img-box {
+    height: 135px;
+  }
+}
