@@ -125,6 +125,17 @@ function renderProfileMain() {
         <div class="pmi-label">Price Method</div>
         <div class="pmi-arrow">›</div>
       </div>
+      <div class="profile-menu-item" style="cursor:default;">
+        <div class="pmi-icon">⚡</div>
+        <div class="pmi-label">Auto Execute Signals</div>
+        <div class="pmi-value" style="display:flex;align-items:center;gap:8px;">
+          <label class="signal-toggle">
+            <input type="checkbox" id="profile-auto-exec-toggle" ${user?.autoSignalExec !== false ? 'checked' : ''} onchange="toggleProfileAutoExec(this.checked)"/>
+            <span class="signal-toggle-slider"></span>
+          </label>
+          <span class="signal-toggle-label" id="profile-auto-exec-label" style="color:${user?.autoSignalExec !== false ? '#00c49a' : '#f59e0b'};">${user?.autoSignalExec !== false ? 'Auto' : 'Manual'}</span>
+        </div>
+      </div>
       <div class="profile-menu-item" onclick="navigateTo('customer-service')">
         <div class="pmi-icon">🎧</div>
         <div class="pmi-label">Online Service</div>
@@ -537,6 +548,23 @@ function renderCustomerService() {
 
 export function init(page) {
   window.toast = toast;
+
+  // ---- Toggle Auto/Manual Signal Execution (global preference) ----
+  window.toggleProfileAutoExec = async function (checked) {
+    const label = document.getElementById('profile-auto-exec-label');
+    try {
+      await store.setSignalPreference(checked);
+      if (label) {
+        label.textContent = checked ? 'Auto' : 'Manual';
+        label.style.color = checked ? '#00c49a' : '#f59e0b';
+      }
+      toast(checked ? '✅ Auto execution enabled — all signals will be executed automatically' : 'ℹ️ Manual mode enabled — you will be notified and can execute signals manually', checked ? 'success' : 'info');
+    } catch (err) {
+      toast('Failed to update signal preference: ' + err.message, 'error');
+      const toggle = document.getElementById('profile-auto-exec-toggle');
+      if (toggle) toggle.checked = !checked;
+    }
+  };
 
   window.openVipPosterModal = function () {
     const modal = document.getElementById('vip-poster-modal');
