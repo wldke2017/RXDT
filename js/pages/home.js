@@ -11,7 +11,7 @@ export function render() {
   return `
   <!-- Home Hero Section with AI Signals Focus -->
   <div class="home-hero-container">
-    <div class="home-hero-bg" style="background-image: url('assets/images/rxdt_home_hero_bg.png');"></div>
+    <div class="home-hero-bg"></div>
     <div class="home-hero-overlay"></div>
     
     <div class="home-hero-inner">
