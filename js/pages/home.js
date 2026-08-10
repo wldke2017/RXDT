@@ -59,7 +59,7 @@ export function render() {
         </p>
 
         <div class="home-quick-actions">
-          <button class="btn-dark action-btn" onclick="navigateTo('follow')">⚡ Access AI Signals</button>
+          <button class="btn-dark action-btn" onclick="navigateTo('contract')">⚡ Access AI Signals</button>
           <button class="btn-outline action-btn" onclick="navigateTo('market')">📊 Live Signal Feeds</button>
           <button class="btn-outline action-btn" onclick="navigateTo('invite-friends')">🎁 Refer & Earn</button>
           <button class="btn-outline action-btn" onclick="navigateTo('earn-guide')">📈 Signals Guide</button>
@@ -70,19 +70,19 @@ export function render() {
 
   <!-- AI Signals Visual Showcase (Auto-scrolling Image Carousel) -->
   <div class="card" style="margin-top:24px; padding:20px;">
-    <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+    <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
       <div style="display:flex;align-items:center;gap:10px;">
         <img src="assets/images/rxdt_logo.png" alt="RXDT Logo" style="width:28px;height:28px;filter:drop-shadow(0 0 6px rgba(0,242,254,0.6));"/>
-        <span style="font-size:18px;font-weight:700;">RXDT AI Signal Engines & Strategy Showcase</span>
+        <span style="font-size:18px;font-weight:700;">RXDT Daily AI Signal Trading Windows</span>
       </div>
-      <button class="btn-outline" style="font-size:13px;padding:6px 14px;" onclick="navigateTo('follow')">Start Copying Signals →</button>
+      <button class="btn-outline" style="font-size:13px;padding:6px 14px;" onclick="navigateTo('contract')">Start Copying Signals →</button>
     </div>
 
     <!-- Auto Scroll Horizontality Carousel -->
     <div class="signals-carousel-wrapper">
       <div class="signals-carousel-track" id="signalsCarouselTrack">
         <!-- Signal 1: 5:00 PM EAT -->
-        <div class="signals-card-item card-glass" onclick="navigateTo('follow')">
+        <div class="signals-card-item card-glass" onclick="navigateTo('contract')">
           <div class="signals-img-box">
             <img src="assets/images/daily_signal_1_5pm.png" alt="AI Signal 1 - 5:00 PM EAT" class="signals-banner-img"/>
             <div class="signals-img-badge">⏰ 5:00 PM EAT (14:00 UTC)</div>
@@ -95,13 +95,13 @@ export function render() {
             <p class="signals-desc">First daily quantitative trade window for Tier 1 traders & above ($100+ deposit).</p>
             <div class="signals-meta">
               <span>Time Window: <strong style="color:var(--el-color-primary);">5:00 - 5:30 PM</strong></span>
-              <button class="btn-primary btn-sm" onclick="event.stopPropagation(); navigateTo('follow')">Join 5 PM Signal</button>
+              <button class="btn-primary btn-sm" onclick="event.stopPropagation(); navigateTo('contract')">Join 5 PM Signal</button>
             </div>
           </div>
         </div>
 
         <!-- Signal 2: 6:00 PM EAT -->
-        <div class="signals-card-item card-glass" onclick="navigateTo('follow')">
+        <div class="signals-card-item card-glass" onclick="navigateTo('contract')">
           <div class="signals-img-box">
             <img src="assets/images/daily_signal_2_6pm.png" alt="AI Signal 2 - 6:00 PM EAT" class="signals-banner-img"/>
             <div class="signals-img-badge">⏰ 6:00 PM EAT (15:00 UTC)</div>
@@ -114,13 +114,13 @@ export function render() {
             <p class="signals-desc">Second daily quantitative trade window for Tier 2 traders & above ($300+ deposit).</p>
             <div class="signals-meta">
               <span>Time Window: <strong style="color:var(--el-color-primary);">6:00 - 6:30 PM</strong></span>
-              <button class="btn-primary btn-sm" onclick="event.stopPropagation(); navigateTo('follow')">Join 6 PM Signal</button>
+              <button class="btn-primary btn-sm" onclick="event.stopPropagation(); navigateTo('contract')">Join 6 PM Signal</button>
             </div>
           </div>
         </div>
 
         <!-- Signal 3: 7:00 PM EAT -->
-        <div class="signals-card-item card-glass" onclick="navigateTo('follow')">
+        <div class="signals-card-item card-glass" onclick="navigateTo('contract')">
           <div class="signals-img-box">
             <img src="assets/images/daily_signal_3_7pm.png" alt="AI Signal 3 - 7:00 PM EAT" class="signals-banner-img"/>
             <div class="signals-img-badge">🔥 7:00 PM EAT (16:00 UTC)</div>
@@ -133,7 +133,7 @@ export function render() {
             <p class="signals-desc">Third daily quantitative trade window for Tier 3 traders & VIPs ($1,000+ deposit).</p>
             <div class="signals-meta">
               <span>Time Window: <strong style="color:var(--el-color-primary);">7:00 - 7:30 PM</strong></span>
-              <button class="btn-primary btn-sm" onclick="event.stopPropagation(); navigateTo('follow')">Join 7 PM Signal</button>
+              <button class="btn-primary btn-sm" onclick="event.stopPropagation(); navigateTo('contract')">Join 7 PM Signal</button>
             </div>
           </div>
         </div>
