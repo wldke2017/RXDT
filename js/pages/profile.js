@@ -745,6 +745,31 @@ export function init(page) {
     }
   }
 
+  // Check email binding status on security settings load
+  async function checkEmailStatus() {
+    try {
+      const data = await authFetch('/api/email/email-status');
+      const sub = document.getElementById('email-bind-status-sub');
+      const container = document.getElementById('email-bind-btn-container');
+      if (data.emailBound) {
+        if (sub) sub.textContent = `Bound: ${data.emailBound}`;
+        if (container) container.innerHTML = `<span class="badge badge-success">Bound</span>`;
+      } else {
+        if (sub) sub.textContent = 'No email address bound';
+        if (container) container.innerHTML = `<button class="btn-outline" style="padding:7px 16px;font-size:13px;" onclick="openBindEmailModal()">Bind Email</button>`;
+      }
+    } catch (e) { }
+  }
+
+  // Make open/close email modal available globally before any call
+  window.openBindEmailModal = function () {
+    document.getElementById('bind-email-modal')?.classList.add('active');
+  };
+
+  window.closeBindEmailModal = function () {
+    document.getElementById('bind-email-modal')?.classList.remove('active');
+  };
+
   if (page === 'invite-friends') loadReferralStats();
   if (page === 'security-settings') {
     checkEmailStatus();
@@ -814,13 +839,7 @@ export function init(page) {
     }
   };
 
-  window.openBindEmailModal = function () {
-    document.getElementById('bind-email-modal')?.classList.add('active');
-  };
-
-  window.closeBindEmailModal = function () {
-    document.getElementById('bind-email-modal')?.classList.remove('active');
-  };
+  // openBindEmailModal / closeBindEmailModal already defined above
 
   window.sendBindEmailOtp = async function () {
     const email = document.getElementById('bind-email-input')?.value;
