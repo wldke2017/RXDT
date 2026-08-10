@@ -85,11 +85,15 @@ export function render() {
         <div class="signals-card-item card-glass" onclick="navigateTo('contract')">
           <div class="signals-img-box">
             <img src="assets/images/daily_signal_1_5pm.png" alt="AI Signal 1 - 5:00 PM EAT" class="signals-banner-img"/>
-            <div class="signals-img-badge">⏰ 5:00 PM EAT (14:00 UTC)</div>
           </div>
           <div class="signals-card-body">
             <div class="signals-card-header">
-              <span class="signals-title">Daily AI Signal #1</span>
+              <div>
+                <span class="signals-title">Daily AI Signal #1</span>
+                <div style="margin-top:4px;">
+                  <span class="chip chip-cyan" style="font-size:11px;font-weight:700;">⏰ 5:00 PM EAT (14:00 UTC)</span>
+                </div>
+              </div>
               <span class="chip chip-green">1.4% Yield</span>
             </div>
             <p class="signals-desc">First daily quantitative trade window for Tier 1 traders & above ($100+ deposit).</p>
@@ -104,11 +108,15 @@ export function render() {
         <div class="signals-card-item card-glass" onclick="navigateTo('contract')">
           <div class="signals-img-box">
             <img src="assets/images/daily_signal_2_6pm.png" alt="AI Signal 2 - 6:00 PM EAT" class="signals-banner-img"/>
-            <div class="signals-img-badge">⏰ 6:00 PM EAT (15:00 UTC)</div>
           </div>
           <div class="signals-card-body">
             <div class="signals-card-header">
-              <span class="signals-title">Daily AI Signal #2</span>
+              <div>
+                <span class="signals-title">Daily AI Signal #2</span>
+                <div style="margin-top:4px;">
+                  <span class="chip chip-cyan" style="font-size:11px;font-weight:700;">⏰ 6:00 PM EAT (15:00 UTC)</span>
+                </div>
+              </div>
               <span class="chip chip-cyan">2.4% Yield</span>
             </div>
             <p class="signals-desc">Second daily quantitative trade window for Tier 2 traders & above ($300+ deposit).</p>
@@ -123,11 +131,15 @@ export function render() {
         <div class="signals-card-item card-glass" onclick="navigateTo('contract')">
           <div class="signals-img-box">
             <img src="assets/images/daily_signal_3_7pm.png" alt="AI Signal 3 - 7:00 PM EAT" class="signals-banner-img"/>
-            <div class="signals-img-badge">🔥 7:00 PM EAT (16:00 UTC)</div>
           </div>
           <div class="signals-card-body">
             <div class="signals-card-header">
-              <span class="signals-title">Daily AI Signal #3</span>
+              <div>
+                <span class="signals-title">Daily AI Signal #3</span>
+                <div style="margin-top:4px;">
+                  <span class="chip chip-cyan" style="font-size:11px;font-weight:700;">🔥 7:00 PM EAT (16:00 UTC)</span>
+                </div>
+              </div>
               <span class="chip chip-green">3.1% Max Yield</span>
             </div>
             <p class="signals-desc">Third daily quantitative trade window for Tier 3 traders & VIPs ($1,000+ deposit).</p>
