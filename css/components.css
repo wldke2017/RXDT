@@ -3685,3 +3685,112 @@
   color: #ff4d4d;
   font-weight: 600;
 }
+
+/* ============================================================
+   How to Earn Guide Mobile & Tablet Responsiveness
+   ============================================================ */
+.earn-guide-step {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  margin-bottom: 12px;
+}
+
+.earn-guide-step-2 {
+  background: linear-gradient(135deg, rgba(0, 242, 254, 0.06), rgba(167, 139, 250, 0.03));
+  border: 1px solid rgba(0, 242, 254, 0.3);
+  border-radius: 14px;
+  padding: 18px;
+}
+
+.earn-guide-badge {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(0, 242, 254, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--el-color-primary, #00f2fe);
+}
+
+.earn-guide-tiers-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.earn-tier-card {
+  background: #090d16;
+  border: 1px solid #d97706;
+  border-radius: 12px;
+  padding: 14px 12px;
+  text-align: center;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.earn-tier-card img {
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+  cursor: pointer;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.earn-tier-card img:hover {
+  transform: scale(1.02);
+  border-color: #f59e0b;
+}
+
+/* Mobile adjustments (< 768px) */
+@media (max-width: 768px) {
+  .earn-guide-tiers-grid {
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 12px;
+  }
+}
+
+/* Small Mobile Phones (< 576px) */
+@media (max-width: 576px) {
+  .earn-guide-step {
+    padding: 12px 10px;
+    gap: 10px;
+  }
+  
+  .earn-guide-step-2 {
+    padding: 14px 12px;
+  }
+
+  .earn-guide-badge {
+    width: 32px;
+    height: 32px;
+    font-size: 15px;
+  }
+
+  .earn-guide-tiers-grid {
+    grid-template-columns: 1fr; /* Stack vertically on phones for clean reading */
+    gap: 12px;
+  }
+
+  .earn-tier-card {
+    padding: 12px 10px;
+  }
+
+  .earn-tier-card button {
+    font-size: 12px !important;
+    padding: 6px 0 !important;
+  }
+}

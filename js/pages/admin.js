@@ -111,9 +111,10 @@ function renderDashboard() {
     <div style="background:linear-gradient(135deg, #0f172a, #1e1b4b);border:1px solid #00f2fe;border-radius:14px;padding:16px 20px;margin-bottom:20px;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
         <div>
-          <h3 style="margin:0;font-size:15px;font-weight:800;color:#fff;">🖼️ Brand Assets</h3>
-          <div style="font-size:12px;color:var(--text-sub);margin-top:2px;">Official founder image & logo — downloadable for marketing & support use.</div>
+          <h3 style="margin:0;font-size:15px;font-weight:800;color:#fff;">🖼️ Brand & Marketing Assets</h3>
+          <div style="font-size:12px;color:var(--text-sub);margin-top:2px;">Official founder image, logo, copy-paste messages & VIP congratulation cards.</div>
         </div>
+        <button class="btn-outline" style="font-size:12px;padding:6px 14px;border-color:#00f2fe;color:#00f2fe;" onclick="switchAdminTab('marketing', document.querySelectorAll('.tabs-header .tab-btn')[8]);renderMarketingHubTab();">📢 Open Marketing & VIP Storage Hub →</button>
       </div>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;">
         <div style="text-align:center;background:rgba(255,255,255,0.03);padding:12px;border-radius:10px;border:1px solid rgba(0,242,254,0.2);">
@@ -139,6 +140,7 @@ function renderDashboard() {
       <button class="tab-btn" onclick="switchAdminTab('vip',this);loadVipRewardsView()">🎁 VIP Rewards</button>
       <button class="tab-btn" onclick="switchAdminTab('earnings',this);loadEarningsView()">📊 Earnings</button>
       <button class="tab-btn" onclick="switchAdminTab('infographics',this);renderInfographicsTab()">🖼️ Profit Cards</button>
+      <button class="tab-btn" onclick="switchAdminTab('marketing',this);renderMarketingHubTab()">📢 Marketing & VIP Assets</button>
       <button class="tab-btn" onclick="switchAdminTab('chat',this);loadChatConversations()">💬 Chat</button>
     </div>
 
@@ -178,6 +180,11 @@ function renderDashboard() {
     <!-- Infographics Panel -->
     <div id="admin-tab-infographics" style="display:none;">
       <div id="admin-infographics-container"></div>
+    </div>
+
+    <!-- Marketing & VIP Hub Panel -->
+    <div id="admin-tab-marketing" style="display:none;">
+      <div id="admin-marketing-container"></div>
     </div>
 
     <!-- Chat Panel -->
@@ -470,13 +477,14 @@ function initDashboard() {
   window.switchAdminTab = function (tab, btn) {
     document.querySelectorAll('.tabs-header .tab-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
-    ['deposits', 'withdrawals', 'kyc', 'users', 'signals', 'vip', 'earnings', 'infographics', 'chat'].forEach(t => {
+    ['deposits', 'withdrawals', 'kyc', 'users', 'signals', 'vip', 'earnings', 'infographics', 'marketing', 'chat'].forEach(t => {
       const el = document.getElementById(`admin-tab-${t}`);
       if (el) el.style.display = t === tab ? '' : 'none';
     });
     if (tab === 'users' && !allUsersCache.length) loadUsers();
     if (tab === 'signals') loadSignalTrades();
     if (tab === 'vip') loadVipRewardsView();
+    if (tab === 'marketing') renderMarketingHubTab();
   };
 
   window.loadVipRewardsView = async function () {
@@ -1458,6 +1466,467 @@ function initDashboard() {
     link.href = canvas.toDataURL('image/png');
     link.click();
     window.toast('📥 Downloading PNG image...', 'success');
+  };
+
+  // ============================================================
+  // 📢 Marketing, Brand Assets & VIP Congratulation Storage Hub
+  // ============================================================
+  
+  window.copyToClipboard = function (text, label = 'Message') {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(() => {
+        if (window.toast) window.toast(`📋 ${label} copied to clipboard!`, 'success');
+      }).catch(err => {
+        fallbackCopyText(text, label);
+      });
+    } else {
+      fallbackCopyText(text, label);
+    }
+  };
+
+  function fallbackCopyText(text, label) {
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.style.position = 'fixed';
+    textarea.style.opacity = '0';
+    document.body.appendChild(textarea);
+    textarea.select();
+    try {
+      document.execCommand('copy');
+      if (window.toast) window.toast(`📋 ${label} copied to clipboard!`, 'success');
+    } catch (e) {
+      alert(`Could not auto-copy. Please copy manually:\n\n${text}`);
+    }
+    document.body.removeChild(textarea);
+  }
+
+  const DEFAULT_MARKETING_MESSAGES = [
+    {
+      id: 'msg-welcome-1',
+      title: '🚀 Welcome & Quick Start Pitch',
+      platform: 'Telegram / WhatsApp',
+      category: 'Onboarding',
+      text: `Welcome to RXDT Exchange! 📈
+
+Follow these simple steps to start earning daily profits:
+1. 💰 Deposit $100+ to unlock Tier 1 Copy Trading.
+2. 📡 Join live AI signals daily at 5:00 PM, 6:00 PM & 7:00 PM EAT.
+3. 🤖 Allocate capital to AI Quantitative Models for 1.8%-2.8% daily returns.
+4. 👥 Invite friends to earn 7.5% referral profit commissions!
+
+Official Telegram: @RXDT888 | Website: https://rxdt.site`
+    },
+    {
+      id: 'msg-signal-alert',
+      title: '📡 Daily Signal Window Alert',
+      platform: 'Telegram',
+      category: 'Signals',
+      text: `⚡ ATTENTION RXDT TRADERS! ⚡
+
+Live AI Strategy Copy Trading Signal is NOW ACTIVE! 🚀
+
+🕒 Signal Schedule (EAT):
+• Tier 1 ($100+): 5:00 PM EAT (1.4% Return)
+• Tier 2 ($300+): 6:00 PM EAT (2.4% Return)
+• Tier 3 ($1,000+): 7:00 PM EAT (3.1% Return)
+
+👉 Log in now & click 'Join Strategy Copy Trading' on the Contract page before the signal window closes!`
+    },
+    {
+      id: 'msg-vip-pitch',
+      title: '🏆 VIP 1 - VIP 9 Monthly Salary & Bonus Pitch',
+      platform: 'Facebook / WhatsApp',
+      category: 'VIP',
+      text: `💰 Build Your Team & Unlock 10-Day Salaries on RXDT! 🏆
+
+Did you know you can earn guaranteed recurring salaries every 10 days?
+
+• VIP 1 (5 Members): $30 every 10 days ($90/mo) + $100 Bonus
+• VIP 2 (15 Members): $70 every 10 days ($210/mo) + $250 Bonus
+• VIP 3 (30 Members): $150 every 10 days ($450/mo) + $500 Bonus
+• VIP 4 (60 Members): $300 every 10 days ($900/mo) + $1,000 Bonus
+
+Salaries are automatically distributed on the 3rd, 13th, & 23rd of every month! Start inviting today!`
+    },
+    {
+      id: 'msg-support-contact',
+      title: '💬 Customer Support & CEO Telegram Contact',
+      platform: 'Support',
+      category: 'Support',
+      text: `Hello! Need assistance or have questions about your deposits, withdrawals, or copy trading signals?
+
+Contact our Founder & CEO Arthur Vance directly on Telegram:
+👉 Username: @RXDT888
+👉 Link: https://t.me/RXDT888
+
+Our team is available 24/7 to assist you!`
+    }
+  ];
+
+  const DEFAULT_BRAND_IMAGES = [
+    { id: 'img-founder', name: 'Arthur Vance — Founder & CEO', category: 'Founder', path: 'assets/images/warren_pennington.png' },
+    { id: 'img-logo', name: 'RXDT Exchange Official Logo', category: 'Branding', path: 'assets/images/rxdt_logo.png' },
+    { id: 'img-tier1', name: 'Tier 1 ($100 Plan) Strategy Poster', category: 'Strategy Posters', path: 'assets/images/rxdt_100_strategy.png' },
+    { id: 'img-tier2', name: 'Tier 2 ($300 Plan) Strategy Poster', category: 'Strategy Posters', path: 'assets/images/rxdt_300_strategy.png' },
+    { id: 'img-tier3', name: 'Tier 3 ($1,000 Plan) Strategy Poster', category: 'Strategy Posters', path: 'assets/images/rxdt_1000_strategy.png' },
+    { id: 'img-vip-matrix', name: 'VIP Monthly Salary & Promotion Reward Matrix', category: 'VIP Banners', path: 'assets/images/rxdt_vip_rewards.png' },
+    { id: 'img-signal-popup', name: 'Strategy Copy Trading Signal Popup Header', category: 'Signals', path: 'assets/images/signal_popup.png' }
+  ];
+
+  const VIP_TIER_DATA = [
+    { level: 1, name: 'VIP 1 Junior Trader', members: 5, salary: '$30', salaryTotal: '$90/mo', bonus: '$100', icon: '🥉' },
+    { level: 2, name: 'VIP 2 Senior Trader', members: 15, salary: '$70', salaryTotal: '$210/mo', bonus: '$250', icon: '🥈' },
+    { level: 3, name: 'VIP 3 Master Trader', members: 30, salary: '$150', salaryTotal: '$450/mo', bonus: '$500', icon: '🥇' },
+    { level: 4, name: 'VIP 4 Elite Strategist', members: 60, salary: '$300', salaryTotal: '$900/mo', bonus: '$1,000', icon: '💎' },
+    { level: 5, name: 'VIP 5 Regional Director', members: 120, salary: '$600', salaryTotal: '$1,800/mo', bonus: '$2,200', icon: '👑' },
+    { level: 6, name: 'VIP 6 Managing Director', members: 250, salary: '$1,200', salaryTotal: '$3,600/mo', bonus: '$4,500', icon: '🌟' },
+    { level: 7, name: 'VIP 7 Global Ambassador', members: 500, salary: '$1,800', salaryTotal: '$5,400/mo', bonus: '$6,500', icon: '🚀' },
+    { level: 8, name: 'VIP 8 Executive Partner', members: 1000, salary: '$2,400', salaryTotal: '$7,200/mo', bonus: '$8,500', icon: '🔥' },
+    { level: 9, name: 'VIP 9 Chairman Club', members: 2000, salary: '$3,000', salaryTotal: '$9,000/mo', bonus: '$11,000', icon: '🏆' }
+  ];
+
+  window.renderMarketingHubTab = function () {
+    const container = document.getElementById('admin-marketing-container');
+    if (!container) return;
+
+    let messages = JSON.parse(localStorage.getItem('rxdt_admin_messages') || 'null');
+    if (!messages) {
+      messages = DEFAULT_MARKETING_MESSAGES;
+      localStorage.setItem('rxdt_admin_messages', JSON.stringify(messages));
+    }
+
+    let images = JSON.parse(localStorage.getItem('rxdt_admin_images') || 'null');
+    if (!images) {
+      images = DEFAULT_BRAND_IMAGES;
+      localStorage.setItem('rxdt_admin_images', JSON.stringify(images));
+    }
+
+    container.innerHTML = `
+      <div style="background:linear-gradient(135deg, #0f172a, #1e1b4b);border:1px solid #00f2fe;border-radius:16px;padding:20px;margin-bottom:24px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+          <div>
+            <h2 style="margin:0;font-size:20px;font-weight:800;color:#fff;display:flex;align-items:center;gap:8px;">
+              📢 Marketing, Brand Assets & VIP Celebration Hub
+            </h2>
+            <div style="font-size:13px;color:var(--text-sub);margin-top:4px;">
+              Centralized library for copy-paste marketing messages, VIP achievement cards, and official brand assets for WhatsApp, Telegram & Facebook.
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="btn-outline" onclick="openAddMessageModal()" style="font-size:12px;padding:8px 14px;border-color:#00f2fe;color:#00f2fe;">➕ Add New Message</button>
+            <button class="btn-outline" onclick="openAddImageModal()" style="font-size:12px;padding:8px 14px;border-color:#f59e0b;color:#f59e0b;">📤 Upload Brand Asset</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sub Navigation Buttons -->
+      <div style="display:flex;gap:10px;margin-bottom:20px;border-bottom:1px solid rgba(255,255,255,0.1);padding-bottom:12px;flex-wrap:wrap;">
+        <button class="btn-outline active-subtab" id="subtab-btn-messages" onclick="switchMarketingSubTab('messages')" style="font-size:13px;padding:8px 16px;background:rgba(0,242,254,0.15);border-color:#00f2fe;color:#00f2fe;">📋 Copy-Paste Messages</button>
+        <button class="btn-outline" id="subtab-btn-vip" onclick="switchMarketingSubTab('vip')" style="font-size:13px;padding:8px 16px;border-color:rgba(255,255,255,0.2);color:var(--text-sub);">🏆 VIP Congratulation Cards (VIP 1–9)</button>
+        <button class="btn-outline" id="subtab-btn-images" onclick="switchMarketingSubTab('images')" style="font-size:13px;padding:8px 16px;border-color:rgba(255,255,255,0.2);color:var(--text-sub);">🖼️ Brand & Image Library</button>
+      </div>
+
+      <!-- SUB-SECTION 1: Copy-Paste Messages -->
+      <div id="mkt-subtab-messages">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(320px, 1fr));gap:16px;">
+          ${messages.map(msg => `
+            <div style="background:#090d16;border:1px solid rgba(0,242,254,0.2);border-radius:14px;padding:16px;display:flex;flex-direction:column;justify-content:space-between;">
+              <div>
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                  <strong style="color:#00f2fe;font-size:14px;">${msg.title}</strong>
+                  <span style="font-size:10px;padding:2px 8px;border-radius:12px;background:rgba(0,242,254,0.15);color:#00f2fe;font-weight:700;">${msg.platform}</span>
+                </div>
+                <textarea readonly style="width:100%;height:140px;background:rgba(0,0,0,0.4);color:#e2e8f0;border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:10px;font-size:12px;font-family:monospace;resize:none;margin-bottom:12px;line-height:1.4;">${msg.text}</textarea>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+                <button class="btn-dark" style="flex:1;font-size:12px;padding:8px 0;background:#00f2fe;color:#000;font-weight:700;" onclick="copyToClipboard(\`${msg.text.replace(/`/g, '\\`').replace(/'/g, "\\'")}\`, '${msg.title.replace(/'/g, "\\'")}')">📋 Copy Message</button>
+                ${msg.isCustom ? `<button class="btn-outline" style="font-size:11px;padding:6px 10px;border-color:#ff4d4d;color:#ff4d4d;" onclick="deleteCustomMessage('${msg.id}')">🗑️</button>` : ''}
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+
+      <!-- SUB-SECTION 2: VIP Congratulation Cards (VIP 1 - VIP 9) -->
+      <div id="mkt-subtab-vip" style="display:none;">
+        <div style="margin-bottom:16px;background:rgba(245,158,11,0.1);border:1px solid #f59e0b;padding:12px 16px;border-radius:12px;font-size:13px;color:#fcd34d;">
+          💡 <strong>VIP Celebration Cards & Announcement Templates:</strong> Generate official congratulation posts for WhatsApp & Telegram groups when users unlock VIP ranks!
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(300px, 1fr));gap:16px;">
+          ${VIP_TIER_DATA.map(vip => {
+            const groupMsg = `🎉 *CONGRATULATIONS TO OUR NEW VIP TRADER!* 🎉\n\n👏 Huge congratulations to user **[Username / Phone]** for reaching **${vip.name}** on RXDT Exchange!\n\n${vip.icon} **VIP Level:** ${vip.name}\n💰 **10-Day Salary:** ${vip.salary} (Paid 3rd, 13th & 23rd)\n💵 **Monthly Income:** ${vip.salaryTotal}\n🎁 **Promotion Bonus:** ${vip.bonus} USDT\n\n🚀 Keep climbing the ranks on RXDT! Join live signals today at 5pm, 6pm & 7pm EAT!\n💬 CEO Telegram: @RXDT888`;
+            return `
+            <div style="background:#090d16;border:1px solid #f59e0b;border-radius:14px;padding:16px;text-align:center;position:relative;box-shadow:0 8px 24px rgba(0,0,0,0.5);">
+              <div style="font-size:36px;margin-bottom:6px;">${vip.icon}</div>
+              <div style="font-size:16px;font-weight:800;color:#f59e0b;margin-bottom:4px;">${vip.name}</div>
+              <div style="font-size:12px;color:var(--text-sub);margin-bottom:10px;">Requirement: <strong>${vip.members} Active Team Members</strong></div>
+              
+              <div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.25);border-radius:10px;padding:10px;margin-bottom:12px;font-size:12px;text-align:left;">
+                <div style="color:#fff;margin-bottom:2px;">💵 <strong>10-Day Salary:</strong> <span style="color:#10b981;font-weight:700;">${vip.salary}</span> (${vip.salaryTotal})</div>
+                <div style="color:#fff;">🎁 <strong>Promotion Bonus:</strong> <span style="color:#00f2fe;font-weight:700;">${vip.bonus} USDT</span></div>
+              </div>
+
+              <div style="display:flex;gap:8px;">
+                <button class="btn-outline" style="flex:1;font-size:11px;padding:7px 0;border-color:#f59e0b;color:#f59e0b;" onclick="copyToClipboard(\`${groupMsg.replace(/`/g, '\\`').replace(/'/g, "\\'")}\`, '${vip.name} Group Post')">📋 Copy Group Post</button>
+                <button class="btn-dark" style="flex:1;font-size:11px;padding:7px 0;background:#f59e0b;color:#000;font-weight:700;" onclick="downloadVipCardBadge(${vip.level})">📥 Download Badge</button>
+              </div>
+            </div>
+            `;
+          }).join('')}
+        </div>
+      </div>
+
+      <!-- SUB-SECTION 3: Brand & Image Library -->
+      <div id="mkt-subtab-images" style="display:none;">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(230px, 1fr));gap:16px;">
+          ${images.map(img => `
+            <div style="background:#090d16;border:1px solid rgba(0,242,254,0.25);border-radius:14px;padding:14px;text-align:center;display:flex;flex-direction:column;justify-content:space-between;">
+              <div>
+                <span style="font-size:10px;padding:2px 8px;border-radius:10px;background:rgba(0,242,254,0.15);color:#00f2fe;font-weight:700;display:inline-block;margin-bottom:6px;">${img.category}</span>
+                <div style="font-size:13px;font-weight:700;color:#fff;margin-bottom:10px;">${img.name}</div>
+                <div style="background:rgba(0,0,0,0.4);border-radius:10px;padding:8px;margin-bottom:10px;min-height:140px;display:flex;align-items:center;justify-content:center;">
+                  <img src="${img.path}" alt="${img.name}" style="max-width:100%;max-height:130px;object-fit:contain;border-radius:6px;" />
+                </div>
+              </div>
+              <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                <a href="${img.path}" download="${img.name.replace(/[^a-zA-Z0-9]/g, '_')}.png" class="btn-outline" style="flex:1;font-size:11px;padding:6px 0;border-color:#00f2fe;color:#00f2fe;text-align:center;display:block;">📥 Download</a>
+                <button class="btn-outline" style="flex:1;font-size:11px;padding:6px 0;border-color:rgba(255,255,255,0.3);color:#fff;" onclick="copyToClipboard('${img.path}', 'Image Path')">📋 Path</button>
+                ${img.isCustom ? `<button class="btn-outline" style="font-size:11px;padding:6px 8px;border-color:#ff4d4d;color:#ff4d4d;" onclick="deleteCustomImage('${img.id}')">🗑️</button>` : ''}
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+
+      <!-- Add Message Modal -->
+      <div class="modal-overlay" id="add-message-modal" style="display:none;z-index:9999;">
+        <div class="modal-content" style="max-width:500px;background:#090d16;border:1px solid #00f2fe;border-radius:16px;padding:20px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+            <strong style="color:#00f2fe;font-size:16px;">➕ Add Custom Copy-Paste Message</strong>
+            <button class="btn-outline" style="padding:2px 8px;" onclick="closeAddMessageModal()">✕</button>
+          </div>
+          <div style="margin-bottom:10px;">
+            <label style="font-size:12px;color:var(--text-sub);display:block;margin-bottom:4px;">Message Title</label>
+            <input type="text" id="new-msg-title" class="form-control" placeholder="e.g. Special Weekend Promo Pitch" style="width:100%;" />
+          </div>
+          <div style="margin-bottom:10px;">
+            <label style="font-size:12px;color:var(--text-sub);display:block;margin-bottom:4px;">Platform Target</label>
+            <select id="new-msg-platform" class="form-control" style="width:100%;">
+              <option value="WhatsApp">WhatsApp</option>
+              <option value="Telegram">Telegram</option>
+              <option value="Facebook">Facebook</option>
+              <option value="Support">Support Reply</option>
+              <option value="General">General Marketing</option>
+            </select>
+          </div>
+          <div style="margin-bottom:14px;">
+            <label style="font-size:12px;color:var(--text-sub);display:block;margin-bottom:4px;">Message Text</label>
+            <textarea id="new-msg-text" class="form-control" style="width:100%;height:120px;font-family:monospace;font-size:12px;" placeholder="Write your marketing or copy-paste text here..."></textarea>
+          </div>
+          <button class="btn-dark" style="width:100%;background:#00f2fe;color:#000;font-weight:700;padding:10px 0;" onclick="saveCustomMessage()">Save Message Template</button>
+        </div>
+      </div>
+
+      <!-- Add Image Modal -->
+      <div class="modal-overlay" id="add-image-modal" style="display:none;z-index:9999;">
+        <div class="modal-content" style="max-width:500px;background:#090d16;border:1px solid #f59e0b;border-radius:16px;padding:20px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+            <strong style="color:#f59e0b;font-size:16px;">📤 Upload Brand Asset / Image</strong>
+            <button class="btn-outline" style="padding:2px 8px;" onclick="closeAddImageModal()">✕</button>
+          </div>
+          <div style="margin-bottom:10px;">
+            <label style="font-size:12px;color:var(--text-sub);display:block;margin-bottom:4px;">Asset Name / Description</label>
+            <input type="text" id="new-img-name" class="form-control" placeholder="e.g. CEO Anniversary Banner" style="width:100%;" />
+          </div>
+          <div style="margin-bottom:10px;">
+            <label style="font-size:12px;color:var(--text-sub);display:block;margin-bottom:4px;">Category</label>
+            <input type="text" id="new-img-category" class="form-control" placeholder="e.g. Promo Banners" style="width:100%;" />
+          </div>
+          <div style="margin-bottom:10px;">
+            <label style="font-size:12px;color:var(--text-sub);display:block;margin-bottom:4px;">Upload File OR Enter Image URL</label>
+            <input type="file" id="new-img-file" accept="image/*" class="form-control" style="width:100%;margin-bottom:6px;" />
+            <input type="text" id="new-img-url" class="form-control" placeholder="OR paste image URL here (https://...)" style="width:100%;" />
+          </div>
+          <button class="btn-dark" style="width:100%;background:#f59e0b;color:#000;font-weight:700;padding:10px 0;" onclick="saveCustomImage()">Upload Asset to Storage</button>
+        </div>
+      </div>
+    `;
+  };
+
+  window.switchMarketingSubTab = function (tab) {
+    const tabs = ['messages', 'vip', 'images'];
+    tabs.forEach(t => {
+      const btn = document.getElementById(`subtab-btn-${t}`);
+      const sec = document.getElementById(`mkt-subtab-${t}`);
+      if (sec) sec.style.display = t === tab ? '' : 'none';
+      if (btn) {
+        if (t === tab) {
+          btn.style.background = t === 'vip' ? 'rgba(245,158,11,0.15)' : 'rgba(0,242,254,0.15)';
+          btn.style.borderColor = t === 'vip' ? '#f59e0b' : '#00f2fe';
+          btn.style.color = t === 'vip' ? '#f59e0b' : '#00f2fe';
+        } else {
+          btn.style.background = 'transparent';
+          btn.style.borderColor = 'rgba(255,255,255,0.2)';
+          btn.style.color = 'var(--text-sub)';
+        }
+      }
+    });
+  };
+
+  window.openAddMessageModal = function () {
+    const m = document.getElementById('add-message-modal');
+    if (m) m.style.display = 'flex';
+  };
+
+  window.closeAddMessageModal = function () {
+    const m = document.getElementById('add-message-modal');
+    if (m) m.style.display = 'none';
+  };
+
+  window.saveCustomMessage = function () {
+    const title = document.getElementById('new-msg-title')?.value.trim();
+    const platform = document.getElementById('new-msg-platform')?.value;
+    const text = document.getElementById('new-msg-text')?.value.trim();
+
+    if (!title || !text) {
+      if (window.toast) window.toast('Please enter both title and message text', 'error');
+      return;
+    }
+
+    let messages = JSON.parse(localStorage.getItem('rxdt_admin_messages') || '[]');
+    messages.push({
+      id: 'custom-msg-' + Date.now(),
+      title,
+      platform,
+      category: 'Custom',
+      text,
+      isCustom: true
+    });
+
+    localStorage.setItem('rxdt_admin_messages', JSON.stringify(messages));
+    closeAddMessageModal();
+    renderMarketingHubTab();
+    if (window.toast) window.toast('✅ Custom message template saved!', 'success');
+  };
+
+  window.deleteCustomMessage = function (id) {
+    let messages = JSON.parse(localStorage.getItem('rxdt_admin_messages') || '[]');
+    messages = messages.filter(m => m.id !== id);
+    localStorage.setItem('rxdt_admin_messages', JSON.stringify(messages));
+    renderMarketingHubTab();
+    if (window.toast) window.toast('Custom message deleted', 'info');
+  };
+
+  window.openAddImageModal = function () {
+    const m = document.getElementById('add-image-modal');
+    if (m) m.style.display = 'flex';
+  };
+
+  window.closeAddImageModal = function () {
+    const m = document.getElementById('add-image-modal');
+    if (m) m.style.display = 'none';
+  };
+
+  window.saveCustomImage = function () {
+    const name = document.getElementById('new-img-name')?.value.trim();
+    const category = document.getElementById('new-img-category')?.value.trim() || 'Custom';
+    const fileInput = document.getElementById('new-img-file');
+    const urlInput = document.getElementById('new-img-url')?.value.trim();
+
+    if (!name) {
+      if (window.toast) window.toast('Please enter asset name', 'error');
+      return;
+    }
+
+    const processSave = (path) => {
+      let images = JSON.parse(localStorage.getItem('rxdt_admin_images') || '[]');
+      images.push({
+        id: 'custom-img-' + Date.now(),
+        name,
+        category,
+        path,
+        isCustom: true
+      });
+      localStorage.setItem('rxdt_admin_images', JSON.stringify(images));
+      closeAddImageModal();
+      renderMarketingHubTab();
+      if (window.toast) window.toast('✅ Brand asset uploaded and saved!', 'success');
+    };
+
+    if (fileInput && fileInput.files && fileInput.files[0]) {
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        processSave(e.target.result);
+      };
+      reader.readAsDataURL(fileInput.files[0]);
+    } else if (urlInput) {
+      processSave(urlInput);
+    } else {
+      if (window.toast) window.toast('Please upload an image file or enter a valid URL', 'error');
+    }
+  };
+
+  window.deleteCustomImage = function (id) {
+    let images = JSON.parse(localStorage.getItem('rxdt_admin_images') || '[]');
+    images = images.filter(i => i.id !== id);
+    localStorage.setItem('rxdt_admin_images', JSON.stringify(images));
+    renderMarketingHubTab();
+    if (window.toast) window.toast('Brand asset deleted', 'info');
+  };
+
+  window.downloadVipCardBadge = function (level) {
+    const vip = VIP_TIER_DATA.find(v => v.level === level);
+    if (!vip) return;
+
+    const canvas = document.createElement('canvas');
+    canvas.width = 600;
+    canvas.height = 360;
+    const ctx = canvas.getContext('2d');
+
+    const bgGrad = ctx.createLinearGradient(0, 0, 600, 360);
+    bgGrad.addColorStop(0, '#090d16');
+    bgGrad.addColorStop(1, '#1e1b4b');
+    ctx.fillStyle = bgGrad;
+    ctx.fillRect(0, 0, 600, 360);
+
+    ctx.strokeStyle = '#f59e0b';
+    ctx.lineWidth = 4;
+    ctx.strokeRect(10, 10, 580, 340);
+
+    ctx.fillStyle = '#00f2fe';
+    ctx.font = 'bold 16px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('RXDT EXCHANGE OFFICIAL VIP ACHIEVEMENT', 300, 45);
+
+    ctx.font = '54px sans-serif';
+    ctx.fillText(vip.icon, 300, 115);
+
+    ctx.fillStyle = '#f59e0b';
+    ctx.font = 'bold 24px sans-serif';
+    ctx.fillText(vip.name.toUpperCase(), 300, 160);
+
+    ctx.strokeStyle = 'rgba(245,158,11,0.4)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(100, 180);
+    ctx.lineTo(500, 180);
+    ctx.stroke();
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '16px sans-serif';
+    ctx.fillText(`10-Day Recurring Salary: ${vip.salary} (${vip.salaryTotal})`, 300, 225);
+    ctx.fillText(`Promotion Reward: ${vip.bonus} USDT`, 300, 255);
+    ctx.fillText(`Active Direct Members: ${vip.members}+`, 300, 285);
+
+    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    ctx.font = '12px sans-serif';
+    ctx.fillText('Verify & Join: https://rxdt.site | Telegram CEO: @RXDT888', 300, 325);
+
+    const link = document.createElement('a');
+    link.download = `RXDT_${vip.name.replace(/\s+/g, '_')}_Badge.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+    if (window.toast) window.toast(`📥 Downloading ${vip.name} Badge PNG...`, 'success');
   };
 
   // Auto-load on init

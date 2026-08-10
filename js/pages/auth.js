@@ -569,8 +569,8 @@ function renderEarnGuide() {
       </div>
 
       <!-- Step 1: Deposit -->
-      <div class="earn-guide-step" style="display:flex;gap:14px;align-items:flex-start;padding:16px;background:rgba(255,255,255,0.03);border:1px solid var(--border-color);border-radius:12px;margin-bottom:12px;">
-        <div style="flex-shrink:0;width:40px;height:40px;border-radius:50%;background:rgba(0,242,254,0.15);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:var(--el-color-primary);">1</div>
+      <div class="earn-guide-step">
+        <div class="earn-guide-badge">1</div>
         <div style="flex:1;">
           <div style="font-weight:700;font-size:16px;color:var(--el-color-primary);margin-bottom:4px;">💰 Deposit Funds</div>
           <div style="font-size:13px;color:var(--text-sub);line-height:1.6;">
@@ -580,8 +580,8 @@ function renderEarnGuide() {
       </div>
 
       <!-- Step 2: AI Signal Copy Trading -->
-      <div class="earn-guide-step" style="display:flex;gap:14px;align-items:flex-start;padding:18px;background:linear-gradient(135deg, rgba(0,242,254,0.06), rgba(167,139,250,0.03));border:1px solid rgba(0,242,254,0.3);border-radius:14px;margin-bottom:12px;">
-        <div style="flex-shrink:0;width:40px;height:40px;border-radius:50%;background:rgba(0,242,254,0.2);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:var(--el-color-primary);">2</div>
+      <div class="earn-guide-step earn-guide-step-2">
+        <div class="earn-guide-badge" style="background:rgba(0,242,254,0.2);">2</div>
         <div style="flex:1;">
           <div style="font-weight:700;font-size:16px;color:var(--el-color-primary);margin-bottom:4px;">📡 Join AI Signal Copy Trading & Official Strategy Plans</div>
           <div style="font-size:13px;color:var(--text-sub);line-height:1.6;margin-bottom:14px;">
@@ -589,29 +589,35 @@ function renderEarnGuide() {
           </div>
 
           <!-- 3-Tier Strategy Cards Grid -->
-          <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(210px, 1fr));gap:14px;margin-bottom:14px;">
+          <div class="earn-guide-tiers-grid">
             
             <!-- Tier 1 Card ($100 - $299) -->
-            <div style="background:#090d16;border:1px solid #d97706;border-radius:12px;padding:12px;text-align:center;box-shadow:0 6px 16px rgba(0,0,0,0.4);">
-              <div style="font-size:12px;font-weight:700;color:#f59e0b;text-transform:uppercase;margin-bottom:4px;">Tier 1 ($100 – $299)</div>
-              <div style="font-size:11px;color:var(--text-sub);margin-bottom:8px;">1 Signal Daily (5:00 PM EAT) · <span style="color:#10b981;font-weight:700;">1.4% Daily</span></div>
-              <img src="assets/images/rxdt_100_strategy.png" alt="RXDT $100 Strategy Poster" style="width:100%;border-radius:8px;cursor:pointer;border:1px solid rgba(245,158,11,0.3);" onclick="openStrategyModal('100')" />
+            <div class="earn-tier-card">
+              <div>
+                <div style="font-size:12px;font-weight:700;color:#f59e0b;text-transform:uppercase;margin-bottom:4px;">Tier 1 ($100 – $299)</div>
+                <div style="font-size:11px;color:var(--text-sub);margin-bottom:8px;">1 Signal Daily (5:00 PM EAT) · <span style="color:#10b981;font-weight:700;">1.4% Daily</span></div>
+                <img src="assets/images/rxdt_100_strategy.png" alt="RXDT $100 Strategy Poster" onclick="openStrategyModal('100')" />
+              </div>
               <button class="btn-outline" style="width:100%;margin-top:8px;font-size:11px;padding:4px 0;border-color:#f59e0b;color:#f59e0b;" onclick="openStrategyModal('100')">🔍 Zoom $100 Plan</button>
             </div>
 
             <!-- Tier 2 Card ($300 - $999) -->
-            <div style="background:#090d16;border:1px solid #d97706;border-radius:12px;padding:12px;text-align:center;box-shadow:0 6px 16px rgba(0,0,0,0.4);">
-              <div style="font-size:12px;font-weight:700;color:#f59e0b;text-transform:uppercase;margin-bottom:4px;">Tier 2 ($300 – $999)</div>
-              <div style="font-size:11px;color:var(--text-sub);margin-bottom:8px;">2 Signals Daily (5 & 6 PM) · <span style="color:#10b981;font-weight:700;">2.4% Daily</span></div>
-              <img src="assets/images/rxdt_300_strategy.png" alt="RXDT $300 Strategy Poster" style="width:100%;border-radius:8px;cursor:pointer;border:1px solid rgba(245,158,11,0.3);" onclick="openStrategyModal('300')" />
+            <div class="earn-tier-card">
+              <div>
+                <div style="font-size:12px;font-weight:700;color:#f59e0b;text-transform:uppercase;margin-bottom:4px;">Tier 2 ($300 – $999)</div>
+                <div style="font-size:11px;color:var(--text-sub);margin-bottom:8px;">2 Signals Daily (5 & 6 PM) · <span style="color:#10b981;font-weight:700;">2.4% Daily</span></div>
+                <img src="assets/images/rxdt_300_strategy.png" alt="RXDT $300 Strategy Poster" onclick="openStrategyModal('300')" />
+              </div>
               <button class="btn-outline" style="width:100%;margin-top:8px;font-size:11px;padding:4px 0;border-color:#f59e0b;color:#f59e0b;" onclick="openStrategyModal('300')">🔍 Zoom $300 Plan</button>
             </div>
 
             <!-- Tier 3 Card ($1,000+) -->
-            <div style="background:#090d16;border:1px solid #d97706;border-radius:12px;padding:12px;text-align:center;box-shadow:0 6px 16px rgba(0,0,0,0.4);">
-              <div style="font-size:12px;font-weight:700;color:#f59e0b;text-transform:uppercase;margin-bottom:4px;">Tier 3 ($1,000+)</div>
-              <div style="font-size:11px;color:var(--text-sub);margin-bottom:8px;">3 Signals Daily (5, 6 & 7 PM) · <span style="color:#10b981;font-weight:700;">3.1% Daily</span></div>
-              <img src="assets/images/rxdt_1000_strategy.png" alt="RXDT $1000 Strategy Poster" style="width:100%;border-radius:8px;cursor:pointer;border:1px solid rgba(245,158,11,0.3);" onclick="openStrategyModal('1000')" />
+            <div class="earn-tier-card">
+              <div>
+                <div style="font-size:12px;font-weight:700;color:#f59e0b;text-transform:uppercase;margin-bottom:4px;">Tier 3 ($1,000+)</div>
+                <div style="font-size:11px;color:var(--text-sub);margin-bottom:8px;">3 Signals Daily (5, 6 & 7 PM) · <span style="color:#10b981;font-weight:700;">3.1% Daily</span></div>
+                <img src="assets/images/rxdt_1000_strategy.png" alt="RXDT $1000 Strategy Poster" onclick="openStrategyModal('1000')" />
+              </div>
               <button class="btn-outline" style="width:100%;margin-top:8px;font-size:11px;padding:4px 0;border-color:#f59e0b;color:#f59e0b;" onclick="openStrategyModal('1000')">🔍 Zoom $1,000 Plan</button>
             </div>
 
@@ -621,12 +627,12 @@ function renderEarnGuide() {
 
       <!-- Strategy Zoom Modal -->
       <div class="modal-overlay" id="strategy-poster-modal" onclick="closeStrategyModal()" style="display:none;z-index:9999;">
-        <div class="modal-content" style="max-width:850px;background:#090d16;border:1px solid #f59e0b;border-radius:16px;padding:20px;text-align:center;" onclick="event.stopPropagation()">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-            <strong style="color:#f59e0b;font-size:16px;" id="strategy-modal-title">RXDT 30-Day Investment Growth Strategy</strong>
-            <button class="btn-outline" style="padding:4px 12px;" onclick="closeStrategyModal()">✕ Close</button>
+        <div class="modal-content" style="max-width:850px;width:92%;background:#090d16;border:1px solid #f59e0b;border-radius:16px;padding:16px;text-align:center;" onclick="event.stopPropagation()">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:8px;">
+            <strong style="color:#f59e0b;font-size:14px;text-align:left;" id="strategy-modal-title">RXDT 30-Day Investment Growth Strategy</strong>
+            <button class="btn-outline" style="padding:4px 10px;font-size:12px;flex-shrink:0;" onclick="closeStrategyModal()">✕ Close</button>
           </div>
-          <img id="strategy-modal-img" src="" style="width:100%;max-height:80vh;object-fit:contain;border-radius:8px;" />
+          <img id="strategy-modal-img" src="" style="width:100%;max-height:75vh;object-fit:contain;border-radius:8px;" />
         </div>
       </div>
 
