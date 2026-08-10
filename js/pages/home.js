@@ -8,57 +8,88 @@ export function render() {
   const user = store.getUser();
   const isLoggedIn = store.isLoggedIn();
 
+  const availableBalance = user ? (user.availableBalance || 0) : 0;
+  const inOrderBalance = user ? (user.frozenBalance || user.inOrderBalance || 0) : 0;
+  const totalAssets = user ? (user.totalAssets || (availableBalance + inOrderBalance)) : 0;
+
   return `
-  <!-- ======== HOME: COMPACT BRAND HEADER ======== -->
-  <div class="home-brand-bar">
-    <div class="hbb-left">
-      <img src="assets/images/rxdt_logo.png" alt="RXDT" class="hbb-logo"/>
-      <div class="hbb-titles">
-        <span class="hbb-name">RXDT EXCHANGE</span>
-        <span class="hbb-sub">AI Quant Signals Platform</span>
+  <!-- ======== HOME: ELEGANT BALANCE & BRAND CARD ======== -->
+  <div class="home-balance-card">
+    <div class="hbc-header">
+      <div class="hbc-brand">
+        <img src="assets/images/rxdt_logo.png" alt="RXDT" class="hbc-logo"/>
+        <div class="hbc-titles">
+          <span class="hbc-name">RXDT EXCHANGE</span>
+          <span class="hbc-sub">AI Quant Signals Platform</span>
+        </div>
+      </div>
+      <div class="hbc-badge">
+        <span class="live-dot"></span> Active
       </div>
     </div>
-    <div class="hbb-right">
-      ${isLoggedIn && user ? `
-        <div class="hbb-balance">
-          <span class="hbb-bal-label">Balance</span>
-          <span class="hbb-bal-value">$${fmt(user.availableBalance)} <small>USDT</small></span>
+
+    ${isLoggedIn && user ? `
+      <div class="hbc-stats-grid">
+        <div class="hbc-stat-item">
+          <span class="hbc-label">Available Balance</span>
+          <span class="hbc-value">$${fmt(availableBalance)} <small>USDT</small></span>
         </div>
-        <div class="hbb-btns">
-          <button class="btn-primary btn-xs" onclick="navigateTo('recharge')">Deposit</button>
-          <button class="btn-outline btn-xs" onclick="navigateTo('withdraw')">Withdraw</button>
+        <div class="hbc-stat-item">
+          <span class="hbc-label">In Order (In Signal/Trade)</span>
+          <span class="hbc-value highlight-gold">$${fmt(inOrderBalance)} <small>USDT</small></span>
         </div>
-      ` : `
-        <button class="btn-primary btn-sm hbb-cta" onclick="navigateTo('login')">Get Started</button>
-      `}
-    </div>
+        <div class="hbc-stat-item full-width">
+          <span class="hbc-label">Total Assets</span>
+          <span class="hbc-value highlight-cyan">$${fmt(totalAssets)} <small>USDT</small></span>
+        </div>
+      </div>
+
+      <div class="hbc-actions">
+        <button class="btn-primary hbc-btn" onclick="navigateTo('recharge')">Deposit</button>
+        <button class="btn-outline hbc-btn" onclick="navigateTo('withdraw')">Withdraw</button>
+      </div>
+    ` : `
+      <div class="hbc-guest-box">
+        <p class="hbc-guest-txt">Join the premier AI Quantitative Trading Platform. Start automated trading today.</p>
+        <button class="btn-primary hbc-btn" onclick="navigateTo('login')">Get Started / Log In</button>
+      </div>
+    `}
   </div>
 
-  <!-- ======== HOME: SIGNAL CARDS HERO ======== -->
-  <div class="home-signals-hero">
-
-    <!-- Live indicator pill -->
-    <div class="home-live-pill">
-      <span class="live-dot"></span>
-      <span>3 Daily AI Signal Windows &middot; Live</span>
+  <!-- ======== HOME: SINGLE BOX HORIZONTAL AUTO-SWIPING SIGNALS CAROUSEL ======== -->
+  <div class="home-signals-carousel-box">
+    <div class="hscb-header">
+      <div class="hscb-title">
+        <span class="live-dot"></span> 3 Daily AI Signal Windows
+      </div>
+      <span class="hscb-subtitle">Swipe or auto-scroll &rarr;</span>
     </div>
 
-    <!-- Signal Card 1 -->
-    <div class="home-sig-card" onclick="navigateTo('contract')">
-      <img src="assets/images/daily_signal_1_5pm.png" alt="AI Signal 1 – 5:00 PM EAT" class="home-sig-img"/>
-      <div class="home-sig-tap-hint">Tap to Start Trading</div>
+    <div class="hscb-track-wrapper" id="signalsCarouselTrack">
+      <!-- Signal 1 -->
+      <div class="hscb-slide" onclick="navigateTo('contract')">
+        <img src="assets/images/daily_signal_1_5pm.png" alt="AI Signal 1 – 5:00 PM EAT" class="hscb-img"/>
+        <div class="hscb-badge">Signal 1 · 5:00 PM EAT</div>
+      </div>
+
+      <!-- Signal 2 -->
+      <div class="hscb-slide" onclick="navigateTo('contract')">
+        <img src="assets/images/daily_signal_2_6pm.png" alt="AI Signal 2 – 6:00 PM EAT" class="hscb-img"/>
+        <div class="hscb-badge">Signal 2 · 6:00 PM EAT</div>
+      </div>
+
+      <!-- Signal 3 -->
+      <div class="hscb-slide" onclick="navigateTo('contract')">
+        <img src="assets/images/daily_signal_3_7pm.png" alt="AI Signal 3 – 7:00 PM EAT" class="hscb-img"/>
+        <div class="hscb-badge">Signal 3 · 7:00 PM EAT</div>
+      </div>
     </div>
 
-    <!-- Signal Card 2 -->
-    <div class="home-sig-card" onclick="navigateTo('contract')">
-      <img src="assets/images/daily_signal_2_6pm.png" alt="AI Signal 2 – 6:00 PM EAT" class="home-sig-img"/>
-      <div class="home-sig-tap-hint">Tap to Start Trading</div>
-    </div>
-
-    <!-- Signal Card 3 -->
-    <div class="home-sig-card" onclick="navigateTo('contract')">
-      <img src="assets/images/daily_signal_3_7pm.png" alt="AI Signal 3 – 7:00 PM EAT" class="home-sig-img"/>
-      <div class="home-sig-tap-hint">Tap to Start Trading</div>
+    <!-- Carousel Indicator Dots -->
+    <div class="hscb-dots">
+      <span class="hscb-dot active" data-idx="0"></span>
+      <span class="hscb-dot" data-idx="1"></span>
+      <span class="hscb-dot" data-idx="2"></span>
     </div>
   </div>
 
@@ -100,14 +131,44 @@ export function render() {
 }
 
 export function init() {
-  // Touch tap detection for signal cards
-  const cards = document.querySelectorAll('.home-sig-card');
-  cards.forEach(card => {
-    let startX = 0;
-    card.addEventListener('touchstart', e => { startX = e.touches[0].clientX; }, { passive: true });
-    card.addEventListener('touchend', e => {
-      const diff = Math.abs(e.changedTouches[0].clientX - startX);
-      if (diff < 8) card.click();
-    }, { passive: true });
-  });
+  const track = document.getElementById('signalsCarouselTrack');
+  if (!track) return;
+
+  const dots = document.querySelectorAll('.hscb-dot');
+  let currentIdx = 0;
+  let isHovered = false;
+
+  const updateDots = (idx) => {
+    dots.forEach((dot, i) => {
+      dot.classList.toggle('active', i === idx);
+    });
+  };
+
+  track.addEventListener('mouseenter', () => { isHovered = true; });
+  track.addEventListener('mouseleave', () => { isHovered = false; });
+  track.addEventListener('touchstart', () => { isHovered = true; }, { passive: true });
+  track.addEventListener('touchend', () => { setTimeout(() => { isHovered = false; }, 3000); }, { passive: true });
+
+  track.addEventListener('scroll', () => {
+    const width = track.clientWidth;
+    if (width > 0) {
+      const idx = Math.round(track.scrollLeft / width);
+      if (idx !== currentIdx) {
+        currentIdx = idx;
+        updateDots(currentIdx);
+      }
+    }
+  }, { passive: true });
+
+  setInterval(() => {
+    if (isHovered) return;
+    const slides = track.querySelectorAll('.hscb-slide');
+    if (!slides.length) return;
+    
+    currentIdx = (currentIdx + 1) % slides.length;
+    const scrollAmount = track.clientWidth * currentIdx;
+    track.scrollTo({ left: scrollAmount, behavior: 'smooth' });
+    updateDots(currentIdx);
+  }, 3500);
 }
+
