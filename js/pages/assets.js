@@ -344,25 +344,47 @@ function renderWithdraw() {
     <!-- Withdrawal History -->
     <div class="card">
       <div class="card-title">Withdrawal History</div>
-      <div class="table-container">
-        <table class="data-table">
-          <thead><tr><th>Order #</th><th>Coin</th><th>Amount</th><th>Fee</th><th>Status</th><th>Time</th></tr></thead>
-          <tbody>
-            ${withdrawals.map(w => `
-              <tr>
-                <td style="font-size:12px;">${w.orderNumber}</td>
-                <td>${w.coin} (${w.network})</td>
-                <td>$${fmt(w.amount)}</td>
-                <td>$${fmt(w.fee)}</td>
-                <td>${auditBadge(w.status)}</td>
-                <td style="font-size:12px;">${w.time}</td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-      </div>
+      ${withdrawals.length === 0 ? `
+        <div style="text-align:center;padding:24px;color:var(--text-muted);font-size:13px;">No withdrawal history found.</div>
+      ` : `
+        <div style="display:flex;flex-direction:column;gap:12px;">
+          ${withdrawals.map(w => `
+            <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border-color);border-radius:12px;padding:14px 16px;">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                <div style="font-weight:700;font-size:15px;color:var(--text-main);display:flex;align-items:center;gap:6px;">
+                  <span>💸</span> ${w.coin} (${w.network})
+                </div>
+                <div>${auditBadge(w.status)}</div>
+              </div>
+
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:13px;margin-bottom:8px;background:rgba(0,0,0,0.2);padding:10px;border-radius:8px;">
+                <div>
+                  <span style="color:var(--text-muted);font-size:11px;display:block;">Amount Requested</span>
+                  <strong style="color:#00d4ff;font-size:14px;">$${fmt(w.amount)}</strong>
+                </div>
+                <div>
+                  <span style="color:var(--text-muted);font-size:11px;display:block;">Fee</span>
+                  <span style="color:var(--text-sub);font-size:13px;">$${fmt(w.fee)}</span>
+                </div>
+              </div>
+
+              ${w.address ? `
+                <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px;word-break:break-all;">
+                  <strong>To:</strong> <code style="color:var(--text-sub);">${w.address}</code>
+                </div>
+              ` : ''}
+
+              <div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;color:var(--text-muted);border-top:1px dashed var(--border-color);padding-top:6px;margin-top:4px;">
+                <span>Order #${w.orderNumber}</span>
+                <span>${w.time}</span>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      `}
     </div>
   </div>`;
+
 }
 
 // ---- BIND ADDRESS ----
@@ -717,6 +739,8 @@ export function init(page) {
     const amount = parseFloat(document.getElementById('withdraw-amount')?.value || 0);
     const address = document.getElementById('withdraw-address')?.value || '';
     const transactionPassword = document.getElementById('withdraw-txn-pwd')?.value || '';
+    const submitBtn = document.querySelector('button[onclick="submitWithdrawal()"]');
+
     if (!amount || amount < 10) { toast('Minimum withdrawal is $10 USDT', 'error'); return; }
     if (amount > user.availableBalance) { toast('Insufficient balance', 'error'); return; }
     if (!address) { toast('Please enter withdrawal address', 'error'); return; }
@@ -726,14 +750,25 @@ export function init(page) {
     const hasDoubled = !!(user && user.doubledCapital);
     const feeRate = hasDoubled ? 0.10 : 0.25;
     const fee = parseFloat((amount * feeRate).toFixed(2));
+
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Processing Withdrawal...';
+    }
+
     try {
       await store.addWithdrawal({ coin: 'USDT', network: 'TRC-20', amount, fee, actualAmount: amount - fee, address, transactionPassword });
       toast('Withdrawal submitted! Under review.', 'success');
       setTimeout(() => window.location.hash = '#/assets', 800);
     } catch (err) {
       toast(err.message || 'Failed to submit withdrawal', 'error');
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Submit Withdrawal';
+      }
     }
   };
+
 
   // Note: switchBindTab referenced non-existent bind-bank-panel — removed.
 

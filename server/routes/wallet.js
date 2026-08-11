@@ -126,8 +126,14 @@ router.post('/withdrawals', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'Transaction password is required for withdrawals.' });
     }
 
-    const userRes = await query(`SELECT available_balance, total_assets, transaction_password, doubled_capital FROM users WHERE id = $1;`, [req.userId]);
-    if (userRes.rows.length === 0) return res.status(404).json({ error: 'User not found' });
+    await query('BEGIN');
+
+    // Row-level lock on user record to prevent race-condition double withdrawals
+    const userRes = await query(`SELECT available_balance, total_assets, transaction_password, doubled_capital FROM users WHERE id = $1 FOR UPDATE;`, [req.userId]);
+    if (userRes.rows.length === 0) {
+      await query('ROLLBACK');
+      return res.status(404).json({ error: 'User not found' });
+    }
 
     const user = userRes.rows[0];
     const available = parseFloat(user.available_balance);
@@ -135,10 +141,12 @@ router.post('/withdrawals', requireAuth, async (req, res) => {
 
     // Verify transaction password
     if (!user.transaction_password) {
+      await query('ROLLBACK');
       return res.status(400).json({ error: 'Please set a transaction password first in Security Settings.' });
     }
     const pwdMatch = await bcrypt.compare(transactionPassword, user.transaction_password);
     if (!pwdMatch) {
+      await query('ROLLBACK');
       return res.status(400).json({ error: 'Incorrect transaction password.' });
     }
 
@@ -150,6 +158,7 @@ router.post('/withdrawals', requireAuth, async (req, res) => {
     const fee = parseFloat((numAmount * feeRate).toFixed(2));
 
     if (available < numAmount + fee) {
+      await query('ROLLBACK');
       return res.status(400).json({ error: `Insufficient available balance. Minimum required including ${(feeRate * 100).toFixed(0)}% fee: $${(numAmount + fee).toFixed(2)}` });
     }
 
@@ -158,7 +167,6 @@ router.post('/withdrawals', requireAuth, async (req, res) => {
     const newAvailable = available - numAmount - fee;
     const newTotal = totalAssets - numAmount - fee;
 
-    await query('BEGIN');
 
     await query(`UPDATE users SET available_balance = $1, total_assets = $2 WHERE id = $3;`, [newAvailable, newTotal, req.userId]);
 
