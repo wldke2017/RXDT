@@ -202,22 +202,32 @@ function renderRecharge() {
     <!-- Deposit History -->
     <div class="card">
       <div class="card-title">Deposit History</div>
-      <div class="table-container">
-        <table class="data-table">
-          <thead><tr><th>Order #</th><th>Coin</th><th>Amount</th><th>Status</th><th>Time</th></tr></thead>
-          <tbody>
-            ${deposits.map(d => `
-              <tr>
-                <td style="font-size:12px;">${d.orderNumber}</td>
-                <td>${d.coin} (${d.network})</td>
-                <td>$${fmt(d.amount)}</td>
-                <td>${auditBadge(d.auditStatus)}</td>
-                <td style="font-size:12px;">${d.time}</td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-      </div>
+      ${deposits.length === 0 ? `
+        <div style="text-align:center;padding:24px;color:var(--text-muted);font-size:13px;">No deposit history found.</div>
+      ` : `
+        <div style="display:flex;flex-direction:column;gap:12px;">
+          ${deposits.map(d => `
+            <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border-color);border-radius:12px;padding:14px 16px;">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                <div style="font-weight:700;font-size:15px;color:var(--text-main);display:flex;align-items:center;gap:6px;">
+                  <span>💳</span> ${d.coin} (${d.network})
+                </div>
+                <div>${auditBadge(d.auditStatus)}</div>
+              </div>
+
+              <div style="background:rgba(0,0,0,0.2);padding:10px 12px;border-radius:8px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;">
+                <span style="color:var(--text-muted);font-size:12px;">Deposit Amount</span>
+                <strong style="color:#00c49a;font-size:16px;">+$${fmt(d.amount)}</strong>
+              </div>
+
+              <div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;color:var(--text-muted);border-top:1px dashed var(--border-color);padding-top:6px;margin-top:4px;">
+                <span>Order #${d.orderNumber}</span>
+                <span>${d.time}</span>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      `}
     </div>
 
     <!-- Checkout / Awaiting Payment Modal Overlay -->
@@ -443,8 +453,10 @@ function renderBindAddress() {
 
       <button class="btn-dark" style="width:100%;height:48px;font-size:16px;" onclick="submitBindAddress()">Bind Address</button>
     </div>
+
   </div>`;
 }
+
 
 // ---- ACCOUNT CHANGE LOG ----
 function renderAccountChange() {
@@ -456,27 +468,41 @@ function renderAccountChange() {
       <h1 class="page-title">Account Change Log</h1>
     </div>
 
-    <div class="card" style="padding:0;">
-      <div class="table-container">
-        <table class="data-table">
-          <thead>
-            <tr><th>Type</th><th>Amount</th><th>Balance After</th><th>Remark</th><th>Time</th></tr>
-          </thead>
-          <tbody>
-            ${changes.map(c => `
-              <tr>
-                <td><span class="badge ${c.amount >= 0 ? 'badge-success' : 'badge-danger'}">${c.type}</span></td>
-                <td class="${c.amount >= 0 ? 'price-up' : 'price-down'}" style="font-weight:600;">
-                  ${c.amount >= 0 ? '+' : ''}$${fmt(Math.abs(c.amount))}
-                </td>
-                <td>$${fmt(c.balance)}</td>
-                <td style="font-size:13px;">${c.remark}</td>
-                <td style="font-size:12px;color:var(--text-muted);">${c.time}</td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-      </div>
+    <div class="card">
+      <div class="card-title">Transaction History</div>
+      ${changes.length === 0 ? `
+        <div style="text-align:center;padding:24px;color:var(--text-muted);font-size:13px;">No account changes found.</div>
+      ` : `
+        <div style="display:flex;flex-direction:column;gap:12px;">
+          ${changes.map(c => `
+            <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border-color);border-radius:12px;padding:14px 16px;">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                <span class="badge ${c.amount >= 0 ? 'badge-success' : 'badge-danger'}" style="font-size:12px;">${c.type}</span>
+                <span style="font-size:11px;color:var(--text-muted);">${c.time}</span>
+              </div>
+
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:13px;margin-bottom:8px;background:rgba(0,0,0,0.2);padding:10px;border-radius:8px;">
+                <div>
+                  <span style="color:var(--text-muted);font-size:11px;display:block;">Amount</span>
+                  <strong class="${c.amount >= 0 ? 'price-up' : 'price-down'}" style="font-size:15px;">
+                    ${c.amount >= 0 ? '+' : ''}$${fmt(Math.abs(c.amount))}
+                  </strong>
+                </div>
+                <div>
+                  <span style="color:var(--text-muted);font-size:11px;display:block;">Balance After</span>
+                  <span style="color:var(--text-main);font-weight:600;font-size:14px;">$${fmt(c.balance || c.balanceAfter)}</span>
+                </div>
+              </div>
+
+              ${c.remark ? `
+                <div style="font-size:12px;color:var(--text-sub);border-top:1px dashed var(--border-color);padding-top:6px;margin-top:4px;">
+                  💬 ${c.remark}
+                </div>
+              ` : ''}
+            </div>
+          `).join('')}
+        </div>
+      `}
     </div>
   </div>`;
 }
