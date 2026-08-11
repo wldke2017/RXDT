@@ -390,6 +390,8 @@ function renderSecurity() {
           <h3 style="margin:0;font-size:18px;font-weight:700;">✉️ Bind Email Address</h3>
           <button class="btn-outline" style="padding:4px 10px;" onclick="closeBindEmailModal()">✕</button>
         </div>
+        <!-- Inline status message shown inside the modal -->
+        <div id="bind-email-msg" style="display:none;padding:10px 14px;border-radius:10px;font-size:13px;font-weight:600;margin-bottom:14px;text-align:center;"></div>
         <div class="form-group">
           <label class="form-label">Your Email Address</label>
           <input type="email" id="bind-email-input" class="form-control" placeholder="name@example.com"/>
@@ -397,11 +399,11 @@ function renderSecurity() {
         <div class="form-group">
           <label class="form-label">Verification Code</label>
           <div class="code-input-group" style="display:flex;gap:8px;">
-            <input type="text" id="bind-email-code" class="form-control" placeholder="6-digit code"/>
+            <input type="text" id="bind-email-code" class="form-control" placeholder="6-digit code" maxlength="6" inputmode="numeric"/>
             <button class="btn-primary" id="bind-email-send-btn" style="white-space:nowrap;padding:0 16px;" onclick="sendBindEmailOtp()">Send Code</button>
           </div>
         </div>
-        <button class="btn-dark" style="width:100%;height:48px;font-size:16px;margin-top:12px;" onclick="submitBindEmail()">Confirm Email Binding</button>
+        <button class="btn-dark" id="bind-email-confirm-btn" style="width:100%;height:48px;font-size:16px;margin-top:12px;" onclick="submitBindEmail()">Confirm Email Binding</button>
       </div>
     </div>
 
@@ -841,18 +843,48 @@ export function init(page) {
 
   // openBindEmailModal / closeBindEmailModal already defined above
 
+  // Helper: show message inside the bind-email modal itself
+  function showBindEmailMsg(msg, type) {
+    const el = document.getElementById('bind-email-msg');
+    if (!el) return;
+    el.textContent = msg;
+    el.style.display = 'block';
+    if (type === 'error') {
+      el.style.background = 'rgba(239,68,68,0.15)';
+      el.style.color = '#f87171';
+      el.style.border = '1px solid rgba(239,68,68,0.35)';
+    } else if (type === 'success') {
+      el.style.background = 'rgba(0,196,154,0.15)';
+      el.style.color = '#00c49a';
+      el.style.border = '1px solid rgba(0,196,154,0.35)';
+    } else {
+      el.style.background = 'rgba(0,212,255,0.1)';
+      el.style.color = '#00d4ff';
+      el.style.border = '1px solid rgba(0,212,255,0.3)';
+    }
+  }
+
+  function clearBindEmailMsg() {
+    const el = document.getElementById('bind-email-msg');
+    if (el) { el.style.display = 'none'; el.textContent = ''; }
+  }
+
   window.sendBindEmailOtp = async function () {
-    const email = document.getElementById('bind-email-input')?.value;
-    if (!email || !email.includes('@')) { toast('Please enter a valid email address', 'error'); return; }
+    const email = document.getElementById('bind-email-input')?.value?.trim();
+    if (!email || !email.includes('@')) {
+      showBindEmailMsg('Please enter a valid email address', 'error');
+      return;
+    }
 
     const btn = document.getElementById('bind-email-send-btn');
     if (btn) btn.disabled = true;
+    clearBindEmailMsg();
 
     try {
       const data = await authFetch('/api/email/send-otp', { method: 'POST', body: JSON.stringify({ email }) });
       if (data.error) throw new Error(data.error);
 
-      toast(data.message || 'Verification code sent to your email!', 'success');
+      showBindEmailMsg(`✉️ Code sent to ${email}. Check your inbox.`, 'info');
 
       let sec = 60;
       const timer = setInterval(() => {
@@ -861,7 +893,7 @@ export function init(page) {
         if (sec < 0) { clearInterval(timer); if (btn) { btn.disabled = false; btn.textContent = 'Send Code'; } }
       }, 1000);
     } catch (err) {
-      toast(err.message, 'error');
+      showBindEmailMsg(err.message || 'Failed to send code', 'error');
       if (btn) btn.disabled = false;
     }
   };
@@ -869,14 +901,34 @@ export function init(page) {
   window.submitBindEmail = async function () {
     const email = document.getElementById('bind-email-input')?.value?.trim();
     const otp = document.getElementById('bind-email-code')?.value?.trim();
+    const confirmBtn = document.getElementById('bind-email-confirm-btn');
 
-    if (!email || !otp) { toast('Please enter email and verification code', 'error'); return; }
+    if (!email || !otp) {
+      showBindEmailMsg('Please enter both email and verification code', 'error');
+      return;
+    }
+
+    // Loading state — prevent double submission
+    if (confirmBtn) {
+      confirmBtn.disabled = true;
+      confirmBtn.innerHTML = `<span style="display:inline-flex;align-items:center;gap:8px;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="animation:spin 0.8s linear infinite;"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>Verifying...</span>`;
+    }
+    clearBindEmailMsg();
 
     try {
       const data = await authFetch('/api/email/bind-email', { method: 'POST', body: JSON.stringify({ email, otp }) });
       if (data.error || !data.success) throw new Error(data.error || 'Failed to bind email');
-      
-      // Update local store so user object reflects new email_bound
+
+      // Show brief success inside modal, then auto-close
+      showBindEmailMsg('✅ Email bound successfully!', 'success');
+      if (confirmBtn) {
+        confirmBtn.innerHTML = '✅ Verified!';
+        confirmBtn.style.background = 'rgba(0,196,154,0.2)';
+        confirmBtn.style.color = '#00c49a';
+        confirmBtn.style.border = '1px solid rgba(0,196,154,0.4)';
+      }
+
+      // Update local store immediately
       const currentUser = store.getUser();
       if (currentUser) {
         currentUser.emailBound = data.emailBound || email;
@@ -884,12 +936,32 @@ export function init(page) {
         store.setUser(currentUser);
       }
 
-      toast('✅ Email bound successfully!', 'success');
-      closeBindEmailModal();
-      checkEmailStatus();
-      if (store.checkAuth) store.checkAuth();
+      // Auto-close after 1.2s and refresh status
+      setTimeout(() => {
+        closeBindEmailModal();
+        checkEmailStatus();
+        if (store.checkAuth) store.checkAuth();
+        // Reset button for next open
+        if (confirmBtn) {
+          confirmBtn.disabled = false;
+          confirmBtn.innerHTML = 'Confirm Email Binding';
+          confirmBtn.style.background = '';
+          confirmBtn.style.color = '';
+          confirmBtn.style.border = '';
+        }
+        clearBindEmailMsg();
+        const inputEmail = document.getElementById('bind-email-input');
+        const inputCode = document.getElementById('bind-email-code');
+        if (inputEmail) inputEmail.value = '';
+        if (inputCode) inputCode.value = '';
+      }, 1200);
+
     } catch (err) {
-      toast(err.message || 'Failed to bind email', 'error');
+      showBindEmailMsg(err.message || 'Failed to bind email', 'error');
+      if (confirmBtn) {
+        confirmBtn.disabled = false;
+        confirmBtn.innerHTML = 'Confirm Email Binding';
+      }
     }
   };
 
