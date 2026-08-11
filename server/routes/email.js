@@ -7,7 +7,8 @@ const router = express.Router();
 // Send OTP to a given email address (for binding OR for password change)
 router.post('/send-otp', requireAuth, async (req, res) => {
   const { email } = req.body;
-  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+  const cleanEmail = email ? String(email).trim().toLowerCase() : '';
+  if (!cleanEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
     return res.status(400).json({ error: 'Valid email address required' });
   }
 
@@ -30,6 +31,8 @@ router.post('/send-otp', requireAuth, async (req, res) => {
       `UPDATE users SET email_otp = $1, email_otp_expires = $2 WHERE id = $3`,
       [otp, expires, req.userId]
     );
+    console.log(`[send-otp] userId=${req.userId} generated_otp="${otp}" to="${cleanEmail}" expires=${expires.toISOString()}`);
+
 
     // Attempt to send email via Resend
     let resendFailed = false;
@@ -43,7 +46,7 @@ router.post('/send-otp', requireAuth, async (req, res) => {
         },
         body: JSON.stringify({
           from: 'RXDT Exchange <noreply@rxdt.site>',
-          to: [email],
+          to: [cleanEmail],
           subject: 'Your RXDT Verification Code',
           html: `
             <div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;padding:32px;background:#0a0e1a;border-radius:16px;border:1px solid #1e2a3a;">
@@ -105,15 +108,7 @@ router.post('/bind-email', requireAuth, async (req, res) => {
   }
 
   try {
-    // Check if this email is already bound to another account
-    const existingCheck = await query(
-      `SELECT id FROM users WHERE (email_bound = $1 OR email = $1) AND id != $2`,
-      [cleanEmail, req.userId]
-    );
-    if (existingCheck.rows.length > 0) {
-      return res.status(400).json({ error: 'This email address is already bound to another account.' });
-    }
-
+    // Step 1: Verify OTP FIRST — correct error messaging
     const result = await query(
       `SELECT email_otp, email_otp_expires FROM users WHERE id = $1`,
       [req.userId]
@@ -121,14 +116,33 @@ router.post('/bind-email', requireAuth, async (req, res) => {
     const user = result.rows[0];
     if (!user) return res.status(404).json({ error: 'User not found' });
 
-    if (!user.email_otp || String(user.email_otp).trim() !== cleanOtp) {
+    // Debug log to trace OTP mismatch issues
+    console.log(`[bind-email] userId=${req.userId} stored_otp="${user.email_otp}" submitted_otp="${cleanOtp}" expires=${user.email_otp_expires}`);
+
+    if (!user.email_otp) {
+      return res.status(400).json({ error: 'No verification code found. Please request a new code.' });
+    }
+
+    // Normalize stored OTP the same way as the submitted one
+    const storedOtp = String(user.email_otp).trim();
+    if (storedOtp !== cleanOtp) {
       return res.status(400).json({ error: 'Incorrect verification code. Please check and try again.' });
     }
+
     if (new Date() > new Date(user.email_otp_expires)) {
       return res.status(400).json({ error: 'Verification code has expired. Please request a new code.' });
     }
 
-    // Bind the email and clear OTP
+    // Step 2: Check if email is already bound to another account (after OTP passes)
+    const existingCheck = await query(
+      `SELECT id FROM users WHERE (email_bound = $1 OR (email = $1 AND email_bound IS NOT NULL)) AND id != $2`,
+      [cleanEmail, req.userId]
+    );
+    if (existingCheck.rows.length > 0) {
+      return res.status(400).json({ error: 'This email address is already bound to another account.' });
+    }
+
+    // Step 3: Bind the email and clear OTP
     await query(
       `UPDATE users SET email_bound = $1, email = COALESCE(email, $1), email_otp = NULL, email_otp_expires = NULL WHERE id = $2`,
       [cleanEmail, req.userId]
