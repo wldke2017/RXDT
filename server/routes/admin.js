@@ -79,8 +79,9 @@ router.get('/users', requireAdminSecret, async (req, res) => {
     const result = await query(`
       SELECT id, name, phone, email, available_balance, total_assets, total_earnings,
              kyc_status, invite_code, created_at
-      FROM users ORDER BY created_at DESC LIMIT 200`);
+      FROM users ORDER BY created_at ASC LIMIT 200`);
     res.json({ users: result.rows });
+
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch users' });
   }
