@@ -1560,6 +1560,50 @@ Contact our Founder & CEO Arthur Vance directly on Telegram:
 👉 Link: https://t.me/RXDT888
 
 Our team is available 24/7 to assist you!`
+    },
+    {
+      id: 'msg-monthly-salary-advantages',
+      title: '💰 Why RXDT Monthly Salary Rewards Change Everything',
+      platform: 'WhatsApp / Telegram / Facebook',
+      category: 'VIP',
+      text: `💰 *WHY RXDT MONTHLY SALARY REWARDS CHANGE EVERYTHING* 💰
+
+Most platforms give you a one-time bonus and that's it.
+RXDT Exchange gives you a *continuous monthly salary* — paid every 10 days, 3 times a month.
+
+Here are 6 reasons our leaders keep building:
+
+1️⃣ *Continuously Growing Passive Income*
+Beyond trading profits, your salary keeps flowing every month — no extra effort once your team is active.
+
+2️⃣ *Designed for Long-Term Builders*
+This isn't a one-off bonus. It rewards those who invest in their teams consistently — real leaders.
+
+3️⃣ *Build a Stable, Thriving Team*
+Grow your community and watch it become a healthy, self-sustaining ecosystem that works for you 24/7.
+
+4️⃣ *Platform Recognition for Leadership*
+The higher your VIP rank, the higher your salary — from $90/month all the way up to $9,000/month.
+🥉 VIP 1 → $90/mo  |  👑 VIP 5 → $1,800/mo  |  🏆 VIP 9 → $9,000/mo
+
+5️⃣ *Multiple Income Streams, All Working Together*
+✅ AI Signal Trading Returns (1.8%–2.8% Daily)
+✅ Referral Commissions (7.5%)
+✅ Promotion Bonuses (up to $11,000 USDT)
+✅ 10-Day Team Salary (up to $3,000 per cycle)
+
+6️⃣ *Long-Term Value Far Exceeds Any One-Time Bonus*
+A bonus is earned once. A salary is earned forever. As your team grows, so does your income.
+
+🧠 *RXDT firmly believes: Real wealth is built, not stumbled upon.*
+
+Since launching on 30th July 2026 under the vision of Founder & CEO *Arthur Vance*, RXDT has been committed to building a lasting financial foundation for every member.
+
+🌍 Register today and start building your legacy:
+👉 https://www.rxdt.site/#/register?invite=RXN2ZO
+
+📩 Direct support & mentorship:
+💬 CEO Telegram: @RXDT888`
     }
   ];
 
@@ -1655,6 +1699,13 @@ Our team is available 24/7 to assist you!`
       category: 'Signals', 
       path: 'assets/images/signal_popup.png',
       caption: `📡 *LIVE AI COPY-TRADING SIGNALS ACTIVE!* 📡\n\nCopy verified signals at 5pm, 6pm & 7pm EAT!`
+    },
+    {
+      id: 'img-monthly-salary-leadership',
+      name: 'Monthly Salary Rewards & Leadership Program Poster',
+      category: 'VIP Banners',
+      path: 'assets/images/rxdt_monthly_salary_leadership.svg',
+      caption: `💰 *RXDT MONTHLY SALARY REWARDS — BUILD YOUR LEGACY* 💰\n\n✅ 6 Powerful Advantages of the RXDT Leadership Salary Program:\n1️⃣ Continuously Growing Passive Income\n2️⃣ Designed for Long-Term Builders\n3️⃣ Build a Stable, Self-Sustaining Team\n4️⃣ Platform Recognition for Leadership (VIP 1–9)\n5️⃣ Multiple Income Streams Working Together\n6️⃣ Long-Term Value Far Exceeds Any One-Time Bonus\n\n🏆 Salary Range: $90/mo (VIP 1) → $9,000/mo (VIP 9)\n💬 Paid every 10 days — 3rd, 13th & 23rd of each month\n\n👉 Register: https://www.rxdt.site/#/register?invite=RXN2ZO\n💬 CEO Telegram: @RXDT888`
     }
   ];
 
