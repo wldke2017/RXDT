@@ -1604,6 +1604,38 @@ Since launching on 30th July 2026 under the vision of Founder & CEO *Arthur Vanc
 
 📩 Direct support & mentorship:
 💬 CEO Telegram: @RXDT888`
+    },
+    {
+      id: 'msg-charity-community',
+      title: '❤️ RXDT Community Charity — Giving Back Together',
+      platform: 'WhatsApp / Telegram / Facebook',
+      category: 'Community',
+      text: `❤️ *RXDT COMMUNITY GIVES BACK* 🌍
+
+At RXDT Exchange, profit is only part of our story.
+The other part? *People.*
+
+Recently, our incredible team leaders organized a charity visit to a local children's home — bringing essential supplies and, more importantly, bringing *joy*.
+
+🏠 *What We Did:*
+✅ Coordinated with community members to donate daily essentials
+✅ Spent quality time chatting, playing & laughing with the children
+✅ Showed that behind every trade is a human heart
+
+💞 *The most meaningful gift wasn't the supplies.*
+It was the radiant smiles on the children's faces — the reminder that even the smallest act of kindness creates real warmth.
+
+Since our official launch on *30th July 2026*, under the vision of Founder & CEO *Arthur Vance*, the RXDT community has stood for more than returns.
+We stand for *impact* — both in your portfolio and in the world.
+
+🧡 To every member who gave their time and love: *THANK YOU.*
+
+This is what RXDT is truly about:
+🌍 *Working together. Growing together. Giving back to society.*
+
+✨ Join a platform that cares:
+👉 https://www.rxdt.site/#/register?invite=RXN2ZO
+💬 CEO Telegram: @RXDT888`
     }
   ];
 
@@ -1706,8 +1738,16 @@ Since launching on 30th July 2026 under the vision of Founder & CEO *Arthur Vanc
       category: 'VIP Banners',
       path: 'assets/images/rxdt_monthly_salary_leadership.svg',
       caption: `💰 *RXDT MONTHLY SALARY REWARDS — BUILD YOUR LEGACY* 💰\n\n✅ 6 Powerful Advantages of the RXDT Leadership Salary Program:\n1️⃣ Continuously Growing Passive Income\n2️⃣ Designed for Long-Term Builders\n3️⃣ Build a Stable, Self-Sustaining Team\n4️⃣ Platform Recognition for Leadership (VIP 1–9)\n5️⃣ Multiple Income Streams Working Together\n6️⃣ Long-Term Value Far Exceeds Any One-Time Bonus\n\n🏆 Salary Range: $90/mo (VIP 1) → $9,000/mo (VIP 9)\n💬 Paid every 10 days — 3rd, 13th & 23rd of each month\n\n👉 Register: https://www.rxdt.site/#/register?invite=RXN2ZO\n💬 CEO Telegram: @RXDT888`
+    },
+    {
+      id: 'img-charity-community',
+      name: 'RXDT Community Charity — Giving Back Poster',
+      category: 'Community',
+      path: 'assets/images/rxdt_charity_community.svg',
+      caption: `❤️ *RXDT COMMUNITY GIVES BACK* 🌍\n\nOur team leaders organized a heartfelt charity visit to a local children's home — donating essential supplies and spending quality time with the children.\n\n🏠 Essential supplies donated\n💞 Joyful moments shared — smiles, laughter & play\n🌍 A community built on care, not just profit\n\n*Working together. Growing together. Giving back to society.*\n\n✨ Join us: https://www.rxdt.site/#/register?invite=RXN2ZO\n💬 CEO Telegram: @RXDT888`
     }
   ];
+
 
   const VIP_TIER_DATA = [
     { level: 1, name: 'VIP 1 Junior Trader', members: 5, salary: '$30', salaryTotal: '$90/mo', bonus: '$100', icon: '🥉' },
