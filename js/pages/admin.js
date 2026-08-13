@@ -1636,6 +1636,42 @@ This is what RXDT is truly about:
 ✨ Join a platform that cares:
 👉 https://www.rxdt.site/#/register?invite=RXN2ZO
 💬 CEO Telegram: @RXDT888`
+    },
+    {
+      id: 'msg-platform-overview',
+      title: '🚀 RXDT Exchange — Full Platform Overview',
+      platform: 'WhatsApp / Telegram / Facebook',
+      category: 'General Marketing',
+      text: `🚀 *RXDT EXCHANGE · THE NEXT-GENERATION GLOBAL INTELLIGENT TRADING PLATFORM!* 🚀
+
+If you've been looking for a smarter way to grow your money — you've found it.
+
+📅 *Launched:* July 30, 2026
+💰 *Minimum Deposit:* 100 USDT
+💵 *Minimum Withdrawal:* 30 USDT
+📤 *Withdrawal Fee:* 7%
+
+📈 *Intelligent Trading System:*
+RXDT's AI releases *3 trading orders daily*, generating a return of *2.7%–3.0% per day*.
+(Actual returns reflect live market performance.)
+
+🌟 *Your 7 Income Streams on RXDT:*
+
+💵 10-Day Salary — paid 3× per month (3rd, 13th & 23rd)
+💸 VIP Level Promotion Bonus — up to $11,000 USDT
+💰 Referral Rewards — 7.5% of every friend's trading profits
+💎 New User First Deposit Bonus — activated immediately
+🎁 Exclusive Community VIP Promotion Rewards
+👥 Team Trading Profit Sharing
+📊 Trading Volume Bonus
+
+🧠 *Built under the vision of Founder & CEO Arthur Vance*, RXDT is dedicated to empowering global traders with institutional-grade AI technology — now accessible to everyone.
+
+📩 *Have questions?* Send me a private message — I'll walk you through everything step by step.
+
+🌍 Register now and activate your first deposit bonus:
+👉 https://www.rxdt.site/#/register?invite=RXN2ZO
+💬 CEO Telegram: @RXDT888`
     }
   ];
 
@@ -1745,6 +1781,13 @@ This is what RXDT is truly about:
       category: 'Community',
       path: 'assets/images/rxdt_charity_community.svg',
       caption: `❤️ *RXDT COMMUNITY GIVES BACK* 🌍\n\nOur team leaders organized a heartfelt charity visit to a local children's home — donating essential supplies and spending quality time with the children.\n\n🏠 Essential supplies donated\n💞 Joyful moments shared — smiles, laughter & play\n🌍 A community built on care, not just profit\n\n*Working together. Growing together. Giving back to society.*\n\n✨ Join us: https://www.rxdt.site/#/register?invite=RXN2ZO\n💬 CEO Telegram: @RXDT888`
+    },
+    {
+      id: 'img-platform-overview',
+      name: 'RXDT Exchange — Full Platform Overview Poster',
+      category: 'General Marketing',
+      path: 'assets/images/rxdt_platform_overview.svg',
+      caption: `🚀 *RXDT EXCHANGE — NEXT-GEN INTELLIGENT TRADING PLATFORM* 🚀\n\n📅 Launched: July 30, 2026\n💰 Min. Deposit: 100 USDT  ·  Min. Withdrawal: 30 USDT\n📈 Daily Returns: 2.7%–3.0%  ·  3 AI Orders/Day\n\n🌟 7 Income Streams:\n💵 10-Day Salary  |  💸 VIP Promotion Bonus  |  💰 Referral Rewards\n💎 First Deposit Bonus  |  🎁 Community VIP Rewards  |  👥 Team Profit Share  |  📊 Volume Bonus\n\n🌍 Register now: https://www.rxdt.site/#/register?invite=RXN2ZO\n💬 CEO Telegram: @RXDT888`
     }
   ];
 
