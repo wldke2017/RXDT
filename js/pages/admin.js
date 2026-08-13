@@ -1672,6 +1672,47 @@ RXDT's AI releases *3 trading orders daily*, generating a return of *2.7%–3.0%
 🌍 Register now and activate your first deposit bonus:
 👉 https://www.rxdt.site/#/register?invite=RXN2ZO
 💬 CEO Telegram: @RXDT888`
+    },
+    {
+      id: 'msg-global-expansion',
+      title: '🌍 RXDT Global Market Development Plan',
+      platform: 'WhatsApp / Telegram / Facebook',
+      category: 'General Marketing',
+      text: `🌍 *RXDT GLOBAL MARKET DEVELOPMENT PLAN* 🌍
+
+*Now is not the time to watch. It’s the time to move.*
+
+📅 *Officially Launched:* July 30, 2026
+🏗️ *Founder & CEO:* Arthur Vance
+
+🌎 *Current Global Footprint:*
+✅ Africa — Rapidly Growing
+✅ Europe — Expanding Fast
+✅ Asia — Massive Scale
+✅ America — Building Momentum
+✅ Middle East — Emerging Leaders
+
+Our global community is growing steadily. More teams and members are joining the RXDT ecosystem every single day.
+
+⏰ *Why NOW is the Golden Window:*
+
+🔑 For every team leader and early participant, *this is the golden age of platform development.*
+
+🌱 A truly promising platform doesn’t wait for the market to mature — it gives extraordinary opportunities to those who dare to act before it does.
+
+⚡ *The earlier you join, the earlier your strategy takes shape.*
+⚡ *The earlier your strategy takes shape, the greater your team’s long-term advantage.*
+
+Today’s efforts aren’t just about participating in a platform — they are about laying the foundation for your long-term business legacy in the digital asset space.
+
+📊 The ecosystem is rapidly expanding. The market is not yet saturated. *The window is open — but it won’t be forever.*
+
+🚀 *Grow together with RXDT.*
+🌍 *Develop together with the global market.*
+
+✨ Seize your opportunity in the new era of digital assets:
+👉 https://www.rxdt.site/#/register?invite=RXN2ZO
+💬 CEO Telegram: @RXDT888`
     }
   ];
 
@@ -1788,6 +1829,13 @@ RXDT's AI releases *3 trading orders daily*, generating a return of *2.7%–3.0%
       category: 'General Marketing',
       path: 'assets/images/rxdt_platform_overview.svg',
       caption: `🚀 *RXDT EXCHANGE — NEXT-GEN INTELLIGENT TRADING PLATFORM* 🚀\n\n📅 Launched: July 30, 2026\n💰 Min. Deposit: 100 USDT  ·  Min. Withdrawal: 30 USDT\n📈 Daily Returns: 2.7%–3.0%  ·  3 AI Orders/Day\n\n🌟 7 Income Streams:\n💵 10-Day Salary  |  💸 VIP Promotion Bonus  |  💰 Referral Rewards\n💎 First Deposit Bonus  |  🎁 Community VIP Rewards  |  👥 Team Profit Share  |  📊 Volume Bonus\n\n🌍 Register now: https://www.rxdt.site/#/register?invite=RXN2ZO\n💬 CEO Telegram: @RXDT888`
+    },
+    {
+      id: 'img-global-expansion',
+      name: 'RXDT Global Market Development Plan Poster',
+      category: 'General Marketing',
+      path: 'assets/images/rxdt_global_expansion.svg',
+      caption: `🌍 *RXDT GLOBAL MARKET DEVELOPMENT PLAN* 🌍\n\nRXDT is actively expanding across 5 continents:\n✅ Africa  ·  ✅ Europe  ·  ✅ Asia  ·  ✅ America  ·  ✅ Middle East\n\n⏰ NOW is the Golden Window for early movers.\n🌱 The ecosystem is expanding. The market is not yet saturated.\n📊 The earlier you act, the greater your long-term advantage.\n\n🚀 Grow with RXDT — develop with the global market.\n👉 Register: https://www.rxdt.site/#/register?invite=RXN2ZO\n💬 CEO Telegram: @RXDT888`
     }
   ];
 

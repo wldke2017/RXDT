@@ -1,0 +1,192 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 675" width="1200" height="675">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#020812"/>
+      <stop offset="40%" stop-color="#060d22"/>
+      <stop offset="100%" stop-color="#030610"/>
+    </linearGradient>
+    <linearGradient id="cyanGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#00f2fe"/>
+      <stop offset="100%" stop-color="#4facfe"/>
+    </linearGradient>
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffe259"/>
+      <stop offset="100%" stop-color="#ffa751"/>
+    </linearGradient>
+    <linearGradient id="purpleGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#a855f7"/>
+      <stop offset="100%" stop-color="#6366f1"/>
+    </linearGradient>
+    <linearGradient id="regionCard" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="rgba(0,242,254,0.08)"/>
+      <stop offset="100%" stop-color="rgba(0,0,0,0.7)"/>
+    </linearGradient>
+    <filter id="glowCyan">
+      <feGaussianBlur stdDeviation="20" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+    <filter id="glowGold">
+      <feGaussianBlur stdDeviation="14" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+    <filter id="glowPurple">
+      <feGaussianBlur stdDeviation="16" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+    <filter id="pinGlow">
+      <feGaussianBlur stdDeviation="5" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="675" fill="url(#bgGrad)"/>
+
+  <!-- Subtle dot grid -->
+  <pattern id="dots" width="40" height="40" patternUnits="userSpaceOnUse">
+    <circle cx="20" cy="20" r="1" fill="#00f2fe" opacity="0.08"/>
+  </pattern>
+  <rect width="1200" height="675" fill="url(#dots)"/>
+
+  <!-- Ambient glow orbs -->
+  <circle cx="180" cy="180" r="220" fill="#00f2fe" opacity="0.07" filter="url(#glowCyan)"/>
+  <circle cx="1050" cy="500" r="200" fill="#a855f7" opacity="0.07" filter="url(#glowPurple)"/>
+  <circle cx="600" cy="650" r="160" fill="#ffa751" opacity="0.06" filter="url(#glowGold)"/>
+
+  <!-- ─── HEADER ─── -->
+  <rect x="0" y="0" width="1200" height="85" fill="rgba(0,0,0,0.6)"/>
+  <rect x="40" y="20" width="115" height="44" rx="10" fill="rgba(0,242,254,0.15)" stroke="#00f2fe" stroke-width="1.8"/>
+  <text x="97" y="46" text-anchor="middle" fill="#00f2fe" font-family="'Segoe UI', Roboto, sans-serif" font-weight="900" font-size="18" letter-spacing="3">RXDT</text>
+  <text x="175" y="40" fill="#ffffff" font-family="'Segoe UI', Roboto, sans-serif" font-weight="800" font-size="22">GLOBAL MARKET DEVELOPMENT PLAN</text>
+  <text x="175" y="63" fill="#94a3b8" font-family="'Segoe UI', Roboto, sans-serif" font-size="13">Founded by Arthur Vance  ·  Officially Launched July 30, 2026  ·  5 Continents  ·  Growing Daily</text>
+  <!-- Right badge -->
+  <rect x="1010" y="20" width="162" height="44" rx="10" fill="rgba(168,85,247,0.15)" stroke="#a855f7" stroke-width="1.2"/>
+  <text x="1091" y="39" text-anchor="middle" fill="#c084fc" font-family="'Segoe UI', sans-serif" font-size="11" font-weight="700">🌍 GLOBAL EXPANSION</text>
+  <text x="1091" y="56" text-anchor="middle" fill="#c084fc" font-family="'Segoe UI', sans-serif" font-size="12" font-weight="800">ACTIVE · 2026</text>
+
+  <!-- ─── HERO TEXT ─── -->
+  <text x="600" y="128" text-anchor="middle" fill="url(#cyanGrad)" font-family="'Segoe UI', Roboto, sans-serif" font-weight="900" font-size="36" letter-spacing="1">🌐 THE GOLDEN AGE OF RXDT IS NOW</text>
+  <text x="600" y="158" text-anchor="middle" fill="#94a3b8" font-family="'Segoe UI', Roboto, sans-serif" font-size="15">Early movers build lasting advantages. The ecosystem is expanding — be part of the foundation.</text>
+
+  <!-- ─── WORLD MAP REPRESENTATION (Stylised continent arcs & connection lines) ─── -->
+  <!-- Globe outline -->
+  <circle cx="600" cy="340" r="168" fill="none" stroke="rgba(0,242,254,0.12)" stroke-width="1.5" stroke-dasharray="6,4"/>
+  <circle cx="600" cy="340" r="140" fill="rgba(0,242,254,0.04)" stroke="rgba(0,242,254,0.08)" stroke-width="1"/>
+  <ellipse cx="600" cy="340" rx="168" ry="55" fill="none" stroke="rgba(0,242,254,0.07)" stroke-width="1"/>
+  <ellipse cx="600" cy="340" rx="80" ry="168" fill="none" stroke="rgba(0,242,254,0.07)" stroke-width="1"/>
+
+  <!-- Continent blobs (stylized) -->
+  <!-- Africa -->
+  <ellipse cx="595" cy="365" rx="28" ry="36" fill="rgba(0,242,254,0.18)" stroke="#00f2fe" stroke-width="1.2"/>
+  <!-- Europe -->
+  <ellipse cx="568" cy="308" rx="18" ry="14" fill="rgba(168,85,247,0.22)" stroke="#a855f7" stroke-width="1.2"/>
+  <!-- Asia -->
+  <ellipse cx="648" cy="316" rx="34" ry="24" fill="rgba(255,226,89,0.18)" stroke="#ffe259" stroke-width="1.2"/>
+  <!-- Americas -->
+  <ellipse cx="523" cy="340" rx="18" ry="30" fill="rgba(56,239,125,0.18)" stroke="#38ef7d" stroke-width="1.2"/>
+  <!-- Middle East -->
+  <ellipse cx="622" cy="348" rx="14" ry="12" fill="rgba(255,165,80,0.22)" stroke="#ffa751" stroke-width="1.2"/>
+
+  <!-- Connection lines between regions -->
+  <line x1="523" y1="325" x2="568" y2="312" stroke="#00f2fe" stroke-width="1" opacity="0.4" stroke-dasharray="4,3"/>
+  <line x1="568" y1="312" x2="648" y2="318" stroke="#a855f7" stroke-width="1" opacity="0.4" stroke-dasharray="4,3"/>
+  <line x1="648" y1="322" x2="622" y2="345" stroke="#ffe259" stroke-width="1" opacity="0.4" stroke-dasharray="4,3"/>
+  <line x1="595" y1="360" x2="622" y2="348" stroke="#ffa751" stroke-width="1" opacity="0.4" stroke-dasharray="4,3"/>
+  <line x1="595" y1="360" x2="568" y2="318" stroke="#38ef7d" stroke-width="1" opacity="0.4" stroke-dasharray="4,3"/>
+
+  <!-- Pulse rings on globe centre -->
+  <circle cx="600" cy="340" r="20" fill="rgba(0,242,254,0.25)" stroke="#00f2fe" stroke-width="1.5"/>
+  <circle cx="600" cy="340" r="8" fill="#00f2fe"/>
+  <text x="600" y="344" text-anchor="middle" fill="#000" font-size="9" font-weight="900">RXDT</text>
+
+  <!-- ─── 5 REGION CARDS (left side) ─── -->
+  <!-- Africa -->
+  <g transform="translate(40, 178)">
+    <rect width="195" height="68" rx="12" fill="url(#regionCard)" stroke="rgba(0,242,254,0.3)" stroke-width="1"/>
+    <circle cx="24" cy="24" r="14" fill="rgba(0,242,254,0.2)" stroke="#00f2fe" stroke-width="1.2"/>
+    <text x="24" y="28" text-anchor="middle" fill="#00f2fe" font-size="14">🌍</text>
+    <text x="48" y="22" fill="#ffffff" font-family="'Segoe UI', sans-serif" font-weight="700" font-size="13">Africa</text>
+    <text x="48" y="38" fill="#64748b" font-family="'Segoe UI', sans-serif" font-size="11">Rapidly Growing</text>
+    <rect x="12" y="48" width="60" height="10" rx="4" fill="rgba(0,242,254,0.15)"/>
+    <rect x="12" y="48" width="48" height="10" rx="4" fill="url(#cyanGrad)" opacity="0.8"/>
+    <text x="85" y="58" fill="#00f2fe" font-size="11" font-weight="700">🔥 HOT</text>
+  </g>
+  <!-- Europe -->
+  <g transform="translate(40, 258)">
+    <rect width="195" height="68" rx="12" fill="url(#regionCard)" stroke="rgba(168,85,247,0.3)" stroke-width="1"/>
+    <circle cx="24" cy="24" r="14" fill="rgba(168,85,247,0.2)" stroke="#a855f7" stroke-width="1.2"/>
+    <text x="24" y="28" text-anchor="middle" fill="#c084fc" font-size="14">🌐</text>
+    <text x="48" y="22" fill="#ffffff" font-family="'Segoe UI', sans-serif" font-weight="700" font-size="13">Europe</text>
+    <text x="48" y="38" fill="#64748b" font-family="'Segoe UI', sans-serif" font-size="11">Expanding Fast</text>
+    <rect x="12" y="48" width="60" height="10" rx="4" fill="rgba(168,85,247,0.15)"/>
+    <rect x="12" y="48" width="42" height="10" rx="4" fill="url(#purpleGrad)" opacity="0.8"/>
+    <text x="85" y="58" fill="#c084fc" font-size="11" font-weight="700">📈 ACTIVE</text>
+  </g>
+  <!-- Asia -->
+  <g transform="translate(40, 338)">
+    <rect width="195" height="68" rx="12" fill="url(#regionCard)" stroke="rgba(255,226,89,0.3)" stroke-width="1"/>
+    <circle cx="24" cy="24" r="14" fill="rgba(255,226,89,0.2)" stroke="#ffe259" stroke-width="1.2"/>
+    <text x="24" y="28" text-anchor="middle" fill="#ffe259" font-size="14">🌏</text>
+    <text x="48" y="22" fill="#ffffff" font-family="'Segoe UI', sans-serif" font-weight="700" font-size="13">Asia</text>
+    <text x="48" y="38" fill="#64748b" font-family="'Segoe UI', sans-serif" font-size="11">Massive Scale</text>
+    <rect x="12" y="48" width="60" height="10" rx="4" fill="rgba(255,226,89,0.15)"/>
+    <rect x="12" y="48" width="52" height="10" rx="4" fill="url(#goldGrad)" opacity="0.8"/>
+    <text x="85" y="58" fill="#ffe259" font-size="11" font-weight="700">💹 STRONG</text>
+  </g>
+  <!-- Americas -->
+  <g transform="translate(40, 418)">
+    <rect width="195" height="68" rx="12" fill="url(#regionCard)" stroke="rgba(56,239,125,0.3)" stroke-width="1"/>
+    <circle cx="24" cy="24" r="14" fill="rgba(56,239,125,0.2)" stroke="#38ef7d" stroke-width="1.2"/>
+    <text x="24" y="28" text-anchor="middle" fill="#38ef7d" font-size="14">🌎</text>
+    <text x="48" y="22" fill="#ffffff" font-family="'Segoe UI', sans-serif" font-weight="700" font-size="13">America</text>
+    <text x="48" y="38" fill="#64748b" font-family="'Segoe UI', sans-serif" font-size="11">Building Momentum</text>
+    <rect x="12" y="48" width="60" height="10" rx="4" fill="rgba(56,239,125,0.15)"/>
+    <rect x="12" y="48" width="36" height="10" rx="4" fill="#38ef7d" opacity="0.8"/>
+    <text x="85" y="58" fill="#38ef7d" font-size="11" font-weight="700">🚀 GROWING</text>
+  </g>
+  <!-- Middle East -->
+  <g transform="translate(40, 498)">
+    <rect width="195" height="68" rx="12" fill="url(#regionCard)" stroke="rgba(255,165,80,0.3)" stroke-width="1"/>
+    <circle cx="24" cy="24" r="14" fill="rgba(255,165,80,0.2)" stroke="#ffa751" stroke-width="1.2"/>
+    <text x="24" y="28" text-anchor="middle" fill="#ffa751" font-size="14">🕌</text>
+    <text x="48" y="22" fill="#ffffff" font-family="'Segoe UI', sans-serif" font-weight="700" font-size="13">Middle East</text>
+    <text x="48" y="38" fill="#64748b" font-family="'Segoe UI', sans-serif" font-size="11">Emerging Leaders</text>
+    <rect x="12" y="48" width="60" height="10" rx="4" fill="rgba(255,165,80,0.15)"/>
+    <rect x="12" y="48" width="30" height="10" rx="4" fill="#ffa751" opacity="0.8"/>
+    <text x="85" y="58" fill="#ffa751" font-size="11" font-weight="700">🌱 RISING</text>
+  </g>
+
+  <!-- ─── 3 KEY INSIGHT CARDS (right side) ─── -->
+  <!-- Card 1: Early Mover -->
+  <g transform="translate(800, 178)">
+    <rect width="360" height="110" rx="14" fill="rgba(0,242,254,0.06)" stroke="rgba(0,242,254,0.25)" stroke-width="1.2"/>
+    <text x="20" y="36" fill="#00f2fe" font-family="'Segoe UI', sans-serif" font-weight="800" font-size="15">⚡ FIRST MOVER ADVANTAGE</text>
+    <text x="20" y="58" fill="#e2e8f0" font-family="'Segoe UI', sans-serif" font-size="13">The market isn't saturated yet. Those who</text>
+    <text x="20" y="75" fill="#e2e8f0" font-family="'Segoe UI', sans-serif" font-size="13">act now will build the deepest roots and</text>
+    <text x="20" y="92" fill="#00f2fe" font-family="'Segoe UI', sans-serif" font-size="13" font-weight="600">the widest networks in their region. 🌱</text>
+  </g>
+  <!-- Card 2: Strategy -->
+  <g transform="translate(800, 304)">
+    <rect width="360" height="110" rx="14" fill="rgba(168,85,247,0.06)" stroke="rgba(168,85,247,0.25)" stroke-width="1.2"/>
+    <text x="20" y="36" fill="#c084fc" font-family="'Segoe UI', sans-serif" font-weight="800" font-size="15">🧠 STRATEGY BUILDS LEGACY</text>
+    <text x="20" y="58" fill="#e2e8f0" font-family="'Segoe UI', sans-serif" font-size="13">The earlier your strategy is formed, the</text>
+    <text x="20" y="75" fill="#e2e8f0" font-family="'Segoe UI', sans-serif" font-size="13">greater the long-term advantage your team</text>
+    <text x="20" y="92" fill="#c084fc" font-family="'Segoe UI', sans-serif" font-size="13" font-weight="600">holds as the ecosystem matures. 🏆</text>
+  </g>
+  <!-- Card 3: Digital Asset Era -->
+  <g transform="translate(800, 430)">
+    <rect width="360" height="110" rx="14" fill="rgba(255,226,89,0.06)" stroke="rgba(255,226,89,0.25)" stroke-width="1.2"/>
+    <text x="20" y="36" fill="#ffe259" font-family="'Segoe UI', sans-serif" font-weight="800" font-size="15">💎 THE NEW ERA OF DIGITAL ASSETS</text>
+    <text x="20" y="58" fill="#e2e8f0" font-family="'Segoe UI', sans-serif" font-size="13">Today's efforts lay tomorrow's foundation.</text>
+    <text x="20" y="75" fill="#e2e8f0" font-family="'Segoe UI', sans-serif" font-size="13">Grow together with RXDT and seize the</text>
+    <text x="20" y="92" fill="#ffe259" font-family="'Segoe UI', sans-serif" font-size="13" font-weight="600">opportunities of the digital asset revolution. 🚀</text>
+  </g>
+
+  <!-- ─── BOTTOM CTA ─── -->
+  <g transform="translate(40, 566)">
+    <rect width="1120" height="86" rx="16" fill="rgba(0,0,0,0.55)" stroke="url(#cyanGrad)" stroke-width="1.5"/>
+    <text x="36" y="36" fill="url(#goldGrad)" font-family="'Segoe UI', sans-serif" font-weight="900" font-size="19">🌍 GROW WITH RXDT — DEVELOP WITH THE GLOBAL MARKET</text>
+    <text x="36" y="58" fill="#94a3b8" font-family="'Segoe UI', sans-serif" font-size="13">Arthur Vance · Founder &amp; CEO  ·  USA Colorado Compliant  ·  Launched July 30, 2026</text>
+    <text x="36" y="78" fill="#00f2fe" font-family="'Segoe UI', sans-serif" font-weight="700" font-size="14">👉 Register: https://www.rxdt.site/#/register?invite=RXN2ZO   ·   📬 Telegram: @RXDT888</text>
+  </g>
+</svg>
