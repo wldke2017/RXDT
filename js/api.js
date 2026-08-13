@@ -71,7 +71,11 @@ export const api = {
   getKycStatus: () => request('/api/kyc/status'),
 
   // Signals
-  setSignalPreference: (autoSignalExec) => request('/api/signals/preference', { method: 'POST', body: { autoSignalExec } })
+  setSignalPreference: (autoSignalExec) => request('/api/signals/preference', { method: 'POST', body: { autoSignalExec } }),
+
+  // Admin Notifications
+  getAdminNotifications: () => request('/api/admin/notifications'),
+  deleteAdminNotification: (id) => request(`/api/admin/notifications/${id}`, { method: 'DELETE' })
 };
 
 export default api;

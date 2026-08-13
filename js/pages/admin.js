@@ -141,6 +141,7 @@ function renderDashboard() {
       <button class="tab-btn" onclick="switchAdminTab('earnings',this);loadEarningsView()">📊 Earnings</button>
       <button class="tab-btn" onclick="switchAdminTab('infographics',this);renderInfographicsTab()">🖼️ Profit Cards</button>
       <button class="tab-btn" onclick="switchAdminTab('marketing',this);renderMarketingHubTab()">📢 Marketing & VIP Assets</button>
+      <button class="tab-btn" onclick="switchAdminTab('notifications',this);renderAdminNotificationsTab()">🔔 Notifications</button>
       <button class="tab-btn" onclick="switchAdminTab('chat',this);loadChatConversations()">💬 Chat</button>
     </div>
 
@@ -185,6 +186,11 @@ function renderDashboard() {
     <!-- Marketing & VIP Hub Panel -->
     <div id="admin-tab-marketing" style="display:none;">
       <div id="admin-marketing-container"></div>
+    </div>
+
+    <!-- Social Group Notifications Panel -->
+    <div id="admin-tab-notifications" style="display:none;">
+      <div id="admin-notifications-container"></div>
     </div>
 
     <!-- Chat Panel -->
@@ -477,7 +483,7 @@ function initDashboard() {
   window.switchAdminTab = function (tab, btn) {
     document.querySelectorAll('.tabs-header .tab-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
-    ['deposits', 'withdrawals', 'kyc', 'users', 'signals', 'vip', 'earnings', 'infographics', 'marketing', 'chat'].forEach(t => {
+    ['deposits', 'withdrawals', 'kyc', 'users', 'signals', 'vip', 'earnings', 'infographics', 'marketing', 'notifications', 'chat'].forEach(t => {
       const el = document.getElementById(`admin-tab-${t}`);
       if (el) el.style.display = t === tab ? '' : 'none';
     });
@@ -485,6 +491,7 @@ function initDashboard() {
     if (tab === 'signals') loadSignalTrades();
     if (tab === 'vip') loadVipRewardsView();
     if (tab === 'marketing') renderMarketingHubTab();
+    if (tab === 'notifications') renderAdminNotificationsTab();
   };
 
   window.loadVipRewardsView = async function () {
@@ -2206,6 +2213,179 @@ Today’s efforts aren’t just about participating in a platform — they are a
     link.href = canvas.toDataURL('image/png');
     link.click();
     if (window.toast) window.toast(`📥 Downloading ${vip.name} Badge PNG...`, 'success');
+  };
+
+  // ── ADMIN SOCIAL GROUP NOTIFICATIONS (Auto-Generated Updates) ──────────────
+  const DEFAULT_NOTIFICATION_LOGS = [
+    {
+      id: 'notif-demo-1',
+      event_type: 'user_registered',
+      category: 'New User',
+      title: '🎉 New Trader Joined (User #89421)',
+      created_at: new Date().toISOString(),
+      message_text: `🎉 *NEW TRADER JOINED RXDT EXCHANGE!* 🎉
+
+👏 Warm welcome to user **Trader_8942** to the RXDT trading community!
+
+👤 *User ID:* USR-89421
+👥 *Referred By:* User RXN2ZO (John D.)
+💰 *Deposit Status:* ⌛ Deposit Pending (Unlocks signals & copy-trading once deposit is completed)
+
+🚀 Start your AI Quantitative Copy-Trading journey on RXDT Exchange today!
+🌍 Registration: https://www.rxdt.site/#/register?invite=RXN2ZO
+💬 CEO Telegram: @RXDT888`
+    },
+    {
+      id: 'notif-demo-2',
+      event_type: 'deposit_approved',
+      category: 'Deposit',
+      title: '💰 Deposit Approved ($500.00 USDT — Trader_4412)',
+      created_at: new Date(Date.now() - 3600000).toISOString(),
+      message_text: `💰 *NEW DEPOSIT CONFIRMED & REFERRAL COMMISSION PAID!* 💰
+
+👏 Congratulations to **Trader_4412** for completing a deposit of **$500.00 USDT**!
+
+🎁 *Referrer Bonus Earned:* $37.50 USDT (7.5% Commission paid to User RXN2ZO)
+📈 *Unlocked Strategy:* Tier 2 ($300+)
+📡 *Daily AI Signal Schedule:* 6:00 PM EAT (2.4% Yield)
+📊 *Daily Return:* 1.8% – 2.8% Automated AI Execution
+
+🚀 Maximize your passive earnings on RXDT Exchange!
+🌍 Registration: https://www.rxdt.site/#/register?invite=RXN2ZO
+💬 CEO Telegram: @RXDT888`
+    },
+    {
+      id: 'notif-demo-3',
+      event_type: 'vip_unlocked',
+      category: 'VIP Rank',
+      title: '🏆 VIP 3 Master Trader Unlocked (Trader_7701)',
+      created_at: new Date(Date.now() - 7200000).toISOString(),
+      message_text: `🏆 *CONGRATULATIONS TO OUR NEW VIP TRADER!* 🏆
+
+👏 Huge congratulations to **Trader_7701** for reaching **VIP 3 Master Trader** on RXDT Exchange!
+
+🏅 *VIP Level:* VIP 3 Master Trader
+💵 *10-Day Salary:* $150 (Paid 3rd, 13th & 23rd of every month)
+💰 *Monthly Income:* $450/mo Total Salary
+🎁 *Promotion Bonus:* $500 USDT
+
+🚀 Build your team and climb the leadership ranks on RXDT!
+🌍 Registration: https://www.rxdt.site/#/register?invite=RXN2ZO
+💬 CEO Telegram: @RXDT888`
+    },
+    {
+      id: 'notif-demo-4',
+      event_type: 'withdrawal_completed',
+      category: 'Withdrawal',
+      title: '📤 Withdrawal Approved ($250.00 USDT — Tra***12)',
+      created_at: new Date(Date.now() - 14400000).toISOString(),
+      message_text: `📤 *WITHDRAWAL PROOF & SUCCESSFUL DISTRIBUTION!* 📤
+
+✅ Withdrawal request of **$250.00 USDT** for user **Tra***12** has been verified and processed!
+
+💵 *Amount Received:* $232.50 USDT (Fee: $17.50 USDT)
+🌐 *Network:* USDT (TRC-20)
+⚡ *Status:* Fully Distributed & Verified
+
+🛡️ Trade with confidence on USA Colorado State Compliant RXDT Exchange!
+🌍 Registration: https://www.rxdt.site/#/register?invite=RXN2ZO
+💬 CEO Telegram: @RXDT888`
+    }
+  ];
+
+  window.renderAdminNotificationsTab = async function (filterCategory = 'ALL') {
+    const container = document.getElementById('admin-notifications-container');
+    if (!container) return;
+
+    container.innerHTML = `<div class="admin-loading">Loading social group updates...</div>`;
+
+    let serverNotifs = [];
+    try {
+      const data = await adminFetch('/notifications');
+      if (data && data.notifications) serverNotifs = data.notifications;
+    } catch (e) { }
+
+    const combinedNotifs = [...serverNotifs, ...DEFAULT_NOTIFICATION_LOGS];
+
+    const filteredNotifs = filterCategory === 'ALL'
+      ? combinedNotifs
+      : combinedNotifs.filter(n => (n.category || '').toLowerCase() === filterCategory.toLowerCase() || (n.event_type || '').toLowerCase() === filterCategory.toLowerCase());
+
+    const getBadgeStyle = (cat) => {
+      const c = (cat || '').toLowerCase();
+      if (c.includes('user') || c.includes('registered')) return 'background:rgba(0,242,254,0.15);color:#00f2fe;border:1px solid #00f2fe;';
+      if (c.includes('deposit')) return 'background:rgba(255,226,89,0.15);color:#ffe259;border:1px solid #ffe259;';
+      if (c.includes('vip') || c.includes('rank')) return 'background:rgba(168,85,247,0.15);color:#c084fc;border:1px solid #a855f7;';
+      if (c.includes('withdrawal')) return 'background:rgba(56,239,125,0.15);color:#38ef7d;border:1px solid #38ef7d;';
+      return 'background:rgba(255,255,255,0.1);color:#fff;border:1px solid rgba(255,255,255,0.2);';
+    };
+
+    container.innerHTML = `
+      <div style="background:linear-gradient(135deg, #090d16, #161b26);border:1px solid #00f2fe;border-radius:16px;padding:20px;margin-bottom:20px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+          <div>
+            <h2 style="margin:0;font-size:20px;font-weight:800;color:#fff;display:flex;align-items:center;gap:8px;">
+              🔔 Social Group Notifications & Auto-Generated Updates
+            </h2>
+            <div style="font-size:13px;color:var(--text-sub);margin-top:4px;">
+              Real-time branded posts generated automatically when users register, deposit, upgrade VIP ranks, or withdraw funds.
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <span style="font-size:12px;color:#00f2fe;font-weight:700;background:rgba(0,242,254,0.1);padding:6px 12px;border-radius:20px;border:1px solid rgba(0,242,254,0.3);">
+              📊 Total Logs: ${combinedNotifs.length}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Filter Bar -->
+      <div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;align-items:center;">
+        <button class="btn-outline" style="font-size:13px;padding:6px 14px;${filterCategory==='ALL'?'background:rgba(0,242,254,0.15);border-color:#00f2fe;color:#00f2fe;':''}" onclick="renderAdminNotificationsTab('ALL')">🌐 All Activity (${combinedNotifs.length})</button>
+        <button class="btn-outline" style="font-size:13px;padding:6px 14px;${filterCategory==='New User'?'background:rgba(0,242,254,0.15);border-color:#00f2fe;color:#00f2fe;':''}" onclick="renderAdminNotificationsTab('New User')">🎉 New Users</button>
+        <button class="btn-outline" style="font-size:13px;padding:6px 14px;${filterCategory==='Deposit'?'background:rgba(255,226,89,0.15);border-color:#ffe259;color:#ffe259;':''}" onclick="renderAdminNotificationsTab('Deposit')">💰 Deposits</button>
+        <button class="btn-outline" style="font-size:13px;padding:6px 14px;${filterCategory==='VIP Rank'?'background:rgba(168,85,247,0.15);border-color:#a855f7;color:#c084fc;':''}" onclick="renderAdminNotificationsTab('VIP Rank')">🏆 VIP Ranks</button>
+        <button class="btn-outline" style="font-size:13px;padding:6px 14px;${filterCategory==='Withdrawal'?'background:rgba(56,239,125,0.15);border-color:#38ef7d;color:#38ef7d;':''}" onclick="renderAdminNotificationsTab('Withdrawal')">📤 Withdrawals</button>
+      </div>
+
+      <!-- Cards Grid -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(340px, 1fr));gap:16px;">
+        ${filteredNotifs.map(n => `
+          <div style="background:#090d16;border:1px solid rgba(255,255,255,0.12);border-radius:14px;padding:18px;display:flex;flex-direction:column;justify-content:space-between;">
+            <div>
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                <span style="font-size:11px;padding:3px 10px;border-radius:12px;font-weight:700;${getBadgeStyle(n.category || n.event_type)}">
+                  ${n.category || n.event_type}
+                </span>
+                <span style="font-size:11px;color:var(--text-sub);">${new Date(n.created_at).toLocaleString()}</span>
+              </div>
+              <div style="font-size:14px;font-weight:700;color:#ffffff;margin-bottom:10px;">${n.title}</div>
+              <textarea readonly style="width:100%;height:150px;background:rgba(0,0,0,0.5);color:#e2e8f0;border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:12px;font-size:12px;font-family:monospace;resize:none;margin-bottom:12px;line-height:1.4;">${n.message_text}</textarea>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center;">
+              <button class="btn-dark" style="flex:1;font-size:12px;padding:10px 0;background:#00f2fe;color:#000;font-weight:800;border-radius:8px;" onclick="copyToClipboard(\`${n.message_text.replace(/`/g, '\\`').replace(/'/g, "\\'")}\`, '${n.title.replace(/'/g, "\\'")}')">
+                📋 Copy Group Post
+              </button>
+              ${n.id && !n.id.startsWith('notif-demo-') ? `
+                <button class="btn-outline" style="font-size:12px;padding:8px 12px;border-color:#ff4d4d;color:#ff4d4d;border-radius:8px;" onclick="deleteAdminNotificationLog('${n.id}')">🗑️</button>
+              ` : ''}
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  };
+
+  window.deleteAdminNotificationLog = async function (id) {
+    if (!confirm('Are you sure you want to delete this notification log?')) return;
+    try {
+      const res = await adminFetch(`/notifications/${id}`, { method: 'DELETE' });
+      if (res && res.error) throw new Error(res.error);
+      if (window.toast) window.toast('Notification deleted', 'info');
+      renderAdminNotificationsTab();
+    } catch (err) {
+      if (window.toast) window.toast('Delete error: ' + err.message, 'error');
+    }
   };
 
   // Auto-load on init

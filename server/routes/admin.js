@@ -17,6 +17,25 @@ export function requireAdminSecret(req, res, next) {
 }
 
 // ----------------------------------------------------
+// ADMIN NOTIFICATION HELPER
+// ----------------------------------------------------
+export async function createAdminNotification({ eventType, title, category, messageText, userId, metadata = {} }) {
+  try {
+    const id = 'notif-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
+    await query(
+      `INSERT INTO admin_notifications (id, event_type, title, category, message_text, user_id, metadata, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())`,
+      [id, eventType, title, category, messageText, userId || null, JSON.stringify(metadata)]
+    );
+    console.log(`[Admin Notification] Logged ${eventType} for User: ${userId || 'N/A'}`);
+    return id;
+  } catch (err) {
+    console.warn('Failed to log admin notification:', err.message);
+    return null;
+  }
+}
+
+// ----------------------------------------------------
 // STATS OVERVIEW
 // ----------------------------------------------------
 router.get('/stats', requireAdminSecret, async (req, res) => {
@@ -391,6 +410,47 @@ router.post('/deposits/approve', requireAdminSecret, async (req, res) => {
       ['AC' + Date.now(), dep.user_id, 'deposit', amount, userRes.rows[0].available_balance, `Deposit approved: ${dep.order_number} (+${awardedSpins} Lucky Spin Chances)`]
     );
     await query('COMMIT');
+
+    // Trigger Admin Social Notification for Deposit Approval
+    try {
+      const uRes = await query(`SELECT name, phone, email, referred_by FROM users WHERE id = $1`, [dep.user_id]);
+      const uInfo = uRes.rows[0] || {};
+      const userName = uInfo.name || uInfo.phone || uInfo.email || `Trader_${dep.user_id.slice(-4)}`;
+      const referrerText = uInfo.referred_by ? `User ${uInfo.referred_by}` : 'Direct Global Member';
+      const refBonus = (amount * 0.075).toFixed(2);
+      let tierName = 'Tier 1 ($100+)';
+      let signalSchedule = '5:00 PM EAT (1.4% Yield)';
+      if (amount >= 1000) {
+        tierName = 'Tier 3 ($1,000+)';
+        signalSchedule = '7:00 PM EAT (3.1% Yield)';
+      } else if (amount >= 300) {
+        tierName = 'Tier 2 ($300+)';
+        signalSchedule = '6:00 PM EAT (2.4% Yield)';
+      }
+
+      const depMessage = `💰 *NEW DEPOSIT CONFIRMED & REFERRAL COMMISSION PAID!* 💰
+
+👏 Congratulations to **${userName}** for completing a deposit of **$${amount.toFixed(2)} USDT**!
+
+🎁 *Referrer Bonus Earned:* $${refBonus} USDT (7.5% Commission paid to ${referrerText})
+📈 *Unlocked Strategy:* ${tierName}
+📡 *Daily AI Signal Schedule:* ${signalSchedule}
+📊 *Daily Return:* 1.8% – 2.8% Automated AI Execution
+
+🚀 Start copying verified AI signals on RXDT Exchange today!
+🌍 Registration: https://www.rxdt.site/#/register?invite=RXN2ZO
+💬 CEO Telegram: @RXDT888`;
+
+      await createAdminNotification({
+        eventType: 'deposit_approved',
+        title: `💰 Deposit Approved ($${amount.toFixed(2)} USDT — ${userName})`,
+        category: 'Deposit',
+        messageText: depMessage,
+        userId: dep.user_id,
+        metadata: { amount, refBonus, tierName, referrerText }
+      });
+    } catch (e) { console.warn('Deposit notification trigger error:', e.message); }
+
     res.json({ message: `Deposit ${dep.order_number} ($${amount}) approved! Granted ${awardedSpins} spin chance(s).${bonusMessage}`, newBalance: parseFloat(userRes.rows[0].available_balance), spinChances: parseInt(userRes.rows[0].spin_chances) });
   } catch (err) {
     await query('ROLLBACK');
@@ -426,6 +486,39 @@ router.post('/withdrawals/approve', requireAdminSecret, async (req, res) => {
     );
     if (!witRes.rows.length) return res.status(400).json({ error: 'Not found or already processed' });
     const w = witRes.rows[0];
+
+    // Trigger Admin Social Notification for Withdrawal Approval
+    try {
+      const uRes = await query(`SELECT name, phone, email FROM users WHERE id = $1`, [w.user_id]);
+      const uInfo = uRes.rows[0] || {};
+      const rawName = uInfo.name || uInfo.phone || uInfo.email || `Trader_${w.user_id.slice(-4)}`;
+      const maskedName = rawName.length > 5 ? rawName.slice(0, 3) + '***' + rawName.slice(-2) : rawName;
+      const witAmount = parseFloat(w.amount);
+      const witFee = parseFloat(w.fee || 0);
+      const actualAmount = (witAmount - witFee).toFixed(2);
+
+      const witMessage = `📤 *WITHDRAWAL PROOF & SUCCESSFUL DISTRIBUTION!* 📤
+
+✅ Withdrawal request of **$${witAmount.toFixed(2)} USDT** for user **${maskedName}** has been verified and processed!
+
+💵 *Amount Received:* $${actualAmount} USDT (Fee: $${witFee.toFixed(2)} USDT)
+🌐 *Network:* ${w.coin || 'USDT'} (${w.network || 'TRC-20'})
+⚡ *Status:* Fully Distributed & Verified
+
+🛡️ Trade with confidence on USA Colorado State Compliant RXDT Exchange!
+🌍 Registration: https://www.rxdt.site/#/register?invite=RXN2ZO
+💬 CEO Telegram: @RXDT888`;
+
+      await createAdminNotification({
+        eventType: 'withdrawal_completed',
+        title: `📤 Withdrawal Approved ($${witAmount.toFixed(2)} USDT — ${maskedName})`,
+        category: 'Withdrawal',
+        messageText: witMessage,
+        userId: w.user_id,
+        metadata: { amount: witAmount, actualAmount, network: w.network, coin: w.coin }
+      });
+    } catch (e) { console.warn('Withdrawal notification trigger error:', e.message); }
+
     res.json({ message: `Withdrawal ${w.order_number} ($${w.amount}) approved!` });
   } catch (err) {
     res.status(500).json({ error: 'Failed to approve withdrawal' });
@@ -783,6 +876,32 @@ router.post('/approve-promotion', requireAdminSecret, async (req, res) => {
   } catch (err) {
     console.error('Approve promotion error:', err);
     res.status(500).json({ error: 'Failed to update promotion claim' });
+  }
+});
+
+// ----------------------------------------------------
+// ADMIN NOTIFICATIONS (Social Group Updates)
+// ----------------------------------------------------
+router.get('/notifications', requireAdminSecret, async (req, res) => {
+  try {
+    const result = await query(
+      `SELECT * FROM admin_notifications ORDER BY created_at DESC LIMIT 100`
+    );
+    res.json({ notifications: result.rows });
+  } catch (err) {
+    console.error('Admin notifications fetch error:', err);
+    res.status(500).json({ error: 'Failed to fetch notifications' });
+  }
+});
+
+router.delete('/notifications/:id', requireAdminSecret, async (req, res) => {
+  try {
+    const { id } = req.params;
+    await query(`DELETE FROM admin_notifications WHERE id = $1`, [id]);
+    res.json({ success: true, message: 'Notification deleted' });
+  } catch (err) {
+    console.error('Admin notification delete error:', err);
+    res.status(500).json({ error: 'Failed to delete notification' });
   }
 });
 

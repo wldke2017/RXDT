@@ -176,6 +176,18 @@ export async function initDatabase() {
       status VARCHAR(20) DEFAULT 'processing',
       audit_status VARCHAR(20) DEFAULT 'pending',
       created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+  // Create Admin Social Group Notifications Table
+  await query(`
+    CREATE TABLE IF NOT EXISTS admin_notifications (
+      id VARCHAR(50) PRIMARY KEY,
+      event_type VARCHAR(50) NOT NULL,
+      title VARCHAR(255) NOT NULL,
+      category VARCHAR(50) NOT NULL,
+      platform VARCHAR(100) DEFAULT 'Telegram / WhatsApp / Facebook',
+      message_text TEXT NOT NULL,
+      user_id VARCHAR(50),
+      metadata JSONB DEFAULT '{}',
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
     );
   `);
 

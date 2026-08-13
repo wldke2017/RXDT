@@ -5,7 +5,7 @@ import rateLimit from 'express-rate-limit';
 import { query } from '../db.js';
 import { requireAuth } from '../middleware/auth.js';
 import { processDueSignalTrades } from './signals.js';
-import { notifyAdminOfPendingItem } from '../notify.js';
+import { createAdminNotification } from './admin.js';
 
 const router = express.Router();
 
@@ -102,18 +102,34 @@ router.post('/register', registerLimiter, async (req, res) => {
     const user = newUser.rows[0];
     const token = jwt.sign({ id: user.id, phone: user.phone || '', email: user.email || '' }, JWT_SECRET, { expiresIn: '7d' });
 
-    // Notify admin via email of the new user registration.
-    // Includes the invite code the new user used and who referred them.
-    const referrerLabel = referrerInfo
-      ? `${referrerInfo.name || 'Unknown'} (${referrerInfo.phone || referrerInfo.email || 'no contact'}) · code ${referrerInfo.invite_code || 'N/A'}`
-      : 'None (direct registration)';
-    await notifyAdminOfPendingItem({
-      type: 'user',
-      id: user.id,
-      amount: '',
-      userLabel: `${user.name} (${user.phone || user.email || 'no contact'})`,
-      detail: `New user registered${referrerId ? ' via referral' : ''}. Invite code used: ${inviteCode ? inviteCode.trim() : 'N/A'}. Referred by: ${referrerLabel}. New user's own invite code: ${user.invite_code}`,
-    }).catch(() => { });
+    // Trigger Admin Social Group Notification for New User Registration
+    try {
+      const regName = user.name || user.phone || user.email || `Trader_${user.id.slice(-4)}`;
+      const inviterText = referrerInfo
+        ? `${referrerInfo.name || 'User'} (${referrerInfo.invite_code})`
+        : 'Direct Global Registration';
+
+      const regMessage = `🎉 *NEW TRADER JOINED RXDT EXCHANGE!* 🎉
+
+👏 Warm welcome to user **${regName}** to the RXDT trading community!
+
+👤 *User ID:* ${user.id}
+👥 *Referred By:* ${inviterText}
+💰 *Deposit Status:* ⌛ Deposit Pending (Unlocks signals & copy-trading once deposit is completed)
+
+🚀 Start your AI Quantitative Copy-Trading journey on RXDT Exchange today!
+🌍 Registration: https://www.rxdt.site/#/register?invite=RXN2ZO
+💬 CEO Telegram: @RXDT888`;
+
+      await createAdminNotification({
+        eventType: 'user_registered',
+        title: `🎉 New Trader Joined (${regName})`,
+        category: 'New User',
+        messageText: regMessage,
+        userId: user.id,
+        metadata: { regName, inviterText, inviteCode: user.invite_code }
+      });
+    } catch (e) { console.warn('Registration notification trigger error:', e.message); }
 
     res.json({
       message: 'Registration successful!',
