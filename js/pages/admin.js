@@ -1765,24 +1765,15 @@ This is what RXDT is truly about:
     const container = document.getElementById('admin-marketing-container');
     if (!container) return;
 
-    let messages = JSON.parse(localStorage.getItem('rxdt_admin_messages') || 'null');
-    if (!messages) {
-      messages = DEFAULT_MARKETING_MESSAGES;
-      localStorage.setItem('rxdt_admin_messages', JSON.stringify(messages));
-    }
+    // ── Always use DEFAULT items as base + merge any user-added custom items on top ──
+    // This ensures newly added default messages/images always appear without clearing cache.
+    const customMessages = JSON.parse(localStorage.getItem('rxdt_admin_messages') || '[]')
+      .filter(m => m.isCustom);
+    const messages = [...DEFAULT_MARKETING_MESSAGES, ...customMessages];
 
-    let images = JSON.parse(localStorage.getItem('rxdt_admin_images') || 'null');
-    if (!images) {
-      images = DEFAULT_BRAND_IMAGES;
-      localStorage.setItem('rxdt_admin_images', JSON.stringify(images));
-    } else {
-      // Refresh default images if missing AI Signal Banners
-      const hasSignalBanners = images.some(img => img.id && img.id.startsWith('img-sig-banner'));
-      if (!hasSignalBanners) {
-        images = [...DEFAULT_BRAND_IMAGES, ...images.filter(i => i.isCustom)];
-        localStorage.setItem('rxdt_admin_images', JSON.stringify(images));
-      }
-    }
+    const customImages = JSON.parse(localStorage.getItem('rxdt_admin_images') || '[]')
+      .filter(i => i.isCustom);
+    const images = [...DEFAULT_BRAND_IMAGES, ...customImages];
 
     container.innerHTML = `
       <div style="background:linear-gradient(135deg, #0f172a, #1e1b4b);border:1px solid #00f2fe;border-radius:16px;padding:20px;margin-bottom:24px;">
@@ -1986,8 +1977,10 @@ This is what RXDT is truly about:
       return;
     }
 
-    let messages = JSON.parse(localStorage.getItem('rxdt_admin_messages') || '[]');
-    messages.push({
+    // Only custom items are persisted in localStorage
+    let customMessages = JSON.parse(localStorage.getItem('rxdt_admin_messages') || '[]')
+      .filter(m => m.isCustom);
+    customMessages.push({
       id: 'custom-msg-' + Date.now(),
       title,
       platform,
@@ -1996,16 +1989,17 @@ This is what RXDT is truly about:
       isCustom: true
     });
 
-    localStorage.setItem('rxdt_admin_messages', JSON.stringify(messages));
+    localStorage.setItem('rxdt_admin_messages', JSON.stringify(customMessages));
     closeAddMessageModal();
     renderMarketingHubTab();
     if (window.toast) window.toast('✅ Custom message template saved!', 'success');
   };
 
   window.deleteCustomMessage = function (id) {
-    let messages = JSON.parse(localStorage.getItem('rxdt_admin_messages') || '[]');
-    messages = messages.filter(m => m.id !== id);
-    localStorage.setItem('rxdt_admin_messages', JSON.stringify(messages));
+    // Only custom items live in localStorage; filter by id
+    let customMessages = JSON.parse(localStorage.getItem('rxdt_admin_messages') || '[]')
+      .filter(m => m.isCustom && m.id !== id);
+    localStorage.setItem('rxdt_admin_messages', JSON.stringify(customMessages));
     renderMarketingHubTab();
     if (window.toast) window.toast('Custom message deleted', 'info');
   };
@@ -2060,9 +2054,10 @@ This is what RXDT is truly about:
   };
 
   window.deleteCustomImage = function (id) {
-    let images = JSON.parse(localStorage.getItem('rxdt_admin_images') || '[]');
-    images = images.filter(i => i.id !== id);
-    localStorage.setItem('rxdt_admin_images', JSON.stringify(images));
+    // Only custom items live in localStorage; filter by id
+    let customImages = JSON.parse(localStorage.getItem('rxdt_admin_images') || '[]')
+      .filter(i => i.isCustom && i.id !== id);
+    localStorage.setItem('rxdt_admin_images', JSON.stringify(customImages));
     renderMarketingHubTab();
     if (window.toast) window.toast('Brand asset deleted', 'info');
   };
