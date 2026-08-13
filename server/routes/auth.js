@@ -340,6 +340,42 @@ router.get('/phone-status', requireAuth, async (req, res) => {
   }
 });
 
+// ---- Set Transaction Password (First Time - No OTP Required) ----
+router.post('/set-transaction-password', requireAuth, async (req, res) => {
+  const { transactionPassword } = req.body;
+  if (!transactionPassword || !/^\d{6}$/.test(transactionPassword)) {
+    return res.status(400).json({ error: 'Transaction password must be strictly 6 digits.' });
+  }
+
+  try {
+    const userRes = await query(`SELECT transaction_password FROM users WHERE id = $1`, [req.userId]);
+    const user = userRes.rows[0];
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    // If transaction password is already set, require the change flow with email OTP instead
+    if (user.transaction_password) {
+      return res.status(400).json({
+        error: 'Transaction password is already set. Please use Change Transaction Password with email verification.'
+      });
+    }
+
+    const hash = await bcrypt.hash(transactionPassword, 10);
+    await query(`UPDATE users SET transaction_password = $1 WHERE id = $2`, [hash, req.userId]);
+
+    const updatedRes = await query(`SELECT * FROM users WHERE id = $1`, [req.userId]);
+    const updatedUser = formatUser(updatedRes.rows[0]);
+
+    res.json({
+      success: true,
+      message: 'Transaction password set successfully!',
+      user: updatedUser
+    });
+  } catch (err) {
+    console.error('Set transaction password error:', err);
+    res.status(500).json({ error: 'Failed to set transaction password' });
+  }
+});
+
 function formatUser(u) {
   return {
     id: u.id,
@@ -347,6 +383,7 @@ function formatUser(u) {
     phone: u.phone,
     email: u.email || '',
     emailBound: u.email_bound || null,
+    hasTransactionPassword: !!u.transaction_password,
     totalAssets: parseFloat(u.total_assets || 0),
     availableBalance: parseFloat(u.available_balance || 0),
     frozenBalance: parseFloat(u.frozen_balance || 0),

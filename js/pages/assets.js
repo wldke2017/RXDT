@@ -281,6 +281,7 @@ function renderWithdraw() {
   const addresses = store.getBindAddresses();
   const boundCrypto = addresses.find(a => a.method === 'crypto');
   const isBound = !!boundCrypto;
+  const hasTxnPassword = !!user?.hasTransactionPassword;
 
   return `
   <div>
@@ -392,6 +393,25 @@ function renderWithdraw() {
               <button class="btn-outline" style="flex:1;height:44px;font-size:14px;" onclick="hideMandatoryBindForm()">Back</button>
               <button class="btn-primary" id="modal-bind-submit-btn" style="flex:1;height:44px;font-size:14px;" onclick="submitMandatoryBindAddress()">Confirm Binding</button>
             </div>
+          </div>
+        </div>
+      </div>
+    ` : ''}
+
+    <!-- Mandatory Set Transaction Password Modal overlay when address is bound but transaction password not set -->
+    ${(isBound && !hasTxnPassword) ? `
+      <div class="modal-overlay active" id="mandatory-txn-modal">
+        <div class="modal-content" style="max-width:440px;background:var(--bg-card);border-radius:16px;padding:24px;">
+          <div style="text-align:center;margin-bottom:16px;">
+            <div style="font-size:40px;margin-bottom:8px;">🛡️</div>
+            <h3 style="margin:0;font-size:18px;font-weight:700;">Set Transaction Password Required</h3>
+            <p style="font-size:13px;color:var(--text-muted);margin-top:8px;margin-bottom:0;line-height:1.5;">
+              You have bound a withdrawal wallet address, but you must set a <strong>strictly 6-digit transaction password</strong> before submitting withdrawal requests.
+            </p>
+          </div>
+          <div style="display:flex;gap:12px;margin-top:20px;">
+            <button class="btn-outline" style="flex:1;height:44px;font-size:14px;" onclick="navigateTo('assets')">Cancel</button>
+            <button class="btn-primary" style="flex:1;height:44px;font-size:14px;" onclick="navigateTo('profile'); setTimeout(() => window.openSetTxnPasswordModal &amp;&amp; window.openSetTxnPasswordModal(), 350);">Set Password Now</button>
           </div>
         </div>
       </div>
@@ -821,6 +841,12 @@ export function init(page) {
     const transactionPassword = document.getElementById('withdraw-txn-pwd')?.value || '';
     const submitBtn = document.querySelector('button[onclick="submitWithdrawal()"]');
 
+    if (!user?.hasTransactionPassword) {
+      toast('⚠️ Please set your 6-digit transaction password first', 'error');
+      navigateTo('profile');
+      setTimeout(() => window.openSetTxnPasswordModal && window.openSetTxnPasswordModal(), 350);
+      return;
+    }
     if (!amount || amount < 10) { toast('Minimum withdrawal is $10 USDT', 'error'); return; }
     if (amount > user.availableBalance) { toast('Insufficient balance', 'error'); return; }
     if (!address) { toast('Please enter withdrawal address', 'error'); return; }

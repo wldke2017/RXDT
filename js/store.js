@@ -160,6 +160,14 @@ const store = {
     return state.user;
   },
 
+  updateUser(userFields) {
+    if (state.user) {
+      state.user = { ...state.user, ...userFields };
+      localStorage.setItem('rxdt_user', JSON.stringify(state.user));
+      emit('user', state.user);
+    }
+  },
+
   isLoggedIn() {
     return state.isLoggedIn;
   },

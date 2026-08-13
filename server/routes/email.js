@@ -199,7 +199,11 @@ router.post('/change-password', requireAuth, async (req, res) => {
     }
 
     await query(updateSql, params);
-    res.json({ success: true, message: `${type === 'login' ? 'Login' : 'Transaction'} password changed successfully` });
+    res.json({
+      success: true,
+      message: `${type === 'login' ? 'Login' : 'Transaction'} password changed successfully`,
+      hasTransactionPassword: true
+    });
   } catch (err) {
     console.error('Change password error:', err);
     res.status(500).json({ error: 'Failed to change password' });

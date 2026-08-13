@@ -341,9 +341,11 @@ function renderSecurity() {
       <div class="security-item">
         <div class="security-item-info">
           <div class="si-title">🛡️ Transaction Password</div>
-          <div class="si-sub">Used to authorize withdrawals and transactions</div>
+          <div class="si-sub">${user?.hasTransactionPassword ? '6-digit transaction password active (email verification required to change)' : 'Set a 6-digit PIN to authorize withdrawals'}</div>
         </div>
-        <button class="btn-outline" style="padding:7px 16px;font-size:13px;" onclick="openChangePwd('transaction')">Set</button>
+        <button class="btn-outline" style="padding:7px 16px;font-size:13px;" onclick="${user?.hasTransactionPassword ? "openChangePwd('transaction')" : "openSetTxnPasswordModal()"}">
+          ${user?.hasTransactionPassword ? 'Change' : 'Set'}
+        </button>
       </div>
 
       <div class="security-divider"></div>
@@ -431,6 +433,44 @@ function renderSecurity() {
           </div>
         </div>
         <button class="btn-dark" style="width:100%;height:48px;font-size:16px;margin-top:12px;" onclick="submitBindPhone()">Confirm Phone Binding</button>
+      </div>
+    </div>
+
+    <!-- Set Transaction Password Modal (First Time - No Email Code Required) -->
+    <div class="modal-overlay" id="set-txn-pwd-modal">
+      <div class="modal-content" style="max-width:440px;background:var(--bg-card);border-radius:16px;padding:24px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+          <h3 style="margin:0;font-size:18px;font-weight:700;display:flex;align-items:center;gap:8px;">
+            🛡️ Set Transaction Password
+          </h3>
+          <button class="btn-outline" style="padding:4px 10px;" onclick="closeSetTxnPasswordModal()">✕</button>
+        </div>
+        <div style="font-size:13px;color:var(--text-muted);margin-bottom:16px;line-height:1.4;">
+          Create a <strong>strictly 6-digit transaction password</strong> to authorize all future withdrawals and security actions. First-time setup does not require an email code.
+        </div>
+        <div class="form-group">
+          <label class="form-label">Transaction Password (6 Digits)</label>
+          <div class="input-suffix">
+            <input type="password" id="set-txn-pwd-val" class="form-control"
+              placeholder="Enter 6-digit numeric password" maxlength="6"
+              oninput="this.value = this.value.replace(/[^0-9]/g, '')"
+              style="font-family:monospace;font-size:14px;"
+            />
+            <button class="pwd-toggle" onclick="togglePwd('set-txn-pwd-val')">👁</button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Confirm Transaction Password</label>
+          <div class="input-suffix">
+            <input type="password" id="set-txn-pwd-confirm" class="form-control"
+              placeholder="Confirm 6-digit numeric password" maxlength="6"
+              oninput="this.value = this.value.replace(/[^0-9]/g, '')"
+              style="font-family:monospace;font-size:14px;"
+            />
+            <button class="pwd-toggle" onclick="togglePwd('set-txn-pwd-confirm')">👁</button>
+          </div>
+        </div>
+        <button class="btn-dark" id="set-txn-pwd-submit-btn" style="width:100%;height:48px;font-size:16px;margin-top:12px;" onclick="submitSetTxnPassword()">Set Transaction Password</button>
       </div>
     </div>
 
@@ -966,7 +1006,67 @@ export function init(page) {
   };
 
 
+  // ── First-Time Set Transaction Password (No OTP Required) ──────────────
+  window.openSetTxnPasswordModal = function () {
+    const val = document.getElementById('set-txn-pwd-val');
+    const confirm = document.getElementById('set-txn-pwd-confirm');
+    if (val) val.value = '';
+    if (confirm) confirm.value = '';
+    document.getElementById('set-txn-pwd-modal')?.classList.add('active');
+  };
+
+  window.closeSetTxnPasswordModal = function () {
+    document.getElementById('set-txn-pwd-modal')?.classList.remove('active');
+  };
+
+  window.submitSetTxnPassword = async function () {
+    const pwd = document.getElementById('set-txn-pwd-val')?.value?.trim();
+    const confirm = document.getElementById('set-txn-pwd-confirm')?.value?.trim();
+    const submitBtn = document.getElementById('set-txn-pwd-submit-btn');
+
+    if (!pwd || !confirm) {
+      toast('Please fill in both password fields', 'error');
+      return;
+    }
+    if (!/^\d{6}$/.test(pwd)) {
+      toast('Transaction password must be strictly 6 numeric digits', 'error');
+      return;
+    }
+    if (pwd !== confirm) {
+      toast('Passwords do not match', 'error');
+      return;
+    }
+
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Setting Password...';
+    }
+
+    try {
+      const res = await api.setTransactionPassword({ transactionPassword: pwd });
+      toast('✅ Transaction password set successfully!', 'success');
+      if (res.user) store.updateUser(res.user);
+      else store.updateUser({ hasTransactionPassword: true });
+
+      closeSetTxnPasswordModal();
+      navigateTo('profile');
+    } catch (err) {
+      toast(err.message || 'Failed to set transaction password', 'error');
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Set Transaction Password';
+      }
+    }
+  };
+
+
   window.openChangePwd = async function (type) {
+    const user = store.getUser();
+    if (type === 'transaction' && !user?.hasTransactionPassword) {
+      openSetTxnPasswordModal();
+      return;
+    }
+
     // Check if email is bound first
     try {
       const statusData = await authFetch('/api/email/email-status');
@@ -979,7 +1079,34 @@ export function init(page) {
 
     const titleEl = document.getElementById('change-pwd-title');
     const typeEl = document.getElementById('sec-pwd-type');
-    if (titleEl) titleEl.textContent = type === 'login' ? 'Change Login Password' : 'Set Transaction Password';
+    const newPwdInp = document.getElementById('sec-new-pwd');
+    const confirmInp = document.getElementById('sec-confirm-pwd');
+
+    if (type === 'transaction') {
+      if (titleEl) titleEl.textContent = 'Change Transaction Password';
+      if (newPwdInp) {
+        newPwdInp.placeholder = 'Enter new 6-digit password';
+        newPwdInp.maxLength = 6;
+        newPwdInp.oninput = function() { this.value = this.value.replace(/[^0-9]/g, ''); };
+      }
+      if (confirmInp) {
+        confirmInp.placeholder = 'Confirm new 6-digit password';
+        confirmInp.maxLength = 6;
+        confirmInp.oninput = function() { this.value = this.value.replace(/[^0-9]/g, ''); };
+      }
+    } else {
+      if (titleEl) titleEl.textContent = 'Change Login Password';
+      if (newPwdInp) {
+        newPwdInp.placeholder = 'Enter new password';
+        newPwdInp.removeAttribute('maxlength');
+        newPwdInp.oninput = null;
+      }
+      if (confirmInp) {
+        confirmInp.placeholder = 'Confirm new password';
+        confirmInp.removeAttribute('maxlength');
+        confirmInp.oninput = null;
+      }
+    }
     if (typeEl) typeEl.value = type;
     document.getElementById('change-pwd-modal')?.classList.add('active');
   };
@@ -1014,17 +1141,16 @@ export function init(page) {
 
   window.submitChangePwd = async function () {
     const type = document.getElementById('sec-pwd-type')?.value || 'login';
-    const newPassword = document.getElementById('sec-new-pwd')?.value;
-    const confirm = document.getElementById('sec-confirm-pwd')?.value;
-    const otp = document.getElementById('sec-pwd-otp')?.value;
+    const newPassword = document.getElementById('sec-new-pwd')?.value?.trim();
+    const confirm = document.getElementById('sec-confirm-pwd')?.value?.trim();
+    const otp = document.getElementById('sec-pwd-otp')?.value?.trim();
 
     if (!newPassword || !confirm || !otp) { toast('Please fill all fields', 'error'); return; }
     if (newPassword !== confirm) { toast('Passwords do not match', 'error'); return; }
 
-    // Transaction password must be exactly 6 digits
     if (type === 'transaction') {
       if (!/^\d{6}$/.test(newPassword)) {
-        toast('Transaction password must be exactly 6 digits', 'error');
+        toast('Transaction password must be strictly 6 numeric digits', 'error');
         return;
       }
     } else {
@@ -1032,14 +1158,13 @@ export function init(page) {
     }
 
     try {
-      const data = await authFetch('/api/email/change-password', {
-        method: 'POST',
-        body: JSON.stringify({ newPassword, otp, type })
-      });
+      const data = await api.changePassword({ newPassword, otp, type });
       if (data.error) throw new Error(data.error);
 
       toast(`✅ ${type === 'login' ? 'Login' : 'Transaction'} password changed successfully!`, 'success');
+      if (type === 'transaction') store.updateUser({ hasTransactionPassword: true });
       document.getElementById('change-pwd-modal')?.classList.remove('active');
+      navigateTo('profile');
     } catch (err) {
       toast(err.message, 'error');
     }

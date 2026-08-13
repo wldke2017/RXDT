@@ -37,10 +37,12 @@ async function request(endpoint, options = {}) {
 }
 
 export const api = {
-  // Auth
+  // Auth & Security
   login: (credentials) => request('/api/auth/login', { method: 'POST', body: credentials }),
   register: (data) => request('/api/auth/register', { method: 'POST', body: data }),
   getMe: () => request('/api/auth/me'),
+  setTransactionPassword: (data) => request('/api/auth/set-transaction-password', { method: 'POST', body: data }),
+  changePassword: (data) => request('/api/email/change-password', { method: 'POST', body: data }),
 
   // Phone Binding
   sendPhoneOtp: (phone) => request('/api/auth/send-phone-otp', { method: 'POST', body: { phone } }),
