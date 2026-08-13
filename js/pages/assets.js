@@ -365,7 +365,7 @@ function renderWithdraw() {
           <div id="bind-modal-step2" style="display:none;margin-top:16px;">
             <div class="form-group">
               <label class="form-label">Select Coin</label>
-              <select class="form-control" id="modal-bind-coin">
+              <select class="form-control" id="modal-bind-coin" onchange="updateBindNetworkOptions('modal-bind-coin','modal-bind-network'); validateBindAddress('modal-bind-address','modal-bind-network','modal-bind-detect');">
                 <option value="USDT">USDT</option>
                 <option value="BTC">BTC</option>
                 <option value="ETH">ETH</option>
@@ -373,14 +373,20 @@ function renderWithdraw() {
             </div>
             <div class="form-group">
               <label class="form-label">Select Network</label>
-              <select class="form-control" id="modal-bind-network">
-                <option value="TRC-20">TRC-20</option>
-                <option value="ERC-20">ERC-20</option>
+              <select class="form-control" id="modal-bind-network" onchange="validateBindAddress('modal-bind-address','modal-bind-network','modal-bind-detect');">
+                <option value="TRC-20">TRC-20 (Tron)</option>
+                <option value="ERC-20">ERC-20 (Ethereum)</option>
               </select>
             </div>
             <div class="form-group">
               <label class="form-label">Wallet Address</label>
-              <input type="text" id="modal-bind-address" class="form-control" placeholder="Enter your withdrawal wallet address"/>
+              <input type="text" id="modal-bind-address" class="form-control"
+                placeholder="Paste your wallet address here"
+                oninput="validateBindAddress('modal-bind-address','modal-bind-network','modal-bind-detect')"
+                style="font-family:monospace;font-size:13px;"
+              />
+              <!-- Auto-detect feedback -->
+              <div id="modal-bind-detect" style="margin-top:6px;font-size:12px;min-height:18px;"></div>
             </div>
             <div style="display:flex;gap:12px;margin-top:20px;">
               <button class="btn-outline" style="flex:1;height:44px;font-size:14px;" onclick="hideMandatoryBindForm()">Back</button>
@@ -473,7 +479,7 @@ function renderBindAddress() {
       <div id="bind-crypto-panel">
         <div class="form-group">
           <label class="form-label">Select Coin</label>
-          <select class="form-control" id="bind-coin">
+          <select class="form-control" id="bind-coin" onchange="updateBindNetworkOptions('bind-coin','bind-network'); validateBindAddress('bind-address-val','bind-network','bind-addr-detect');">
             <option value="USDT">USDT</option>
             <option value="BTC">BTC</option>
             <option value="ETH">ETH</option>
@@ -481,22 +487,29 @@ function renderBindAddress() {
         </div>
         <div class="form-group">
           <label class="form-label">Select Network</label>
-          <select class="form-control" id="bind-network">
-            <option value="TRC-20">TRC-20</option>
-            <option value="ERC-20">ERC-20</option>
+          <select class="form-control" id="bind-network" onchange="validateBindAddress('bind-address-val','bind-network','bind-addr-detect');">
+            <option value="TRC-20">TRC-20 (Tron)</option>
+            <option value="ERC-20">ERC-20 (Ethereum)</option>
           </select>
         </div>
         <div class="form-group">
           <label class="form-label">Wallet Address</label>
-          <input type="text" id="bind-address-val" class="form-control" placeholder="Please enter withdrawal address"/>
+          <input type="text" id="bind-address-val" class="form-control"
+            placeholder="Paste your wallet address here"
+            oninput="validateBindAddress('bind-address-val','bind-network','bind-addr-detect')"
+            style="font-family:monospace;font-size:13px;"
+          />
+          <!-- Auto-detect feedback -->
+          <div id="bind-addr-detect" style="margin-top:6px;font-size:12px;min-height:18px;"></div>
         </div>
       </div>
 
-      <button class="btn-dark" style="width:100%;height:48px;font-size:16px;" onclick="submitBindAddress()">Bind Address</button>
+      <button class="btn-dark" id="bind-submit-btn" style="width:100%;height:48px;font-size:16px;" onclick="submitBindAddress()">Bind Address</button>
     </div>
 
   </div>`;
 }
+
 
 
 // ---- ACCOUNT CHANGE LOG ----
@@ -837,14 +850,82 @@ export function init(page) {
   };
 
 
+  // ── Address format rules per network ──────────────────────────────────────
+  const ADDRESS_RULES = {
+    'TRC-20': { label: 'Tron (TRC-20)', regex: /^T[1-9A-HJ-NP-Za-km-z]{33}$/, hint: 'Must start with T and be 34 characters (Tron address).' },
+    'ERC-20': { label: 'Ethereum (ERC-20)', regex: /^0x[0-9a-fA-F]{40}$/, hint: 'Must start with 0x and be 42 characters (Ethereum address).' },
+    'BEP-20': { label: 'BNB Smart Chain (BEP-20)', regex: /^0x[0-9a-fA-F]{40}$/, hint: 'Must start with 0x and be 42 characters (BSC address).' },
+    'BTC':    { label: 'Bitcoin', regex: /^(1|3|bc1)[a-zA-HJ-NP-Z0-9]{25,61}$/, hint: 'Must start with 1, 3, or bc1 (Bitcoin address).' },
+  };
+
+  // Coin → available networks
+  const COIN_NETWORKS = {
+    'USDT': ['TRC-20', 'ERC-20', 'BEP-20'],
+    'ETH':  ['ERC-20'],
+    'BTC':  ['BTC'],
+  };
+
+  // Update network dropdown when coin changes
+  window.updateBindNetworkOptions = function (coinId, networkId) {
+    const coin = document.getElementById(coinId)?.value;
+    const netSel = document.getElementById(networkId);
+    if (!coin || !netSel) return;
+    const nets = COIN_NETWORKS[coin] || ['TRC-20', 'ERC-20'];
+    netSel.innerHTML = nets.map(n => `<option value="${n}">${ADDRESS_RULES[n]?.label || n}</option>`).join('');
+  };
+
+  // Live address validation + auto-detect feedback
+  window.validateBindAddress = function (addressId, networkId, detectId) {
+    const address = document.getElementById(addressId)?.value?.trim() || '';
+    const network = document.getElementById(networkId)?.value || '';
+    const detectEl = document.getElementById(detectId);
+    if (!detectEl) return true;
+
+    if (!address) {
+      detectEl.innerHTML = '';
+      return false;
+    }
+
+    // Try to detect which chain this address belongs to
+    let detectedChain = null;
+    for (const [key, rule] of Object.entries(ADDRESS_RULES)) {
+      if (rule.regex.test(address)) { detectedChain = key; break; }
+    }
+
+    const rule = ADDRESS_RULES[network];
+    if (!rule) { detectEl.innerHTML = ''; return false; }
+
+    const isValid = rule.regex.test(address);
+
+    if (isValid) {
+      detectEl.innerHTML = `<span style="color:#10b981;">✅ Valid ${rule.label} address detected.</span>`;
+    } else if (detectedChain && detectedChain !== network) {
+      const wrongRule = ADDRESS_RULES[detectedChain];
+      detectEl.innerHTML = `<span style="color:#f59e0b;">⚠️ This looks like a <strong>${wrongRule.label}</strong> address, but you selected <strong>${rule.label}</strong>. Please check your network selection.</span>`;
+    } else if (address.length > 5) {
+      detectEl.innerHTML = `<span style="color:#ef4444;">❌ Invalid address for ${rule.label}. ${rule.hint}</span>`;
+    } else {
+      detectEl.innerHTML = `<span style="color:#64748b;">${rule.hint}</span>`;
+    }
+    return isValid;
+  };
+
   // Note: switchBindTab referenced non-existent bind-bank-panel — removed.
 
   window.submitBindAddress = async function () {
     const coin = document.getElementById('bind-coin')?.value || 'USDT';
     const network = document.getElementById('bind-network')?.value || 'TRC-20';
-    const address = document.getElementById('bind-address-val')?.value || '';
+    const address = (document.getElementById('bind-address-val')?.value || '').trim();
+    const btn = document.getElementById('bind-submit-btn');
 
     if (!address) { toast('Please enter a wallet address', 'error'); return; }
+
+    // Validate address format
+    const isValid = window.validateBindAddress('bind-address-val', 'bind-network', 'bind-addr-detect');
+    if (!isValid) {
+      toast('Address format does not match the selected network. Please check and try again.', 'error');
+      return;
+    }
 
     // Check if user already bound an address on this network
     const saved = store.getBindAddresses();
@@ -860,12 +941,15 @@ export function init(page) {
       return;
     }
 
+    if (btn) { btn.disabled = true; btn.textContent = 'Binding...'; }
+
     try {
       await store.addBindAddress({ method: 'crypto', coin, network, address });
       toast('Address bound successfully!', 'success');
       setTimeout(() => window.location.hash = '#/bind-address', 500);
     } catch (err) {
       toast(err.message || 'Failed to bind address', 'error');
+      if (btn) { btn.disabled = false; btn.textContent = 'Bind Address'; }
     }
   };
 
@@ -887,11 +971,18 @@ export function init(page) {
   window.submitMandatoryBindAddress = async function () {
     const coin = document.getElementById('modal-bind-coin')?.value || 'USDT';
     const network = document.getElementById('modal-bind-network')?.value || 'TRC-20';
-    const address = document.getElementById('modal-bind-address')?.value?.trim() || '';
+    const address = (document.getElementById('modal-bind-address')?.value || '').trim();
     const submitBtn = document.getElementById('modal-bind-submit-btn');
 
     if (!address) {
       toast('Please enter your wallet address', 'error');
+      return;
+    }
+
+    // Validate address format against selected network
+    const isValid = window.validateBindAddress('modal-bind-address', 'modal-bind-network', 'modal-bind-detect');
+    if (!isValid) {
+      toast('Address format does not match the selected network. Please check and try again.', 'error');
       return;
     }
 
