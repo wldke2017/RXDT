@@ -858,8 +858,8 @@ export function init(page) {
     'BTC':    { label: 'Bitcoin', regex: /^(1|3|bc1)[a-zA-HJ-NP-Z0-9]{25,61}$/, hint: 'Must start with 1, 3, or bc1 (Bitcoin address).' },
   };
 
-  // Coin → available networks
-  const COIN_NETWORKS = {
+  // Coin → available networks for bind address
+  const BIND_COIN_NETWORKS = {
     'USDT': ['TRC-20', 'ERC-20', 'BEP-20'],
     'ETH':  ['ERC-20'],
     'BTC':  ['BTC'],
@@ -870,7 +870,7 @@ export function init(page) {
     const coin = document.getElementById(coinId)?.value;
     const netSel = document.getElementById(networkId);
     if (!coin || !netSel) return;
-    const nets = COIN_NETWORKS[coin] || ['TRC-20', 'ERC-20'];
+    const nets = BIND_COIN_NETWORKS[coin] || ['TRC-20', 'ERC-20'];
     netSel.innerHTML = nets.map(n => `<option value="${n}">${ADDRESS_RULES[n]?.label || n}</option>`).join('');
   };
 
