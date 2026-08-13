@@ -279,6 +279,8 @@ function renderWithdraw() {
   const user = store.getUser();
   const withdrawals = store.getWithdrawals();
   const addresses = store.getBindAddresses();
+  const boundCrypto = addresses.find(a => a.method === 'crypto');
+  const isBound = !!boundCrypto;
 
   return `
   <div>
@@ -297,33 +299,26 @@ function renderWithdraw() {
       <div class="card-title">Withdrawal Details</div>
 
       <div id="withdraw-crypto-panel">
-        <div class="form-group">
-          <label class="form-label">Select Bound Wallet Address</label>
-          <select class="form-control" id="withdraw-saved-addr" onchange="fillWithdrawAddress(this)">
-            <option value="">-- Select bound address or enter below --</option>
-            ${addresses.filter(a => a.method === 'crypto').map(a => `
-              <option value="${a.address}">${a.coin} (${a.network}) · ${a.address}</option>
-            `).join('')}
-          </select>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Withdrawal Wallet Address</label>
-          <input type="text" id="withdraw-address" class="form-control" placeholder="Enter crypto wallet address"/>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Coin & Network</label>
-          <div style="display:flex;gap:8px;">
-            <select class="form-control" id="withdraw-coin">
-              <option value="USDT">USDT</option>
-              <option value="BTC">BTC</option>
-              <option value="ETH">ETH</option>
-            </select>
-            <select class="form-control" id="withdraw-network">
-              <option value="TRC-20">TRC-20</option>
-              <option value="ERC-20">ERC-20</option>
-            </select>
+        ${isBound ? `
+          <div class="form-group">
+            <label class="form-label" style="display:flex;justify-content:space-between;align-items:center;">
+              <span>Permanently Bound Wallet Address</span>
+              <span class="badge badge-success" style="font-size:11px;">🔒 Bound & Locked</span>
+            </label>
+            <div style="background:rgba(0,196,154,0.08);border:1px solid rgba(0,196,154,0.3);border-radius:10px;padding:12px;margin-bottom:12px;">
+              <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px;">${boundCrypto.coin} (${boundCrypto.network})</div>
+              <code style="font-size:14px;color:#00c49a;word-break:break-all;font-weight:600;">${boundCrypto.address}</code>
+            </div>
+            <input type="hidden" id="withdraw-address" value="${boundCrypto.address}"/>
+            <input type="hidden" id="withdraw-coin" value="${boundCrypto.coin}"/>
+            <input type="hidden" id="withdraw-network" value="${boundCrypto.network}"/>
           </div>
-        </div>
+        ` : `
+          <div class="form-group">
+            <label class="form-label">Withdrawal Wallet Address</label>
+            <input type="text" id="withdraw-address" class="form-control" placeholder="Click 'Bind Address' below to bind" readonly style="opacity:0.7;cursor:not-allowed;"/>
+          </div>
+        `}
       </div>
 
       <div class="form-group">
@@ -345,11 +340,57 @@ function renderWithdraw() {
         <div style="font-size:12px;color:var(--text-muted);margin-top:4px;">Required to authorize this withdrawal. Set it in Security Settings if not set.</div>
       </div>
 
-      <button class="btn-dark" style="width:100%;height:48px;font-size:16px;" onclick="submitWithdrawal()">Submit Withdrawal</button>
-      <div style="text-align:center;margin-top:12px;">
-        <a onclick="navigateTo('bind-address')" class="link" style="font-size:13px;">+ Bind new withdrawal address</a>
-      </div>
+      <button class="btn-dark" style="width:100%;height:48px;font-size:16px;" ${!isBound ? 'disabled style="opacity:0.5;cursor:not-allowed;"' : ''} onclick="submitWithdrawal()">Submit Withdrawal</button>
     </div>
+
+    <!-- Mandatory Bind Address Modal overlay when address is not bound -->
+    ${!isBound ? `
+      <div class="modal-overlay active" id="mandatory-bind-modal">
+        <div class="modal-content" style="max-width:440px;background:var(--bg-card);border-radius:16px;padding:24px;">
+          <div style="text-align:center;margin-bottom:16px;">
+            <div style="font-size:40px;margin-bottom:8px;">🔒</div>
+            <h3 style="margin:0;font-size:18px;font-weight:700;">Withdrawal Address Not Bound</h3>
+            <p style="font-size:13px;color:var(--text-muted);margin-top:6px;margin-bottom:0;">
+              You must bind a withdrawal wallet address before withdrawing funds. Once bound, this address is permanently fixed for all withdrawals.
+            </p>
+          </div>
+
+          <div id="bind-modal-step1">
+            <div style="display:flex;gap:12px;margin-top:20px;">
+              <button class="btn-outline" style="flex:1;height:44px;font-size:14px;" onclick="navigateTo('assets')">Cancel</button>
+              <button class="btn-primary" style="flex:1;height:44px;font-size:14px;" onclick="showMandatoryBindForm()">Bind Now</button>
+            </div>
+          </div>
+
+          <div id="bind-modal-step2" style="display:none;margin-top:16px;">
+            <div class="form-group">
+              <label class="form-label">Select Coin</label>
+              <select class="form-control" id="modal-bind-coin">
+                <option value="USDT">USDT</option>
+                <option value="BTC">BTC</option>
+                <option value="ETH">ETH</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Select Network</label>
+              <select class="form-control" id="modal-bind-network">
+                <option value="TRC-20">TRC-20</option>
+                <option value="ERC-20">ERC-20</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Wallet Address</label>
+              <input type="text" id="modal-bind-address" class="form-control" placeholder="Enter your withdrawal wallet address"/>
+            </div>
+            <div style="display:flex;gap:12px;margin-top:20px;">
+              <button class="btn-outline" style="flex:1;height:44px;font-size:14px;" onclick="hideMandatoryBindForm()">Back</button>
+              <button class="btn-primary" id="modal-bind-submit-btn" style="flex:1;height:44px;font-size:14px;" onclick="submitMandatoryBindAddress()">Confirm Binding</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    ` : ''}
+
 
     <!-- Withdrawal History -->
     <div class="card">
@@ -827,4 +868,51 @@ export function init(page) {
       toast(err.message || 'Failed to bind address', 'error');
     }
   };
+
+  // Mandatory withdrawal binding modal helpers
+  window.showMandatoryBindForm = function () {
+    const step1 = document.getElementById('bind-modal-step1');
+    const step2 = document.getElementById('bind-modal-step2');
+    if (step1) step1.style.display = 'none';
+    if (step2) step2.style.display = 'block';
+  };
+
+  window.hideMandatoryBindForm = function () {
+    const step1 = document.getElementById('bind-modal-step1');
+    const step2 = document.getElementById('bind-modal-step2');
+    if (step1) step1.style.display = 'block';
+    if (step2) step2.style.display = 'none';
+  };
+
+  window.submitMandatoryBindAddress = async function () {
+    const coin = document.getElementById('modal-bind-coin')?.value || 'USDT';
+    const network = document.getElementById('modal-bind-network')?.value || 'TRC-20';
+    const address = document.getElementById('modal-bind-address')?.value?.trim() || '';
+    const submitBtn = document.getElementById('modal-bind-submit-btn');
+
+    if (!address) {
+      toast('Please enter your wallet address', 'error');
+      return;
+    }
+
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Binding...';
+    }
+
+    try {
+      await store.addBindAddress({ method: 'crypto', coin, network, address });
+      toast('✅ Wallet address bound successfully!', 'success');
+      // Refresh page state to show locked bound address
+      if (store.checkAuth) await store.checkAuth();
+      navigateTo('withdraw');
+    } catch (err) {
+      toast(err.message || 'Failed to bind wallet address', 'error');
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Confirm Binding';
+      }
+    }
+  };
 }
+

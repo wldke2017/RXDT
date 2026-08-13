@@ -126,6 +126,17 @@ router.post('/withdrawals', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'Transaction password is required for withdrawals.' });
     }
 
+    // Verify user has a bound withdrawal address and that the request uses it
+    const boundRes = await query(`SELECT * FROM bind_addresses WHERE user_id = $1 AND method = 'crypto';`, [req.userId]);
+    if (boundRes.rows.length === 0) {
+      return res.status(400).json({ error: 'You must bind a withdrawal address first before making a withdrawal.' });
+    }
+    const primaryBound = boundRes.rows[0];
+    if (primaryBound.address !== address) {
+      return res.status(400).json({ error: 'Withdrawal can only be made to your permanently bound wallet address.' });
+    }
+
+
     await query('BEGIN');
 
     // Row-level lock on user record to prevent race-condition double withdrawals
@@ -256,25 +267,16 @@ router.post('/bind-addresses', requireAuth, async (req, res) => {
     const targetCoin = coin || 'USDT';
     const targetNetwork = network || 'TRC-20';
 
-    // 1. Check if user already bound an address on this network (e.g. TRC-20)
-    const existingNetwork = await query(`
+    // 1. Check if user already bound ANY wallet address (only 1 bound address allowed permanently)
+    const existingAny = await query(`
       SELECT * FROM bind_addresses 
-      WHERE user_id = $1 AND coin = $2 AND network = $3;
-    `, [req.userId, targetCoin, targetNetwork]);
+      WHERE user_id = $1 AND method = 'crypto';
+    `, [req.userId]);
 
-    if (existingNetwork.rows.length > 0) {
-      return res.status(400).json({ error: `Wallet address already bound for ${targetCoin} (${targetNetwork}). You can only bind one address per network.` });
+    if (existingAny.rows.length > 0) {
+      return res.status(400).json({ error: 'You already have a bound withdrawal address. Address binding is permanently locked.' });
     }
 
-    // 2. Check if this exact address was bound already
-    const existingAddress = await query(`
-      SELECT * FROM bind_addresses 
-      WHERE user_id = $1 AND address = $2;
-    `, [req.userId, address]);
-
-    if (existingAddress.rows.length > 0) {
-      return res.status(400).json({ error: 'Wallet address already bound to your account.' });
-    }
 
     const id = 'BA' + Date.now();
     const resDb = await query(`
