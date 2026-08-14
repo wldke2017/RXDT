@@ -90,24 +90,29 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(rootDir, 'index.html'));
 });
 
-// Start Server & Connect Database (only start listening if run directly)
-// On Vercel: init DB in background, don't block incoming requests
+// On Vercel: DB schema is initialized lazily without blocking function execution
 let dbInitPromise = null;
 
 function ensureDbInit() {
   if (!dbInitPromise) {
     dbInitPromise = initDatabase().catch(err => {
-      console.error('Database connection error in Vercel function:', err);
-      dbInitPromise = null; // allow retry on next request
+      console.warn('Database initialization warning:', err.message);
+      dbInitPromise = null; // retry on next request
     });
   }
   return dbInitPromise;
 }
 
-// Kick off DB init immediately on cold start
-ensureDbInit().then(() => {
-  runPositionAndBalanceAudit().catch(() => {});
-});
+// In local dev, initialize DB and run initial audit
+if (process.env.VERCEL !== '1' && !process.env.VERCEL_ENV) {
+  ensureDbInit().then(() => {
+    runPositionAndBalanceAudit().catch(() => {});
+  });
+} else {
+  // On Vercel, run ensureDbInit in non-blocking background
+  ensureDbInit();
+}
+
 
 // For local dev: start listening
 if (process.env.VERCEL !== '1' && !process.env.VERCEL_ENV) {

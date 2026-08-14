@@ -176,6 +176,9 @@ export async function initDatabase() {
       status VARCHAR(20) DEFAULT 'processing',
       audit_status VARCHAR(20) DEFAULT 'pending',
       created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+
   // Create Admin Social Group Notifications Table
   await query(`
     CREATE TABLE IF NOT EXISTS admin_notifications (
