@@ -1,6 +1,6 @@
 import express from 'express';
 import { query } from '../db.js';
-import { runPositionAndBalanceAudit } from '../utils/audit.js';
+import { runPositionAndBalanceAudit, runMasterSystemRepair } from '../utils/audit.js';
 import { setTestSignalWindow, clearTestSignalWindow, getTestSignalStatus, autoExecuteEligibleSignals, settleAllDueSignalTrades } from './signals.js';
 import { VIP_TIERS, getVipLevelInfo, calculate3LevelTeam } from './referrals.js';
 import { sendTradingSignalReminderEmails } from './email.js';
@@ -239,12 +239,18 @@ router.post('/users/release-frozen', requireAdminSecret, async (req, res) => {
 });
 
 // ----------------------------------------------------
-// RUN BALANCE & POSITION AUDIT TOOL
+// MASTER AUTOMATED SYSTEM REPAIR COMMAND
 // ----------------------------------------------------
-router.post('/run-audit', requireAdminSecret, async (req, res) => {
-  const result = await runPositionAndBalanceAudit();
-  res.json({ message: `Audit completed: Audited ${result.audited} users, Repaired ${result.repaired} accounts, Recovered $${result.recovered?.toFixed(2) || '0.00'}.`, ...result });
+router.post('/master-repair', requireAdminSecret, async (req, res) => {
+  try {
+    const result = await runMasterSystemRepair();
+    res.json(result);
+  } catch (err) {
+    console.error('Master repair endpoint error:', err);
+    res.status(500).json({ error: err.message || 'Master system repair failed' });
+  }
 });
+
 
 
 // ----------------------------------------------------

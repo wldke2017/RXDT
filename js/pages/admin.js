@@ -90,9 +90,10 @@ function renderDashboard() {
         <div id="admin-live-status" style="font-size:11px;color:#00c49a;margin-top:4px;">🟢 Live alerts: ON</div>
       </div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-        <button class="btn-outline" onclick="sendSignalReminderEmailsBroadcast()" style="padding:8px 16px;font-size:13px;color:#00d4ff;border-color:#00d4ff;">📧 Send Signal Reminders to All Users</button>
+        <button class="btn-primary" onclick="runMasterSystemRepairAdmin()" style="padding:8px 18px;font-size:13px;font-weight:800;background:linear-gradient(135deg,#f59e0b,#d97706);border:none;border-radius:8px;color:#fff;box-shadow:0 0 12px rgba(245,158,11,0.4);">🛠️ FIX ALL USER BALANCES & TRANSACTIONS</button>
+        <button class="btn-outline" onclick="sendSignalReminderEmailsBroadcast()" style="padding:8px 16px;font-size:13px;color:#00d4ff;border-color:#00d4ff;">📧 Send Reminders</button>
         <button class="btn-outline" onclick="settleStuckTrades()" style="padding:8px 16px;font-size:13px;color:#10b981;border-color:#10b981;">🔄 Settle Stuck Trades</button>
-        <button class="btn-outline" onclick="releaseFrozenFunds()" style="padding:8px 16px;font-size:13px;color:#f59e0b;border-color:#f59e0b;">🔓 Release In-Orders Funds</button>
+        <button class="btn-outline" onclick="releaseFrozenFunds()" style="padding:8px 16px;font-size:13px;color:#f59e0b;border-color:#f59e0b;">🔓 Release In-Orders</button>
         <button class="btn-outline" id="admin-sound-btn" onclick="toggleAdminSound()" style="padding:8px 16px;font-size:13px;">🔔 Sound: On</button>
         <button class="btn-outline" onclick="loadAdminStats()" id="admin-refresh-btn" style="padding:8px 16px;font-size:13px;">🔄 Refresh</button>
         <button class="btn-outline" onclick="adminLogout()" style="padding:8px 16px;font-size:13px;color:#ef4444;border-color:#ef4444;">Logout</button>
@@ -2418,6 +2419,27 @@ Today’s efforts aren’t just about participating in a platform — they are a
     } catch (err) {
       if (window.toast) window.toast('Settle error: ' + err.message, 'error');
       alert('❌ Failed to settle trades: ' + err.message);
+    }
+  };
+
+  window.runMasterSystemRepairAdmin = async function () {
+    if (!confirm('Run Master System Balance & Transaction Repair across ALL users?\n\nThis will:\n1. Force-settle all open signal trades with full profit & history logs.\n2. Reconcile total_deposits from approved deposits.\n3. Release any orphan frozen funds back to available balance.\n4. Align total_assets across all user accounts.')) return;
+    try {
+      if (window.toast) window.toast('Running Master System Repair across all users...', 'info');
+      const res = await adminFetch('/master-repair', 'POST');
+      if (window.toast) {
+        window.toast(res.message || 'Master Repair Completed!', 'success');
+      }
+      alert(`✅ MASTER REPAIR COMPLETED SUCCESSFULLY!\n\n` +
+            `• Signal Trades Settled: ${res.tradesSettled || 0}\n` +
+            `• Total Profit Paid Out: $${res.totalProfitCredited?.toFixed(2) || '0.00'}\n` +
+            `• Accounts Repaired: ${res.accountsRepaired || 0}\n` +
+            `• Stuck Frozen Funds Recovered: $${res.totalFrozenRecovered?.toFixed(2) || '0.00'}\n` +
+            `• Total Assets Aligned: ${res.totalAssetsAdjustedUsers || 0} user(s)`);
+      if (window.loadAdminStats) window.loadAdminStats();
+    } catch (err) {
+      if (window.toast) window.toast('Master Repair error: ' + err.message, 'error');
+      alert('❌ Master Repair Failed: ' + err.message);
     }
   };
 
