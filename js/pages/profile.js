@@ -323,6 +323,7 @@ function renderInvite() {
 
 // ---- SECURITY SETTINGS ----
 function renderSecurity() {
+  const user = store.getUser();
   return `
   <div>
     <h1 class="page-title">Security Settings</h1>
@@ -578,6 +579,8 @@ function renderCustomerService() {
         <div id="chat-messages" style="flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:12px;">
           <div class="chat-msg support">
             <div class="chat-bubble">👋 Hello! Welcome to RXDT support. How can I help you today?</div>
+          </div>
+        </div>
         <div style="padding:16px;border-top:1px solid var(--border-color);display:flex;gap:8px;">
           <input type="text" id="chat-input" class="form-control" placeholder="Type your message..."
             onkeydown="if(event.key==='Enter')sendChatMsg()"/>
