@@ -110,6 +110,13 @@ export async function runMasterSystemRepair() {
   let totalAssetsAdjustedUsers = 0;
 
   try {
+    // ---- STAGE 0: RETROACTIVELY REPAIR ZERO-PROFIT TRADES IN DATABASE ----
+    await query(`
+      UPDATE signal_trades 
+      SET profit = ROUND(CAST(trade_amount * 0.014 AS numeric), 4)
+      WHERE (profit IS NULL OR profit <= 0) AND trade_amount > 0
+    `).catch(() => {});
+
     // ---- STAGE 1: SETTLE ALL OPEN SIGNAL TRADES WITH PROFIT ----
     const openTradesRes = await query(`
       SELECT id, user_id, signal_id, pair, trade_amount, profit 

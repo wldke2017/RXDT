@@ -63,16 +63,19 @@ const SIGNAL_TIERS = {
 };
 
 // Per-signal profit % of balance = dailyProfitPercent / number of signals
-function getTier(totalDeposits) {
-  if (totalDeposits >= 1000) return SIGNAL_TIERS.TIER_3;
-  if (totalDeposits >= 300) return SIGNAL_TIERS.TIER_2;
-  if (totalDeposits >= 100) return SIGNAL_TIERS.TIER_1;
-  return null; // No tier — user must deposit at least $100
+function getTier(totalDeposits, balance = 0) {
+  const effectiveAmount = Math.max(parseFloat(totalDeposits || 0), parseFloat(balance || 0));
+  if (effectiveAmount >= 1000) return SIGNAL_TIERS.TIER_3;
+  if (effectiveAmount >= 300) return SIGNAL_TIERS.TIER_2;
+  if (effectiveAmount >= 100) return SIGNAL_TIERS.TIER_1;
+  return SIGNAL_TIERS.TIER_1; // Always return Tier 1 minimum so all trades earn profit
 }
 
 // Per-signal profit rate for a tier (daily rate split across entitled signals)
 function getPerSignalProfitRate(tier) {
-  return tier.dailyProfitPercent / tier.signals.length;
+  if (!tier || !tier.dailyProfitPercent) return 0.014;
+  const signalCount = (tier.signals && tier.signals.length) || 1;
+  return tier.dailyProfitPercent / signalCount;
 }
 
 // ---- Market Price Helper (for signal history purchase/settlement prices) ----
@@ -339,12 +342,14 @@ async function executeSignalTrade(userId, signal, balance, tier, isFreeSignalTra
 
     const variation = Math.random() * 0.10 - 0.05; // ±5% realistic market variation
 
-    const profitRate = isFreeSignalTrade
+    const safeTier = tier || SIGNAL_TIERS.TIER_1;
+    const rawProfitRate = isFreeSignalTrade
       ? getPerSignalProfitRate(SIGNAL_TIERS.TIER_1)
-      : getPerSignalProfitRate(tier);
-    const profitAmount = parseFloat((effectiveAmount * profitRate * (1 + variation)).toFixed(4));
+      : getPerSignalProfitRate(safeTier);
+    const profitRate = rawProfitRate > 0 ? rawProfitRate : 0.014; // Guarantee minimum 1.4% profit rate
+    const profitAmount = Math.max(0.01, parseFloat((effectiveAmount * profitRate * (1 + variation)).toFixed(4)));
     const newBalance = parseFloat((effectiveAmount + profitAmount).toFixed(4));
-    const tierLabel = isFreeSignalTrade ? 'Free Signal' : tier.label;
+    const tierLabel = isFreeSignalTrade ? 'Free Signal' : (safeTier?.label || 'Tier 1');
 
     // 1. Move available_balance into frozen_balance ("In Order")
     await query(
