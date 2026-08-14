@@ -301,4 +301,168 @@ router.get('/email-status', requireAuth, async (req, res) => {
   }
 });
 
+/**
+ * Broadcasts Daily Trading Signal Reminders to all users with emails.
+ */
+export async function sendTradingSignalReminderEmails() {
+  const usersRes = await query(`
+    SELECT id, name, COALESCE(NULLIF(email_bound, ''), email) AS user_email, available_balance, total_deposits, free_signal_credits, auto_signal_exec
+    FROM users
+    WHERE (email IS NOT NULL AND email != '') OR (email_bound IS NOT NULL AND email_bound != '')
+  `);
+
+  const users = usersRes.rows.filter(u => u.user_email && u.user_email.includes('@'));
+  if (!users.length) {
+    return { success: true, message: 'No users with email found to notify.', count: 0 };
+  }
+
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    throw new Error('RESEND_API_KEY is not configured in environment variables.');
+  }
+
+  let sentCount = 0;
+  let failCount = 0;
+  const sentEmails = [];
+
+  for (const u of users) {
+    const userName = u.name || `Trader_${u.id.slice(-4)}`;
+    const email = u.user_email.trim().toLowerCase();
+    const balance = parseFloat(u.available_balance || 0).toFixed(2);
+    const freeCredits = parseInt(u.free_signal_credits || 0);
+
+    const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 580px; margin: 0 auto; padding: 32px; background: #0a0e1a; border-radius: 16px; border: 1px solid #1e2a3a; color: #ffffff;">
+      <div style="text-align: center; margin-bottom: 24px;">
+        <h1 style="color: #00d4ff; font-size: 28px; margin: 0; letter-spacing: 1px;">RXDT EXCHANGE</h1>
+        <p style="color: #8899aa; font-size: 14px; margin-top: 4px;">AI Quantitative Crypto Trading Platform</p>
+      </div>
+
+      <div style="background: linear-gradient(135deg, rgba(0, 212, 255, 0.15) 0%, rgba(121, 40, 202, 0.15) 100%); border: 1px solid rgba(0, 212, 255, 0.4); border-radius: 12px; padding: 20px; text-align: center; margin-bottom: 24px;">
+        <h2 style="color: #ffffff; font-size: 20px; margin: 0 0 8px 0;">📈 Today's AI Trading Signal Reminder!</h2>
+        <p style="color: #8899aa; font-size: 14px; margin: 0;">Hello <strong style="color: #00d4ff;">${userName}</strong>, don't forget to participate in today's verified high-yield AI Quantitative Signal trades.</p>
+      </div>
+
+      <!-- Account Summary -->
+      <div style="background: #111827; border: 1px solid #1e2a3a; border-radius: 12px; padding: 16px 20px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <span style="color: #8899aa; font-size: 12px; display: block;">Available Balance</span>
+          <strong style="color: #00c49a; font-size: 18px;">$${balance} USDT</strong>
+        </div>
+        ${freeCredits > 0 ? `
+        <div style="text-align: right;">
+          <span style="color: #8899aa; font-size: 12px; display: block;">Free 8pm Signal Credits</span>
+          <strong style="color: #f59e0b; font-size: 18px;">${freeCredits} Credit(s) 🎁</strong>
+        </div>` : ''}
+      </div>
+
+      <!-- Daily Schedule -->
+      <h3 style="color: #ffffff; font-size: 16px; margin-bottom: 12px;">⏰ Today's Official Signal Schedule (EAT / UTC+3):</h3>
+      
+      <div style="background: #111827; border: 1px solid #1e2a3a; border-radius: 12px; padding: 16px; margin-bottom: 24px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px dashed #1e2a3a;">
+          <div>
+            <strong style="color: #00d4ff; font-size: 15px;">📡 Signal 1 (Tier 1, 2, 3)</strong>
+            <div style="color: #8899aa; font-size: 12px;">Deposit $100+ · 1.4% Return</div>
+          </div>
+          <div style="background: rgba(0, 212, 255, 0.1); border: 1px solid rgba(0, 212, 255, 0.3); padding: 4px 10px; border-radius: 20px; color: #00d4ff; font-size: 13px; font-weight: 700;">
+            5:00 PM EAT
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px dashed #1e2a3a;">
+          <div>
+            <strong style="color: #00d4ff; font-size: 15px;">📡 Signal 2 (Tier 2, 3)</strong>
+            <div style="color: #8899aa; font-size: 12px;">Deposit $300+ · 2.4% Daily Yield</div>
+          </div>
+          <div style="background: rgba(0, 212, 255, 0.1); border: 1px solid rgba(0, 212, 255, 0.3); padding: 4px 10px; border-radius: 20px; color: #00d4ff; font-size: 13px; font-weight: 700;">
+            6:00 PM EAT
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px dashed #1e2a3a;">
+          <div>
+            <strong style="color: #00d4ff; font-size: 15px;">📡 Signal 3 (Tier 3)</strong>
+            <div style="color: #8899aa; font-size: 12px;">Deposit $1,000+ · 3.1% Daily Yield</div>
+          </div>
+          <div style="background: rgba(0, 212, 255, 0.1); border: 1px solid rgba(0, 212, 255, 0.3); padding: 4px 10px; border-radius: 20px; color: #00d4ff; font-size: 13px; font-weight: 700;">
+            7:00 PM EAT
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0;">
+          <div>
+            <strong style="color: #f59e0b; font-size: 15px;">🎁 Signal 4 (FREE Referral Signal)</strong>
+            <div style="color: #8899aa; font-size: 12px;">Available to referrers · 5-minute window</div>
+          </div>
+          <div style="background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); padding: 4px 10px; border-radius: 20px; color: #f59e0b; font-size: 13px; font-weight: 700;">
+            8:00 PM EAT
+          </div>
+        </div>
+      </div>
+
+      <!-- Action Button -->
+      <div style="text-align: center; margin-bottom: 28px;">
+        <a href="https://www.rxdt.site/#/signals" style="display: inline-block; background: linear-gradient(135deg, #00f2fe 0%, #0284c7 100%); color: #060b19; font-weight: 800; font-size: 16px; padding: 14px 32px; border-radius: 100px; text-decoration: none; box-shadow: 0 4px 20px rgba(0, 242, 254, 0.4);">
+          🚀 OPEN TRADING DESK & JOIN SIGNALS
+        </a>
+      </div>
+
+      <div style="background: rgba(255, 255, 255, 0.03); border-radius: 12px; padding: 16px; font-size: 12px; color: #8899aa; line-height: 1.6; margin-bottom: 24px;">
+        💡 <strong>Pro Tip:</strong> Enable <strong>Auto-Execute Signals</strong> in your account settings so verified AI signal trades execute automatically for your account even when you are busy or offline!
+      </div>
+
+      <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid #1e2a3a; text-align: center; color: #556677; font-size: 11px;">
+        © 2026 RXDT Exchange · USA Colorado Compliant Quantitative Exchange · rxdt.site
+      </div>
+    </div>`;
+
+    try {
+      const resendRes = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          from: 'RXDT Exchange Signal Desk <noreply@rxdt.site>',
+          to: [email],
+          subject: `📈 Today's AI Trading Signals Alert — Don't Miss Your Daily Return!`,
+          html,
+        }),
+      });
+
+      if (resendRes.ok) {
+        sentCount++;
+        sentEmails.push(email);
+      } else {
+        failCount++;
+        console.warn(`[signal-reminder] Resend error for ${email}:`, await resendRes.json().catch(() => ({})));
+      }
+    } catch (e) {
+      failCount++;
+      console.warn(`[signal-reminder] Fetch error for ${email}:`, e.message);
+    }
+  }
+
+  return {
+    success: true,
+    message: `Broadcast complete! Sent ${sentCount} signal reminder email(s).`,
+    sentCount,
+    failCount,
+    sentEmails
+  };
+}
+
+// POST /api/email/send-signal-reminders
+router.post('/send-signal-reminders', async (req, res) => {
+  try {
+    const result = await sendTradingSignalReminderEmails();
+    res.json(result);
+  } catch (err) {
+    console.error('Signal reminder broadcast error:', err);
+    res.status(500).json({ error: err.message || 'Failed to send signal reminders' });
+  }
+});
+
 export default router;

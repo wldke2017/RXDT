@@ -90,6 +90,7 @@ function renderDashboard() {
         <div id="admin-live-status" style="font-size:11px;color:#00c49a;margin-top:4px;">🟢 Live alerts: ON</div>
       </div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <button class="btn-outline" onclick="sendSignalReminderEmailsBroadcast()" style="padding:8px 16px;font-size:13px;color:#00d4ff;border-color:#00d4ff;">📧 Send Signal Reminders to All Users</button>
         <button class="btn-outline" onclick="releaseFrozenFunds()" style="padding:8px 16px;font-size:13px;color:#f59e0b;border-color:#f59e0b;">🔓 Release In-Orders Funds</button>
         <button class="btn-outline" id="admin-sound-btn" onclick="toggleAdminSound()" style="padding:8px 16px;font-size:13px;">🔔 Sound: On</button>
         <button class="btn-outline" onclick="loadAdminStats()" id="admin-refresh-btn" style="padding:8px 16px;font-size:13px;">🔄 Refresh</button>
@@ -2385,6 +2386,21 @@ Today’s efforts aren’t just about participating in a platform — they are a
       renderAdminNotificationsTab();
     } catch (err) {
       if (window.toast) window.toast('Delete error: ' + err.message, 'error');
+    }
+  };
+
+  window.sendSignalReminderEmailsBroadcast = async function () {
+    if (!confirm('Send Daily Signal Reminder emails to all registered users with bound email addresses?')) return;
+    try {
+      if (window.toast) window.toast('Sending signal reminder emails to all users...', 'info');
+      const res = await adminFetch('/send-signal-reminders', 'POST');
+      if (window.toast) {
+        window.toast(res.message || `Sent ${res.sentCount || 0} signal reminder emails!`, 'info');
+      }
+      alert(`✅ ${res.message || 'Signal reminder emails sent!'}\nTotal Sent: ${res.sentCount || 0}`);
+    } catch (err) {
+      if (window.toast) window.toast('Email broadcast error: ' + err.message, 'error');
+      alert('❌ Failed to send emails: ' + err.message);
     }
   };
 

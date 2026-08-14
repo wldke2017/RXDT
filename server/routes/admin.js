@@ -3,6 +3,7 @@ import { query } from '../db.js';
 import { runPositionAndBalanceAudit } from '../utils/audit.js';
 import { setTestSignalWindow, clearTestSignalWindow, getTestSignalStatus, autoExecuteEligibleSignals } from './signals.js';
 import { VIP_TIERS, getVipLevelInfo, calculate3LevelTeam } from './referrals.js';
+import { sendTradingSignalReminderEmails } from './email.js';
 
 const router = express.Router();
 
@@ -896,6 +897,19 @@ router.delete('/notifications/:id', requireAdminSecret, async (req, res) => {
   } catch (err) {
     console.error('Admin notification delete error:', err);
     res.status(500).json({ error: 'Failed to delete notification' });
+  }
+});
+
+// ----------------------------------------------------
+// SEND SIGNAL REMINDER EMAILS TO ALL USERS
+// ----------------------------------------------------
+router.post('/send-signal-reminders', requireAdminSecret, async (req, res) => {
+  try {
+    const result = await sendTradingSignalReminderEmails();
+    res.json(result);
+  } catch (err) {
+    console.error('Admin signal reminder broadcast error:', err);
+    res.status(500).json({ error: err.message || 'Failed to send signal reminders' });
   }
 });
 
