@@ -91,6 +91,7 @@ function renderDashboard() {
       </div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
         <button class="btn-primary" onclick="runMasterSystemRepairAdmin()" style="padding:8px 18px;font-size:13px;font-weight:800;background:linear-gradient(135deg,#f59e0b,#d97706);border:none;border-radius:8px;color:#fff;box-shadow:0 0 12px rgba(245,158,11,0.4);">🛠️ FIX ALL USER BALANCES & TRANSACTIONS</button>
+        <button class="btn-outline" onclick="runDatabaseHardResetAdmin()" style="padding:8px 16px;font-size:13px;color:#ef4444;border-color:#ef4444;">💣 Reset All Balances to $0.00</button>
         <button class="btn-outline" onclick="sendSignalReminderEmailsBroadcast()" style="padding:8px 16px;font-size:13px;color:#00d4ff;border-color:#00d4ff;">📧 Send Reminders</button>
         <button class="btn-outline" onclick="settleStuckTrades()" style="padding:8px 16px;font-size:13px;color:#10b981;border-color:#10b981;">🔄 Settle Stuck Trades</button>
         <button class="btn-outline" onclick="releaseFrozenFunds()" style="padding:8px 16px;font-size:13px;color:#f59e0b;border-color:#f59e0b;">🔓 Release In-Orders</button>
@@ -2440,6 +2441,27 @@ Today’s efforts aren’t just about participating in a platform — they are a
     } catch (err) {
       if (window.toast) window.toast('Master Repair error: ' + err.message, 'error');
       alert('❌ Master Repair Failed: ' + err.message);
+    }
+  };
+
+  window.runDatabaseHardResetAdmin = async function () {
+    if (!confirm('⚠️ WARNING: ARE YOU SURE YOU WANT TO HARD-RESET ALL USER BALANCES TO $0.00?\n\nThis will:\n• Reset all user balances, deposits, earnings, and free credits to $0.00.\n• Permanently wipe all past transaction, deposit, withdrawal, and trade histories.\n• KEEP all registered user accounts, passwords, emails, phones, and referral links intact so users can still log in.')) return;
+    if (!confirm('🚨 FINAL CONFIRMATION: Type OK to proceed with database hard-reset to $0.00 balance.')) return;
+
+    try {
+      if (window.toast) window.toast('Executing database hard-reset across all accounts...', 'info');
+      const res = await adminFetch('/reset-database', 'POST');
+      if (window.toast) {
+        window.toast(res.message || 'Database Reset Successful!', 'success');
+      }
+      alert(`💣 DATABASE HARD-RESET COMPLETED SUCCESSFULLY!\n\n` +
+            `• User Accounts Preserved (Login intact): ${res.resetUserCount || 0}\n` +
+            `• All Account Balances: Reset to $0.00\n` +
+            `• All Transaction Histories: Wiped (0 records)`);
+      if (window.loadAdminStats) window.loadAdminStats();
+    } catch (err) {
+      if (window.toast) window.toast('Database Reset error: ' + err.message, 'error');
+      alert('❌ Database Reset Failed: ' + err.message);
     }
   };
 

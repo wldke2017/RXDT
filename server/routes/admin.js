@@ -1,6 +1,6 @@
 import express from 'express';
 import { query } from '../db.js';
-import { runPositionAndBalanceAudit, runMasterSystemRepair } from '../utils/audit.js';
+import { runPositionAndBalanceAudit, runMasterSystemRepair, runDatabaseHardReset } from '../utils/audit.js';
 import { setTestSignalWindow, clearTestSignalWindow, getTestSignalStatus, autoExecuteEligibleSignals, settleAllDueSignalTrades } from './signals.js';
 import { VIP_TIERS, getVipLevelInfo, calculate3LevelTeam } from './referrals.js';
 import { sendTradingSignalReminderEmails } from './email.js';
@@ -239,17 +239,18 @@ router.post('/users/release-frozen', requireAdminSecret, async (req, res) => {
 });
 
 // ----------------------------------------------------
-// MASTER AUTOMATED SYSTEM REPAIR COMMAND
+// DATABASE HARD-RESET COMMAND
 // ----------------------------------------------------
-router.post('/master-repair', requireAdminSecret, async (req, res) => {
+router.post('/reset-database', requireAdminSecret, async (req, res) => {
   try {
-    const result = await runMasterSystemRepair();
+    const result = await runDatabaseHardReset();
     res.json(result);
   } catch (err) {
-    console.error('Master repair endpoint error:', err);
-    res.status(500).json({ error: err.message || 'Master system repair failed' });
+    console.error('Reset database endpoint error:', err);
+    res.status(500).json({ error: err.message || 'Database hard-reset failed' });
   }
 });
+
 
 
 

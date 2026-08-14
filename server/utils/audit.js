@@ -251,3 +251,64 @@ export async function runMasterSystemRepair() {
     return { ok: false, error: err.message || 'Master system repair failed' };
   }
 }
+
+/**
+ * Hard Reset All User Balances & Wipes Transaction History Tables.
+ * 
+ * RETAINS:
+ * - All registered users (id, name, phone, email, password_hash, invite_code, kyc_status, referred_by, etc.)
+ * 
+ * RESETS & WIPES:
+ * - Resets all user balances (available_balance, frozen_balance, total_assets, total_earnings, total_deposits) to $0.00.
+ * - Wipes all 11 transaction, order, spin, payout, and notification history tables.
+ */
+export async function runDatabaseHardReset() {
+  console.log('💣 Executing Database Hard-Reset across all accounts...');
+  try {
+    // 1. Truncate / delete all transaction & history records (cascade safe)
+    await query(`TRUNCATE TABLE signal_trades CASCADE;`).catch(() => query(`DELETE FROM signal_trades;`));
+    await query(`TRUNCATE TABLE account_changes CASCADE;`).catch(() => query(`DELETE FROM account_changes;`));
+    await query(`TRUNCATE TABLE deposits CASCADE;`).catch(() => query(`DELETE FROM deposits;`));
+    await query(`TRUNCATE TABLE withdrawals CASCADE;`).catch(() => query(`DELETE FROM withdrawals;`));
+    await query(`TRUNCATE TABLE referral_commissions CASCADE;`).catch(() => query(`DELETE FROM referral_commissions;`));
+    await query(`TRUNCATE TABLE contract_orders CASCADE;`).catch(() => query(`DELETE FROM contract_orders;`));
+    await query(`TRUNCATE TABLE follow_orders CASCADE;`).catch(() => query(`DELETE FROM follow_orders;`));
+    await query(`TRUNCATE TABLE salary_payouts CASCADE;`).catch(() => query(`DELETE FROM salary_payouts;`));
+    await query(`TRUNCATE TABLE vip_promotion_claims CASCADE;`).catch(() => query(`DELETE FROM vip_promotion_claims;`));
+    await query(`TRUNCATE TABLE lucky_wheel_logs CASCADE;`).catch(() => query(`DELETE FROM lucky_wheel_logs;`));
+    await query(`TRUNCATE TABLE admin_notifications CASCADE;`).catch(() => query(`DELETE FROM admin_notifications;`));
+
+    // 2. Reset all user account balances & stats back to 0.00
+    const updateRes = await query(`
+      UPDATE users 
+      SET available_balance = 0.00,
+          frozen_balance = 0.00,
+          total_assets = 0.00,
+          total_earnings = 0.00,
+          total_deposits = 0.00,
+          initial_deposit = 0.00,
+          last_deposit_amount = 0.00,
+          spin_chances = 0,
+          spin_winnings_used = 0.00,
+          free_signal_credits = 0,
+          has_received_deposit_bonus = FALSE,
+          doubled_capital = FALSE,
+          vip_level = 'VIP0',
+          last_salary_payout_date = NULL
+      RETURNING id
+    `);
+
+    const resetUserCount = updateRes.rows.length;
+    console.log(`✅ Database hard-reset successful: ${resetUserCount} user account(s) reset to $0.00.`);
+
+    return {
+      ok: true,
+      message: `Database hard-reset complete! Preserved ${resetUserCount} registered user accounts. Reset all balances to $0.00 and cleared all transaction histories.`,
+      resetUserCount,
+    };
+  } catch (err) {
+    console.error('Database Hard-Reset Error:', err);
+    return { ok: false, error: err.message || 'Database hard-reset failed' };
+  }
+}
+
