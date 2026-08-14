@@ -521,19 +521,20 @@ router.post('/preference', requireAuth, async (req, res) => {
 // ---- GET /api/signals/poll ----
 // Public heartbeat endpoint. The frontend polls this every 8 seconds from
 // EVERY page (logged in or not) so the backend auto-executes eligible
-// signal trades even when no logged-in user has the app open. This is the
-// reliability fix for "no signals traded today" — previously auto-execution
-// only ran when a logged-in user's poller hit /active, so if nobody had the
-// app open at 5pm/6pm/7pm EAT, no trades executed.
-//
-// Safe to expose publicly: it only auto-executes trades for users who are
-// already eligible and opted-in (auto_signal_exec = true), and the
-// per-user row-lock + in-transaction duplicate check prevents any double
-// execution. No user data is returned.
+// signal trades even when no logged-in user has the app open.
+// Also settles ALL past-due open positions for all users globally — this
+// ensures positions always close after 30 mins even if the user is offline.
 router.get('/poll', async (req, res) => {
   try {
-    const result = await autoExecuteEligibleSignals();
-    res.json({ ok: true, ...result });
+    const [execResult, settleResult] = await Promise.allSettled([
+      autoExecuteEligibleSignals(),
+      settleAllDueSignalTrades(),
+    ]);
+    res.json({
+      ok: true,
+      execute: execResult.status === 'fulfilled' ? execResult.value : { error: execResult.reason?.message },
+      settle: settleResult.status === 'fulfilled' ? settleResult.value : { error: settleResult.reason?.message },
+    });
   } catch (err) {
     console.error('Signal poll error:', err);
     res.status(500).json({ ok: false, error: err.message });
@@ -694,6 +695,138 @@ export async function processDueSignalTrades(userId) {
     }
   } catch (err) {
     console.error('Error settling due signal trades:', err);
+  }
+}
+
+// ---- Helper: Settle ALL due trades globally (called from /poll) ----
+// Finds every open trade with release_at <= NOW() across ALL users and settles
+// them atomically. This is the fix for positions not closing when users are
+// offline after the 30-minute signal window expires.
+export async function settleAllDueSignalTrades() {
+  let settled = 0;
+  let errors = 0;
+  try {
+    // Atomically claim all due trades one at a time
+    while (true) {
+      const claimRes = await query(
+        `UPDATE signal_trades
+         SET status = 'processing'
+         WHERE id = (
+           SELECT id FROM signal_trades
+           WHERE status = 'open' AND release_at <= NOW()
+           ORDER BY release_at ASC
+           LIMIT 1
+           FOR UPDATE SKIP LOCKED
+         )
+         RETURNING id, user_id, signal_id, pair, trade_amount, profit, balance_before, balance_after`
+      );
+      const claimed = claimRes.rows[0];
+      if (!claimed) break; // no more due trades
+
+      const userId = claimed.user_id;
+      const settlementPrice = await getMarketPrice(claimed.pair).catch(() => null);
+
+      try {
+        const tradeAmount = parseFloat(claimed.trade_amount);
+        const profit = parseFloat(claimed.profit);
+        const returnTotal = tradeAmount + profit;
+
+        await query('BEGIN');
+
+        // Release frozen balance + credit profit
+        const userRes = await query(
+          `UPDATE users
+           SET frozen_balance = GREATEST(0, frozen_balance - $1),
+               available_balance = available_balance + $2,
+               total_assets = total_assets + $3,
+               total_earnings = total_earnings + $3
+           WHERE id = $4 RETURNING available_balance`,
+          [tradeAmount, returnTotal, profit, userId]
+        );
+        const newBal = parseFloat(userRes.rows[0]?.available_balance || 0);
+
+        // Mark trade completed
+        await query(
+          `UPDATE signal_trades SET status = 'completed', settlement_price = $2, settled_at = NOW() WHERE id = $1`,
+          [claimed.id, settlementPrice]
+        );
+
+        // Check doubled-capital milestone
+        const capRes = await query(`SELECT initial_deposit, total_earnings FROM users WHERE id = $1`, [userId]);
+        const cap = capRes.rows[0];
+        if (cap) {
+          const initialDeposit = parseFloat(cap.initial_deposit || 0);
+          const totalEarnings = parseFloat(cap.total_earnings || 0);
+          if (initialDeposit > 0 && totalEarnings >= initialDeposit) {
+            await query(`UPDATE users SET doubled_capital = TRUE WHERE id = $1`, [userId]);
+          }
+        }
+
+        // Log close in account_changes
+        const closeId = 'AC' + Date.now() + 'GC';
+        await query(
+          `INSERT INTO account_changes (id, user_id, type, amount, balance_after, remark)
+           VALUES ($1, $2, 'signal_close', $3, $4, $5)`,
+          [closeId, userId, returnTotal, newBal,
+            `Signal ${claimed.signal_id} — Auto-Close Position (${claimed.pair}) +${profit.toFixed(4)} USDT · trade ${claimed.id}`]
+        ).catch(() => {});
+
+        // Referral commissions (halving chain)
+        try {
+          if (profit > 0) {
+            let currentUserId = userId;
+            let commissionRate = 0.075;
+            let level = 1;
+            while (commissionRate > 0.0001) {
+              const refRes = await query(`SELECT referred_by FROM users WHERE id = $1`, [currentUserId]);
+              const referrerId = refRes.rows[0]?.referred_by;
+              if (!referrerId) break;
+              const commission = parseFloat((profit * commissionRate).toFixed(4));
+              if (commission <= 0) break;
+              const rcId = 'RC' + Date.now() + 'GL' + level;
+              await query(
+                `INSERT INTO referral_commissions (id, referrer_id, referred_user_id, level, trade_amount, amount)
+                 VALUES ($1, $2, $3, $4, $5, $6)`,
+                [rcId, referrerId, userId, level, tradeAmount, commission]
+              );
+              const balRes = await query(
+                `UPDATE users
+                 SET available_balance = available_balance + $1,
+                     total_assets = total_assets + $1,
+                     total_earnings = total_earnings + $1
+                 WHERE id = $2 RETURNING available_balance`,
+                [commission, referrerId]
+              );
+              const refBal = parseFloat(balRes.rows[0]?.available_balance || 0);
+              await query(
+                `INSERT INTO account_changes (id, user_id, type, amount, balance_after, remark)
+                 VALUES ($1, $2, 'commission', $3, $4, $5)`,
+                ['AC' + Date.now() + 'GR' + level, referrerId, commission, refBal,
+                  `L${level} Referral Commission — ${claimed.pair} +${commission.toFixed(4)} USDT`]
+              ).catch(() => {});
+              currentUserId = referrerId;
+              commissionRate = commissionRate / 2;
+              level++;
+            }
+          }
+        } catch (commErr) {
+          console.error('Global settle referral commission error:', commErr);
+        }
+
+        await query('COMMIT');
+        settled++;
+      } catch (err) {
+        await query('ROLLBACK').catch(() => {});
+        await query(`UPDATE signal_trades SET status = 'open' WHERE id = $1`, [claimed.id]).catch(() => {});
+        console.error(`Global settle error for trade ${claimed.id}:`, err.message);
+        errors++;
+      }
+    }
+    if (settled > 0) console.log(`✅ Global settle: ${settled} trades settled, ${errors} errors`);
+    return { settled, errors };
+  } catch (err) {
+    console.error('settleAllDueSignalTrades error:', err);
+    return { settled, errors };
   }
 }
 

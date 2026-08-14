@@ -100,8 +100,11 @@ router.post('/register', registerLimiter, async (req, res) => {
 
     // Fire-and-forget: send welcome email if user registered with an email address
     if (user.email) {
+      console.log(`[register] Sending welcome email to ${user.email} for user ${user.id}`);
       sendWelcomeEmail({ email: user.email, name: user.name, inviteCode: user.invite_code })
         .catch(e => console.warn('[register] Welcome email error:', e.message));
+    } else {
+      console.log(`[register] No email for user ${user.id} (phone-only registration) — skipping welcome email`);
     }
     // Trigger Admin Social Group Notification for New User Registration
     try {
