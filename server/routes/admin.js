@@ -162,57 +162,71 @@ router.post('/users/release-frozen', requireAdminSecret, async (req, res) => {
     let releasedProfit = 0;
 
     for (const u of users) {
-      const frozen = parseFloat(u.frozen_balance);
-      if (frozen <= 0) continue;
-
-      await query('BEGIN');
-
-      // Sum up profits from any open signal trades so they're credited too
+      // Settle any open signal trades for this user with full profit & history logs
       const openTrades = await query(
-        `SELECT COALESCE(SUM(profit), 0) as total_profit FROM signal_trades WHERE user_id = $1 AND status = 'open'`,
+        `SELECT id, signal_id, pair, trade_amount, profit FROM signal_trades WHERE user_id = $1 AND status = 'open'`,
         [u.id]
-      ).catch(() => ({ rows: [{ total_profit: 0 }] }));
-      const openProfit = parseFloat(openTrades.rows[0]?.total_profit || 0);
+      ).catch(() => ({ rows: [] }));
 
-      const totalRelease = frozen + openProfit;
+      for (const trade of openTrades.rows) {
+        const tradeAmount = parseFloat(trade.trade_amount || 0);
+        let profit = parseFloat(trade.profit || 0);
+        if (profit <= 0 && tradeAmount > 0) {
+          profit = parseFloat((tradeAmount * 0.014).toFixed(4));
+        }
+        const returnTotal = tradeAmount + profit;
 
-      const upd = await query(
-        `UPDATE users 
-         SET frozen_balance = GREATEST(0, frozen_balance - $1),
-             available_balance = available_balance + $2,
-             total_assets = total_assets + $2,
-             total_earnings = total_earnings + $3
-         WHERE id = $4 RETURNING available_balance`,
-        [frozen, totalRelease, openProfit, u.id]
-      );
-      const newBal = parseFloat(upd.rows[0]?.available_balance || 0);
+        await query('BEGIN');
 
-      // Mark any open signal trades as completed so they don't re-settle
-      // (also stamp settlement price/time so Copy Trade History stays complete)
-      await query(
-        `UPDATE signal_trades
-         SET status = 'completed',
-             settlement_price = COALESCE(settlement_price, purchase_price),
-             settled_at = NOW()
-         WHERE user_id = $1 AND status = 'open'`,
-        [u.id]
+        const upd = await query(
+          `UPDATE users 
+           SET frozen_balance = GREATEST(0, frozen_balance - $1),
+               available_balance = available_balance + $2,
+               total_assets = total_assets + $3,
+               total_earnings = total_earnings + $3
+           WHERE id = $4 RETURNING available_balance`,
+          [tradeAmount, returnTotal, profit, u.id]
+        );
+        const newBal = parseFloat(upd.rows[0]?.available_balance || 0);
 
-      ).catch(() => { });
+        await query(
+          `UPDATE signal_trades SET status = 'completed', settlement_price = COALESCE(settlement_price, purchase_price), settled_at = NOW() WHERE id = $1`,
+          [trade.id]
+        ).catch(() => { });
 
-      await query(
-        `INSERT INTO account_changes (id, user_id, type, amount, balance_after, remark) VALUES ($1,$2,$3,$4,$5,$6)`,
-        ['AC' + Date.now() + 'RF', u.id, 'admin_release', totalRelease, newBal,
-          `Admin released frozen (In Orders) funds + profit back to available balance`]
-      ).catch(() => { });
+        await query(
+          `INSERT INTO account_changes (id, user_id, type, amount, balance_after, remark) VALUES ($1,$2,$3,$4,$5,$6)`,
+          ['AC' + Date.now() + 'RF_' + trade.id.slice(-4), u.id, 'signal_close', returnTotal, newBal,
+            `Signal ${trade.signal_id} — Admin Release Position (${trade.pair || 'BTCUSDT'}) +${profit.toFixed(4)} USDT · trade ${trade.id}`]
+        ).catch(() => { });
 
-      await query('COMMIT');
-      releasedCount++;
-      releasedTotal += totalRelease;
-      releasedProfit += openProfit;
+        await query('COMMIT');
+        releasedCount++;
+        releasedTotal += returnTotal;
+        releasedProfit += profit;
+      }
+
+      // If user still has leftover frozen balance not tied to open signal trades, clear it
+      const userCheck = await query(`SELECT frozen_balance FROM users WHERE id = $1`, [u.id]);
+      const remFrozen = parseFloat(userCheck.rows[0]?.frozen_balance || 0);
+      if (remFrozen > 0) {
+        await query('BEGIN');
+        const updRem = await query(
+          `UPDATE users SET frozen_balance = 0, available_balance = available_balance + $1 WHERE id = $2 RETURNING available_balance`,
+          [remFrozen, u.id]
+        );
+        await query(
+          `INSERT INTO account_changes (id, user_id, type, amount, balance_after, remark) VALUES ($1,$2,$3,$4,$5,$6)`,
+          ['AC' + Date.now() + 'CLR', u.id, 'admin_release', remFrozen, updRem.rows[0]?.available_balance || 0,
+            `Admin released leftover frozen balance $${remFrozen.toFixed(2)} back to available balance`]
+        ).catch(() => { });
+        await query('COMMIT');
+        releasedTotal += remFrozen;
+      }
     }
 
     res.json({
-      message: `Released $${releasedTotal.toFixed(2)} (incl. $${releasedProfit.toFixed(2)} profit) across ${releasedCount} user(s).`,
+      message: `Released & settled positions across ${releasedCount} user(s). Total Credited: $${releasedTotal.toFixed(2)} (incl. $${releasedProfit.toFixed(2)} profit).`,
       released: releasedCount,
       releasedTotal,
       releasedProfit

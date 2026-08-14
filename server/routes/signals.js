@@ -578,8 +578,12 @@ export async function processDueSignalTrades(userId) {
       try {
         const trade = claimed;
 
-        const tradeAmount = parseFloat(trade.trade_amount);
-        const profit = parseFloat(trade.profit);
+        const tradeAmount = parseFloat(trade.trade_amount || 0);
+        let profit = parseFloat(trade.profit || 0);
+        // Safety Guarantee: If profit stored on trade is 0 or invalid, calculate minimum 1.4% profit
+        if (profit <= 0 && tradeAmount > 0) {
+          profit = parseFloat((tradeAmount * 0.014).toFixed(4));
+        }
         const returnTotal = tradeAmount + profit;
 
         await query('BEGIN');
@@ -727,8 +731,12 @@ export async function settleAllDueSignalTrades() {
       const settlementPrice = await getMarketPrice(claimed.pair).catch(() => null);
 
       try {
-        const tradeAmount = parseFloat(claimed.trade_amount);
-        const profit = parseFloat(claimed.profit);
+        const tradeAmount = parseFloat(claimed.trade_amount || 0);
+        let profit = parseFloat(claimed.profit || 0);
+        // Safety Guarantee: If profit stored on trade is 0 or invalid, calculate minimum 1.4% profit
+        if (profit <= 0 && tradeAmount > 0) {
+          profit = parseFloat((tradeAmount * 0.014).toFixed(4));
+        }
         const returnTotal = tradeAmount + profit;
 
         await query('BEGIN');
