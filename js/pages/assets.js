@@ -146,15 +146,58 @@ function renderRecharge() {
         <button class="tab-btn" onclick="navigateTo('withdraw')">Withdraw</button>
       </div>
 
-      <!-- Coin Selection Dropdown -->
+      <!-- Coin Selection Cards & Dropdown -->
       <div class="form-group">
         <label class="form-label" style="font-weight:700;">Select Crypto Asset</label>
+        
+        <div class="coin-selector-grid">
+          <div class="crypto-coin-card active" id="coin-card-USDT" onclick="selectCryptoCoinCard('USDT')">
+            <div class="crypto-coin-icon">
+              <svg width="32" height="32" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="#26A17B"/><path d="M17.922 17.383c-.11.008-.677.042-1.942.042-1.01 0-1.721-.03-1.971-.042v-2.036h8.795c.164.78.257 1.637.257 2.528 0 1.258-.182 2.457-.514 3.553h-2.673c.189-.607.3-1.28.3-2.003 0-.74-.117-1.428-.312-2.042h-1.94v.004zM16.03 8c4.354 0 7.971 1.057 8.374 2.443h-16.748c.403-1.386 4.02-2.443 8.374-2.443zm8.38 3.52c-.413 1.343-4.004 2.37-8.38 2.37-4.376 0-7.967-1.027-8.38-2.37h16.76zm-8.38 3.427c1.378 0 2.651-.044 3.666-.12v1.884c-1.015.068-2.288.106-3.666.106-1.378 0-2.651-.038-3.666-.106v-1.884c1.015.076 2.288.12 3.666.12zm0-4.015c-3.14 0-5.908-.574-6.496-1.372h12.992c-.588.798-3.356 1.372-6.496 1.372z" fill="#FFF"/></svg>
+            </div>
+            <div>
+              <div class="crypto-coin-symbol">USDT</div>
+              <div class="crypto-coin-name">Tether</div>
+            </div>
+          </div>
+
+          <div class="crypto-coin-card" id="coin-card-USDC" onclick="selectCryptoCoinCard('USDC')">
+            <div class="crypto-coin-icon">
+              <svg width="32" height="32" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="#2775CA"/><path d="M16 6a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 18a8 8 0 1 1 0-16 8 8 0 0 1 0 16zm-1-13h2v2.1c1.5.3 2.5 1.4 2.5 2.9 0 1.6-1.2 2.6-3 3-1.4.3-1.8.6-1.8 1.2 0 .6.5 1.1 1.5 1.1 1.2 0 2.2-.6 2.6-1.5l1.6.7c-.6 1.5-2 2.5-3.8 2.7V23h-2v-2.1c-1.6-.3-2.6-1.5-2.6-3 0-1.7 1.3-2.6 3-3 1.3-.3 1.8-.6 1.8-1.2 0-.5-.5-1-1.3-1-1.1 0-2 .5-2.4 1.3l-1.6-.8c.7-1.4 2-2.3 3.6-2.6V11z" fill="#FFF"/></svg>
+            </div>
+            <div>
+              <div class="crypto-coin-symbol">USDC</div>
+              <div class="crypto-coin-name">USD Coin</div>
+            </div>
+          </div>
+
+          <div class="crypto-coin-card" id="coin-card-BTC" onclick="selectCryptoCoinCard('BTC')">
+            <div class="crypto-coin-icon">
+              <svg width="32" height="32" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="#F7931A"/><path d="M22.7 13.6c.3-2.1-1.3-3.2-3.5-4l.7-2.9-1.8-.4-.7 2.8c-.5-.1-1-.2-1.5-.3l.7-2.8-1.8-.4-.7 2.9-3.7-.9v2.4s1.3.3 1.3.3c.7.2.9.6.8 1l-.8 3.3c0 .1.1.2 0 .2l-1.2 4.7c-.1.3-.4.6-.9.5 0 0-1.3-.3-1.3-.3l-.4 2.8 3.5.9c.7.2 1.3.3 2 .5l-.7 2.9 1.8.4.7-2.8c.5.1 1 .2 1.5.3l-.7 2.8 1.8.4.7-2.9c3 .6 5.3.3 6.3-2.4.8-2.2 0-3.4-1.6-4.2 1.2-.3 2-1 2.3-2.5zm-4.1 5.3c-.6 2.3-4.3 1-5.5.7l1-4c1.2.3 5.1 1 4.5 3.3zm.5-5.4c-.5 2.1-3.6.9-4.6.7l.9-3.6c1 .3 4.3.8 3.7 2.9z" fill="#FFF"/></svg>
+            </div>
+            <div>
+              <div class="crypto-coin-symbol">BTC</div>
+              <div class="crypto-coin-name">Bitcoin</div>
+            </div>
+          </div>
+
+          <div class="crypto-coin-card" id="coin-card-ETH" onclick="selectCryptoCoinCard('ETH')">
+            <div class="crypto-coin-icon">
+              <svg width="32" height="32" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="#627EEA"/><path d="M16 4L9.5 14.8 16 18.6l6.5-3.8L16 4z" fill="#FFF" fill-opacity=".6"/><path d="M16 4l6.5 10.8L16 18.6V4z" fill="#FFF"/><path d="M16 19.9l-6.5-3.8L16 26.5l6.5-10.4-6.5 3.8z" fill="#FFF" fill-opacity=".6"/><path d="M16 19.9v6.6l6.5-10.4L16 19.9z" fill="#FFF"/><path d="M16 17.4L9.5 13.6 16 10.7l6.5 2.9-6.5 3.8z" fill="#FFF" fill-opacity=".2"/><path d="M16 10.7v6.7l6.5-3.8-6.5-2.9z" fill="#FFF" fill-opacity=".6"/></svg>
+            </div>
+            <div>
+              <div class="crypto-coin-symbol">ETH</div>
+              <div class="crypto-coin-name">Ethereum</div>
+            </div>
+          </div>
+        </div>
+
         <div class="custom-select-box">
-          <select class="form-control" id="dep-coin-select" onchange="onDepCoinChange(this.value)">
-            <option value="USDT">₮ USDT (Tether)</option>
-            <option value="USDC">💲 USDC (USD Coin)</option>
-            <option value="BTC">₿ BTC (Bitcoin)</option>
-            <option value="ETH">Ξ ETH (Ethereum)</option>
+          <select class="form-control" id="dep-coin-select" onchange="selectCryptoCoinCard(this.value)">
+            <option value="USDT">USDT (Tether)</option>
+            <option value="USDC">USDC (USD Coin)</option>
+            <option value="BTC">BTC (Bitcoin)</option>
+            <option value="ETH">ETH (Ethereum)</option>
           </select>
         </div>
         <div style="font-size:13px;font-weight:600;color:var(--text-sub);margin-top:8px;" id="dep-rate-display">
@@ -622,6 +665,18 @@ export function init(page) {
     'ETH': [
       { value: 'BEP20', label: 'BSC — BNB Smart Chain (BEP20)' },
     ],
+  };
+
+  window.selectCryptoCoinCard = function (coin) {
+    document.querySelectorAll('.crypto-coin-card').forEach(c => c.classList.remove('active'));
+    const activeCard = document.getElementById(`coin-card-${coin}`);
+    if (activeCard) activeCard.classList.add('active');
+
+    const selectEl = document.getElementById('dep-coin-select');
+    if (selectEl && selectEl.value !== coin) {
+      selectEl.value = coin;
+    }
+    window.onDepCoinChange(coin);
   };
 
   window.onDepCoinChange = function (coin) {

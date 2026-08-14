@@ -50,12 +50,27 @@ select,
 textarea {
   font-family: inherit;
   outline: none;
-  background: rgba(255, 255, 255, 0.05);
+  background: #0d1526;
   color: var(--text-main);
   border: 1px solid var(--border-color);
   border-radius: 8px;
   padding: 10px 14px;
   font-size: 14px;
+}
+
+option {
+  background-color: #0d1526 !important;
+  color: #ffffff !important;
+  padding: 12px;
+  font-size: 14px;
+}
+
+option:hover,
+option:focus,
+option:active,
+option:checked {
+  background-color: #1e293b !important;
+  color: #00f2fe !important;
 }
 
 input:focus,
