@@ -23,15 +23,21 @@ async function request(endpoint, options = {}) {
 
   try {
     const response = await fetch(`${BASE_URL}${endpoint}`, config);
-    const data = await response.json();
+    let data = {};
+    const text = await response.text();
+    try {
+      data = text ? JSON.parse(text) : {};
+    } catch (e) {
+      data = { error: text || `Server error (${response.status})` };
+    }
 
     if (!response.ok) {
-      throw new Error(data.error || 'Server error occurred');
+      throw new Error(data.error || `Server error (${response.status})`);
     }
 
     return data;
   } catch (err) {
-    console.error(`API Error [${endpoint}]:`, err);
+    console.error(`API Error [${endpoint}]:`, err.message || err);
     throw err;
   }
 }
