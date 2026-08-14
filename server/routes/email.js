@@ -465,4 +465,135 @@ router.post('/send-signal-reminders', async (req, res) => {
   }
 });
 
+/**
+ * Sends a welcome email to a newly registered user.
+ * @param {{ email: string, name: string, inviteCode: string }} user
+ */
+export async function sendWelcomeEmail({ email, name, inviteCode }) {
+  if (!email || !email.includes('@')) return; // No email address — skip silently
+
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    console.warn('[sendWelcomeEmail] RESEND_API_KEY not set — skipping welcome email.');
+    return;
+  }
+
+  const displayName = name || email.split('@')[0] || 'Trader';
+  const inviteLink = `https://www.rxdt.site/#/register?invite=${inviteCode}`;
+
+  const html = `<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"/></head>
+<body style="margin:0;padding:0;background:#0a0f1e;font-family:'Segoe UI',Arial,sans-serif;">
+  <div style="max-width:600px;margin:0 auto;padding:32px 16px;">
+
+    <!-- Header -->
+    <div style="text-align:center;margin-bottom:32px;">
+      <div style="display:inline-block;background:linear-gradient(135deg,#00f2fe,#4facfe);padding:2px;border-radius:16px;">
+        <div style="background:#0a0f1e;border-radius:14px;padding:16px 32px;">
+          <span style="font-size:24px;font-weight:900;letter-spacing:2px;background:linear-gradient(135deg,#00f2fe,#4facfe);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">RXDT</span>
+          <span style="font-size:13px;color:#64748b;margin-left:8px;display:block;margin-top:2px;">Exchange &amp; AI Signals</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Welcome Card -->
+    <div style="background:linear-gradient(135deg,#0f172a,#1a2744);border:1px solid rgba(0,242,254,0.2);border-radius:20px;padding:32px;margin-bottom:24px;text-align:center;">
+      <div style="font-size:48px;margin-bottom:16px;">🎉</div>
+      <h1 style="margin:0 0 8px;font-size:24px;font-weight:800;color:#ffffff;">Welcome to RXDT, ${displayName}!</h1>
+      <p style="margin:0;font-size:15px;color:#94a3b8;line-height:1.6;">Your account is ready. You've joined a professional AI-powered quantitative trading community trusted by traders worldwide.</p>
+    </div>
+
+    <!-- Invite Code -->
+    <div style="background:#0f172a;border:1px solid rgba(245,158,11,0.3);border-radius:16px;padding:20px;margin-bottom:24px;text-align:center;">
+      <div style="font-size:13px;color:#f59e0b;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Your Referral Invite Code</div>
+      <div style="font-size:28px;font-weight:900;color:#ffffff;letter-spacing:6px;font-family:monospace;">${inviteCode}</div>
+      <div style="font-size:12px;color:#64748b;margin-top:8px;">Share this code to earn free signal credits when friends join!</div>
+      <a href="${inviteLink}" style="display:inline-block;margin-top:12px;font-size:12px;color:#00f2fe;">🔗 ${inviteLink}</a>
+    </div>
+
+    <!-- Signal Schedule -->
+    <div style="background:#0f172a;border:1px solid rgba(0,242,254,0.15);border-radius:16px;padding:20px;margin-bottom:24px;">
+      <div style="font-size:14px;font-weight:800;color:#00f2fe;margin-bottom:16px;text-align:center;">📡 Daily AI Signal Schedule (EAT / UTC+3)</div>
+      <table style="width:100%;border-collapse:collapse;">
+        <tr style="border-bottom:1px solid rgba(255,255,255,0.06);">
+          <td style="padding:10px 8px;font-size:13px;color:#94a3b8;">📡 Signal 1 <span style="font-size:11px;background:rgba(99,102,241,0.2);color:#818cf8;padding:2px 8px;border-radius:20px;">Tier 1,2,3</span></td>
+          <td style="padding:10px 8px;font-size:13px;color:#ffffff;font-weight:700;text-align:right;">5:00 PM EAT</td>
+          <td style="padding:10px 8px;font-size:13px;color:#10b981;font-weight:700;text-align:right;">+1.4%</td>
+        </tr>
+        <tr style="border-bottom:1px solid rgba(255,255,255,0.06);">
+          <td style="padding:10px 8px;font-size:13px;color:#94a3b8;">📡 Signal 2 <span style="font-size:11px;background:rgba(99,102,241,0.2);color:#818cf8;padding:2px 8px;border-radius:20px;">Tier 2,3</span></td>
+          <td style="padding:10px 8px;font-size:13px;color:#ffffff;font-weight:700;text-align:right;">6:00 PM EAT</td>
+          <td style="padding:10px 8px;font-size:13px;color:#10b981;font-weight:700;text-align:right;">+2.4%</td>
+        </tr>
+        <tr style="border-bottom:1px solid rgba(255,255,255,0.06);">
+          <td style="padding:10px 8px;font-size:13px;color:#94a3b8;">📡 Signal 3 <span style="font-size:11px;background:rgba(99,102,241,0.2);color:#818cf8;padding:2px 8px;border-radius:20px;">Tier 3</span></td>
+          <td style="padding:10px 8px;font-size:13px;color:#ffffff;font-weight:700;text-align:right;">7:00 PM EAT</td>
+          <td style="padding:10px 8px;font-size:13px;color:#10b981;font-weight:700;text-align:right;">+3.1%</td>
+        </tr>
+        <tr>
+          <td style="padding:10px 8px;font-size:13px;color:#94a3b8;">🎁 Free Signal <span style="font-size:11px;background:rgba(16,185,129,0.15);color:#10b981;padding:2px 8px;border-radius:20px;">All Users</span></td>
+          <td style="padding:10px 8px;font-size:13px;color:#ffffff;font-weight:700;text-align:right;">8:00 PM EAT</td>
+          <td style="padding:10px 8px;font-size:13px;color:#f59e0b;font-weight:700;text-align:right;">FREE</td>
+        </tr>
+      </table>
+    </div>
+
+    <!-- Quick Steps -->
+    <div style="background:#0f172a;border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:20px;margin-bottom:24px;">
+      <div style="font-size:14px;font-weight:800;color:#ffffff;margin-bottom:14px;">🚀 Get Started in 3 Steps</div>
+      <div style="display:flex;align-items:flex-start;margin-bottom:12px;">
+        <span style="background:linear-gradient(135deg,#00f2fe,#4facfe);color:#000;font-weight:800;font-size:12px;width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;margin-right:12px;flex-shrink:0;">1</span>
+        <span style="font-size:13px;color:#94a3b8;line-height:1.5;"><strong style="color:#fff;">Deposit Funds</strong> — Go to Assets → Deposit. Minimum $100 USDT to unlock Tier 1 signals.</span>
+      </div>
+      <div style="display:flex;align-items:flex-start;margin-bottom:12px;">
+        <span style="background:linear-gradient(135deg,#00f2fe,#4facfe);color:#000;font-weight:800;font-size:12px;width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;margin-right:12px;flex-shrink:0;">2</span>
+        <span style="font-size:13px;color:#94a3b8;line-height:1.5;"><strong style="color:#fff;">Enable Auto-Execute</strong> — In Profile → Auto Execute Signals → ON. Trades will run automatically at signal time.</span>
+      </div>
+      <div style="display:flex;align-items:flex-start;">
+        <span style="background:linear-gradient(135deg,#00f2fe,#4facfe);color:#000;font-weight:800;font-size:12px;width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;margin-right:12px;flex-shrink:0;">3</span>
+        <span style="font-size:13px;color:#94a3b8;line-height:1.5;"><strong style="color:#fff;">Watch Your Profits</strong> — Profits credit automatically. Withdraw anytime after KYC verification.</span>
+      </div>
+    </div>
+
+    <!-- CTA Button -->
+    <div style="text-align:center;margin-bottom:32px;">
+      <a href="https://www.rxdt.site/#/home" style="display:inline-block;padding:16px 40px;background:linear-gradient(135deg,#00f2fe,#4facfe);color:#000;font-weight:800;font-size:15px;text-decoration:none;border-radius:12px;letter-spacing:0.5px;">🚀 Start Trading Now →</a>
+    </div>
+
+    <!-- Footer -->
+    <div style="text-align:center;border-top:1px solid rgba(255,255,255,0.06);padding-top:20px;">
+      <p style="font-size:12px;color:#475569;margin:0 0 8px;">RXDT Exchange | support@rxdtex.com</p>
+      <p style="font-size:11px;color:#334155;margin:0;">This is an automated message. Do not reply to this email.</p>
+    </div>
+
+  </div>
+</body>
+</html>`;
+
+  try {
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: 'RXDT Exchange <noreply@rxdt.site>',
+        to: [email],
+        subject: `🎉 Welcome to RXDT Exchange, ${displayName}! Your account is ready`,
+        html,
+      }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      console.warn('[sendWelcomeEmail] Resend error:', err);
+    } else {
+      console.log(`[sendWelcomeEmail] Welcome email sent to ${email}`);
+    }
+  } catch (err) {
+    console.warn('[sendWelcomeEmail] fetch error:', err.message);
+  }
+}
+
 export default router;

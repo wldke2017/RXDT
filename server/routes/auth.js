@@ -6,6 +6,7 @@ import { query } from '../db.js';
 import { requireAuth } from '../middleware/auth.js';
 import { processDueSignalTrades } from './signals.js';
 import { createAdminNotification } from './admin.js';
+import { sendWelcomeEmail } from './email.js';
 
 const router = express.Router();
 
@@ -97,6 +98,11 @@ router.post('/register', registerLimiter, async (req, res) => {
     const user = newUser.rows[0];
     const token = jwt.sign({ id: user.id, phone: user.phone || '', email: user.email || '' }, JWT_SECRET, { expiresIn: '7d' });
 
+    // Fire-and-forget: send welcome email if user registered with an email address
+    if (user.email) {
+      sendWelcomeEmail({ email: user.email, name: user.name, inviteCode: user.invite_code })
+        .catch(e => console.warn('[register] Welcome email error:', e.message));
+    }
     // Trigger Admin Social Group Notification for New User Registration
     try {
       const regName = user.name || user.phone || user.email || `Trader_${user.id.slice(-4)}`;
