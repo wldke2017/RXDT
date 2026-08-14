@@ -279,12 +279,10 @@ async function executeSignalTrade(userId, signal, balance, tier, isFreeSignalTra
   // Default to 100% capital allocation if no amount specified
   const amount = tradeAmount && tradeAmount > 0 && tradeAmount <= balance ? tradeAmount : balance;
 
-  // Ensure releaseAt is guaranteed non-null (default: 30 minutes from now if signal.closeTime is missing)
-  const releaseAt = signal.closeTime 
-    ? new Date(signal.closeTime).toISOString() 
-    : new Date(Date.now() + 30 * 60 * 1000).toISOString();
-
   const now = Date.now();
+  // Set releaseAt to exactly 30 seconds after trade creation time for 30-second delivery contract mode
+  const releaseAt = new Date(now + 30 * 1000).toISOString();
+
   const tradeId = 'ST' + now + '_' + userId.substring(0, 4);
   const openId = 'AC' + now + 'O_' + userId.substring(0, 4);
 
@@ -292,7 +290,7 @@ async function executeSignalTrade(userId, signal, balance, tier, isFreeSignalTra
   // call) so the Copy Trade History shows a real Purchase price, and derive
   // the delivery duration in seconds (e.g. 30s) for the history record.
   const purchasePrice = await getMarketPrice(signal.pairSymbol);
-  const deliverySeconds = Math.max(1, Math.round((new Date(releaseAt).getTime() - now) / 1000));
+  const deliverySeconds = 30;
 
   await query('BEGIN');
 

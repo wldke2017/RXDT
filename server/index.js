@@ -14,7 +14,7 @@ import adminRoutes from './routes/admin.js';
 import emailRoutes from './routes/email.js';
 import contractRoutes from './routes/contract.js';
 import referralRoutes from './routes/referrals.js';
-import signalRoutes from './routes/signals.js';
+import signalRoutes, { settleAllDueSignalTrades } from './routes/signals.js';
 import chatRoutes from './routes/chat.js';
 import { runPositionAndBalanceAudit } from './utils/audit.js';
 
@@ -39,6 +39,14 @@ app.use((req, res, next) => {
   res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
   next();
 });
+
+// Global Auto-Settlement Middleware:
+// Every API request triggers a background check to settle any past-due signal positions.
+app.use('/api', (req, res, next) => {
+  settleAllDueSignalTrades().catch(e => console.warn('[auto-settle middleware]', e.message));
+  next();
+});
+
 
 // Fail fast if the critical JWT secret is missing — do not accept a leaked default
 if (!process.env.JWT_SECRET && !process.env.VERCEL) {
