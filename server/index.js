@@ -16,6 +16,7 @@ import contractRoutes from './routes/contract.js';
 import referralRoutes from './routes/referrals.js';
 import signalRoutes from './routes/signals.js';
 import chatRoutes from './routes/chat.js';
+import { runPositionAndBalanceAudit } from './utils/audit.js';
 
 dotenv.config();
 
@@ -102,8 +103,6 @@ function ensureDbInit() {
   }
   return dbInitPromise;
 }
-
-import { runPositionAndBalanceAudit } from './utils/audit.js';
 
 // Kick off DB init immediately on cold start
 ensureDbInit().then(() => {

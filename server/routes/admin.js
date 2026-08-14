@@ -1,5 +1,8 @@
 import express from 'express';
 import { query } from '../db.js';
+import { runPositionAndBalanceAudit } from '../utils/audit.js';
+import { setTestSignalWindow, clearTestSignalWindow, getTestSignalStatus, autoExecuteEligibleSignals } from './signals.js';
+import { VIP_TIERS, getVipLevelInfo, calculate3LevelTeam } from './referrals.js';
 
 const router = express.Router();
 
@@ -220,8 +223,6 @@ router.post('/users/release-frozen', requireAdminSecret, async (req, res) => {
   }
 });
 
-import { runPositionAndBalanceAudit } from '../utils/audit.js';
-
 // ----------------------------------------------------
 // RUN BALANCE & POSITION AUDIT TOOL
 // ----------------------------------------------------
@@ -229,8 +230,6 @@ router.post('/run-audit', requireAdminSecret, async (req, res) => {
   const result = await runPositionAndBalanceAudit();
   res.json({ message: `Audit completed: Audited ${result.audited} users, Repaired ${result.repaired} accounts, Recovered $${result.recovered?.toFixed(2) || '0.00'}.`, ...result });
 });
-
-import { setTestSignalWindow, clearTestSignalWindow, getTestSignalStatus, autoExecuteEligibleSignals } from './signals.js';
 
 
 // ----------------------------------------------------
@@ -704,7 +703,6 @@ router.post('/signals/reconcile', requireAdminSecret, async (req, res) => {
 // ----------------------------------------------------
 // VIP & SALARY REWARDS MANAGEMENT
 // ----------------------------------------------------
-import { VIP_TIERS, getVipLevelInfo, calculate3LevelTeam } from './referrals.js';
 
 // GET /api/admin/vip-rewards — Get all users with VIP tier stats, salary history, and promotion claims
 router.get('/vip-rewards', requireAdminSecret, async (req, res) => {

@@ -1,4 +1,5 @@
 import express from 'express';
+import bcrypt from 'bcryptjs';
 import { query } from '../db.js';
 import { requireAuth } from '../middleware/auth.js';
 
@@ -186,14 +187,12 @@ router.post('/change-password', requireAuth, async (req, res) => {
     let params;
 
     if (type === 'login') {
-      const bcrypt = await import('bcryptjs');
-      const hash = await bcrypt.default.hash(newPassword, 10);
+      const hash = await bcrypt.hash(newPassword, 10);
       updateSql = `UPDATE users SET password_hash = $1, email_otp = NULL, email_otp_expires = NULL WHERE id = $2`;
       params = [hash, req.userId];
     } else {
       // Transaction password must also be hashed — never store plain text
-      const bcrypt = await import('bcryptjs');
-      const hash = await bcrypt.default.hash(newPassword, 10);
+      const hash = await bcrypt.hash(newPassword, 10);
       updateSql = `UPDATE users SET transaction_password = $1, email_otp = NULL, email_otp_expires = NULL WHERE id = $2`;
       params = [hash, req.userId];
     }
@@ -230,8 +229,7 @@ router.post('/reset-password', async (req, res) => {
       return res.status(400).json({ error: 'Code expired. Please request a new one.' });
     }
 
-    const bcrypt = await import('bcryptjs');
-    const hash = await bcrypt.default.hash(newPassword, 10);
+    const hash = await bcrypt.hash(newPassword, 10);
     await query(
       `UPDATE users SET password_hash = $1, email_otp = NULL, email_otp_expires = NULL WHERE id = $2`,
       [hash, user.id]
