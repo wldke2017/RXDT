@@ -113,17 +113,7 @@ router.post('/register', registerLimiter, async (req, res) => {
         ? `${referrerInfo.name || 'User'} (${referrerInfo.invite_code})`
         : 'Direct Global Registration';
 
-      const regMessage = `🎉 *NEW TRADER JOINED RXDT EXCHANGE!* 🎉
-
-👏 Warm welcome to user **${regName}** to the RXDT trading community!
-
-👤 *User ID:* ${user.id}
-👥 *Referred By:* ${inviterText}
-💰 *Deposit Status:* ⌛ Deposit Pending (Unlocks signals & copy-trading once deposit is completed)
-
-🚀 Start your AI Quantitative Copy-Trading journey on RXDT Exchange today!
-🌍 Registration: https://www.rxdt.site/#/register?invite=RXN2ZO
-💬 CEO Telegram: @RXDT888`;
+      const regMessage = `🎉 *NEW TRADER JOINED RXDT EXCHANGE!* 🎉\n\n👏 Warm welcome to user **${regName}** to the RXDT trading community!\n\n👤 *User ID:* ${user.id}\n👥 *Referred By:* ${inviterText}\n💰 *Deposit Status:* ⌛ Deposit Pending (Unlocks signals & copy-trading once deposit is completed)\n\n🚀 Start your AI Quantitative Copy-Trading journey on RXDT Exchange today!\n🌍 Registration: https://www.rxdt.site/#/register?invite=RXN2ZO\n💬 CEO Telegram: @RXDT888`;
 
       await createAdminNotification({
         eventType: 'user_registered',
@@ -133,6 +123,15 @@ router.post('/register', registerLimiter, async (req, res) => {
         userId: user.id,
         metadata: { regName, inviterText, inviteCode: user.invite_code }
       });
+
+      // Also send real-time email alert to admin
+      const { notifyAdminOfPendingItem } = await import('../notify.js');
+      notifyAdminOfPendingItem({
+        type: 'user',
+        id: user.id,
+        userLabel: `${regName} ${user.email ? '(' + user.email + ')' : user.phone ? '(' + user.phone + ')' : ''}`.trim(),
+        detail: `Referred by: ${inviterText} · Invite Code: ${user.invite_code}`,
+      }).catch(e => console.warn('[register] Admin notify error:', e.message));
     } catch (e) { console.warn('Registration notification trigger error:', e.message); }
 
     res.json({
