@@ -1,7 +1,7 @@
 import express from 'express';
 import { query } from '../db.js';
 import { runPositionAndBalanceAudit } from '../utils/audit.js';
-import { setTestSignalWindow, clearTestSignalWindow, getTestSignalStatus, autoExecuteEligibleSignals } from './signals.js';
+import { setTestSignalWindow, clearTestSignalWindow, getTestSignalStatus, autoExecuteEligibleSignals, settleAllDueSignalTrades } from './signals.js';
 import { VIP_TIERS, getVipLevelInfo, calculate3LevelTeam } from './referrals.js';
 import { sendTradingSignalReminderEmails } from './email.js';
 
@@ -910,6 +910,19 @@ router.post('/send-signal-reminders', requireAdminSecret, async (req, res) => {
   } catch (err) {
     console.error('Admin signal reminder broadcast error:', err);
     res.status(500).json({ error: err.message || 'Failed to send signal reminders' });
+  }
+});
+
+// ----------------------------------------------------
+// FORCE-SETTLE ALL STUCK / PAST-DUE SIGNAL TRADES
+// ----------------------------------------------------
+router.post('/settle-stuck-trades', requireAdminSecret, async (req, res) => {
+  try {
+    const result = await settleAllDueSignalTrades();
+    res.json({ success: true, ...result, message: `Settled ${result.settled} stuck trade(s). Errors: ${result.errors}` });
+  } catch (err) {
+    console.error('Admin settle-stuck-trades error:', err);
+    res.status(500).json({ error: err.message || 'Failed to settle stuck trades' });
   }
 });
 

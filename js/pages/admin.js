@@ -91,6 +91,7 @@ function renderDashboard() {
       </div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
         <button class="btn-outline" onclick="sendSignalReminderEmailsBroadcast()" style="padding:8px 16px;font-size:13px;color:#00d4ff;border-color:#00d4ff;">📧 Send Signal Reminders to All Users</button>
+        <button class="btn-outline" onclick="settleStuckTrades()" style="padding:8px 16px;font-size:13px;color:#10b981;border-color:#10b981;">🔄 Settle Stuck Trades</button>
         <button class="btn-outline" onclick="releaseFrozenFunds()" style="padding:8px 16px;font-size:13px;color:#f59e0b;border-color:#f59e0b;">🔓 Release In-Orders Funds</button>
         <button class="btn-outline" id="admin-sound-btn" onclick="toggleAdminSound()" style="padding:8px 16px;font-size:13px;">🔔 Sound: On</button>
         <button class="btn-outline" onclick="loadAdminStats()" id="admin-refresh-btn" style="padding:8px 16px;font-size:13px;">🔄 Refresh</button>
@@ -2401,6 +2402,22 @@ Today’s efforts aren’t just about participating in a platform — they are a
     } catch (err) {
       if (window.toast) window.toast('Email broadcast error: ' + err.message, 'error');
       alert('❌ Failed to send emails: ' + err.message);
+    }
+  };
+
+  window.settleStuckTrades = async function () {
+    if (!confirm('Force-settle all past-due signal trades right now?')) return;
+    try {
+      if (window.toast) window.toast('Settling stuck trades...', 'info');
+      const res = await adminFetch('/settle-stuck-trades', 'POST');
+      if (window.toast) {
+        window.toast(res.message || `Settled ${res.settled || 0} trades!`, 'info');
+      }
+      alert(`✅ ${res.message || 'Stuck trades settled!'}\nSettled: ${res.settled || 0}\nErrors: ${res.errors || 0}`);
+      if (window.loadAdminStats) window.loadAdminStats();
+    } catch (err) {
+      if (window.toast) window.toast('Settle error: ' + err.message, 'error');
+      alert('❌ Failed to settle trades: ' + err.message);
     }
   };
 
