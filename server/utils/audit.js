@@ -15,7 +15,7 @@ export async function runPositionAndBalanceAudit() {
 
   try {
     const usersRes = await query(`
-      SELECT id, username, available_balance, frozen_balance, total_assets 
+      SELECT id, name, available_balance, frozen_balance, total_assets 
       FROM users 
       WHERE frozen_balance != 0 OR id IN (
         SELECT user_id FROM contract_orders WHERE status = 'open'

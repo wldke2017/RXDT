@@ -294,6 +294,7 @@ async function checkSignalWindow() {
     const res = await fetch('/api/signals/active', {
       headers: { 'Authorization': `Bearer ${TOKEN}` }
     });
+    if (!res.ok) return;
     const data = await res.json();
     if (!data.activeSignal || !data.qualified || data.alreadyExecuted) return;
     showSignalPopup(data);
