@@ -33,6 +33,7 @@ export async function initDatabase() {
       avg_daily_return VARCHAR(50) DEFAULT '1.8% - 2.1%',
       spin_chances INT DEFAULT 0,
       referred_by VARCHAR(50),
+      avatar_img TEXT,
       created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
     );
   `);
@@ -57,6 +58,7 @@ export async function initDatabase() {
     ALTER TABLE users ADD COLUMN IF NOT EXISTS auto_signal_exec BOOLEAN DEFAULT TRUE;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS vip_level VARCHAR(20) DEFAULT 'VIP0';
     ALTER TABLE users ADD COLUMN IF NOT EXISTS last_salary_payout_date TIMESTAMP WITH TIME ZONE;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_img TEXT;
     ALTER TABLE users ALTER COLUMN phone DROP NOT NULL;
   `).catch(err => console.log('User schema migration notice:', err.message));
 
