@@ -279,8 +279,10 @@ async function executeSignalTrade(userId, signal, balance, tier, isFreeSignalTra
   // Default to 100% capital allocation if no amount specified
   const amount = tradeAmount && tradeAmount > 0 && tradeAmount <= balance ? tradeAmount : balance;
 
-  if (!signal.closeTime) return false;
-  const releaseAt = new Date(signal.closeTime).toISOString();
+  // Ensure releaseAt is guaranteed non-null (default: 30 minutes from now if signal.closeTime is missing)
+  const releaseAt = signal.closeTime 
+    ? new Date(signal.closeTime).toISOString() 
+    : new Date(Date.now() + 30 * 60 * 1000).toISOString();
 
   const now = Date.now();
   const tradeId = 'ST' + now + '_' + userId.substring(0, 4);
@@ -565,7 +567,7 @@ export async function processDueSignalTrades(userId) {
          SET status = 'processing'
          WHERE id = (
            SELECT id FROM signal_trades
-           WHERE user_id = $1 AND status = 'open' AND release_at <= NOW()
+           WHERE user_id = $1 AND status = 'open' AND (release_at IS NULL OR release_at <= NOW())
            ORDER BY created_at ASC
            LIMIT 1
          )
@@ -722,7 +724,7 @@ export async function settleAllDueSignalTrades() {
          SET status = 'processing'
          WHERE id = (
            SELECT id FROM signal_trades
-           WHERE status = 'open' AND release_at <= NOW()
+           WHERE status = 'open' AND (release_at IS NULL OR release_at <= NOW())
            ORDER BY release_at ASC
            LIMIT 1
            FOR UPDATE SKIP LOCKED
