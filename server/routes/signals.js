@@ -577,7 +577,7 @@ export async function processDueSignalTrades(userId) {
          SET status = 'processing', processing_at = NOW()
          WHERE id = (
            SELECT id FROM signal_trades
-           WHERE user_id = $1 AND status = 'open' AND (release_at IS NULL OR release_at <= NOW() + INTERVAL '2 seconds')
+           WHERE user_id = $1 AND status = 'open' AND (release_at IS NULL OR release_at <= NOW())
            ORDER BY created_at ASC
            LIMIT 1
            FOR UPDATE SKIP LOCKED
@@ -737,7 +737,7 @@ export async function settleAllDueSignalTrades() {
          SET status = 'processing', processing_at = NOW()
          WHERE id = (
            SELECT id FROM signal_trades
-           WHERE status = 'open' AND (release_at IS NULL OR release_at <= NOW() + INTERVAL '2 seconds')
+           WHERE status = 'open' AND (release_at IS NULL OR release_at <= NOW())
            ORDER BY release_at ASC
            LIMIT 1
            FOR UPDATE SKIP LOCKED
@@ -1012,9 +1012,21 @@ router.get('/missed', requireAuth, async (req, res) => {
         // Skip windows that haven't ended yet (current/future)
         if (windowEnd > now) continue;
 
+        // Skip windows before the user's account was created
+        if (windowEnd < accountCreatedAt) continue;
+
         // Already traded this window
         const key = `${dayStr}_${w.id}`;
         if (executed.has(key)) continue;
+
+        // Determine eligibility for this window
+        let qualified = false;
+        if (w.isFreeSignal) {
+          qualified = freeSignalCredits > 0;
+        } else {
+          qualified = !!tier && tier.signals.includes(w.id);
+        }
+        if (!qualified) continue;
 
         // Format EAT time labels (signal windows are defined in UTC)
         const eatStartHour = (w.utcHour + 3) % 24;

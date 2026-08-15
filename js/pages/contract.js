@@ -727,13 +727,16 @@ export async function init() {
       if (!data.activeSignal) {
         const now = new Date();
         const h = now.getUTCHours();
-        let nextSignal = h < 14 ? '5:00 PM' : h < 15 ? '6:00 PM' : h < 16 ? '7:00 PM' : 'tomorrow at 5:00 PM';
+        // Signal windows in UTC (EAT = UTC+3):
+        // Signal 1: 14:00-14:30 (5pm EAT) · Signal 2: 15:00-15:30 (6pm EAT)
+        // Signal 3: 16:00-16:30 (7pm EAT) · Signal 4 (FREE): 17:00-17:05 (8pm EAT)
+        let nextSignal = h < 14 ? '5:00 PM' : h < 15 ? '6:00 PM' : h < 16 ? '7:00 PM' : h < 17 ? '8:00 PM (Free Signal)' : 'tomorrow at 5:00 PM';
         card.innerHTML = `
         <div style="text-align:center;padding:32px;">
           <div style="font-size:40px;margin-bottom:12px;">⏰</div>
           <div style="font-size:16px;font-weight:700;color:#fff;margin-bottom:6px;">No Active Signal Right Now</div>
           <div style="font-size:13px;color:var(--text-muted);">Next signal window: <strong style="color:#00f2fe;">${nextSignal} EAT</strong></div>
-          <div style="font-size:12px;color:var(--text-muted);margin-top:8px;">Log in at 5pm, 6pm, or 7pm EAT to copy AI signals</div>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:8px;">Log in at 5pm, 6pm, 7pm, or 8pm EAT to copy AI signals</div>
         </div>`;
         return;
       }
@@ -1086,24 +1089,8 @@ export async function init() {
   loadHistory();
   loadConsumeRecord(); // load consume record by default
 
-  // Auto-refresh positions, balance & signal trade history every 4s for real-time 30s settlement
-  positionsInterval = setInterval(() => {
-    loadPositions();
-    if (store.isLoggedIn()) {
-      if (store.checkAuth) store.checkAuth();
-      const activeTab = document.querySelector('.signal-main-tab.active')?.id;
-      if (activeTab === 'tab-invited') {
-        const activeSub = document.querySelector('.signal-subtab.active')?.id;
-        if (activeSub === 'subtab-history') {
-          const activeHist = document.querySelector('.sh-tab.active')?.id;
-          if (activeHist === 'shtab-submitted') loadSubmittedOrders();
-          if (activeHist === 'shtab-finished') loadSignalHistory();
-        }
-      } else if (activeTab === 'tab-consume') {
-        loadConsumeRecord();
-      }
-    }
-  }, 4000);
+  // Auto-refresh positions every 5s for live P&L
+  positionsInterval = setInterval(() => loadPositions(), 5000);
 
   // Cleanup on navigate away
   window.addEventListener('hashchange', () => {

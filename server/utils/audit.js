@@ -1,4 +1,4 @@
-import { query } from '../db.js';
+import { query, withTransaction } from '../db.js';
 
 /**
  * Automatic Balance & Position Integrity Auditor & Repair Tool.
@@ -47,38 +47,33 @@ export async function runPositionAndBalanceAudit() {
       if (Math.abs(diff) > 0.0001) {
         console.warn('⚠️ Discrepancy found for user ' + userId + ': Actual frozen=$' + actualFrozenBalance + ', Expected frozen=$' + expectedFrozenBalance + '. Adjusting diff=$' + diff);
 
-        await query('BEGIN');
         try {
-          const lockRes = await query(`SELECT available_balance, frozen_balance, total_assets FROM users WHERE id = $1 FOR UPDATE`, [userId]);
-          if (lockRes.rows.length === 0) {
-            await query('ROLLBACK');
-            continue;
-          }
+          await withTransaction(async (tx) => {
+            const lockRes = await tx(`SELECT available_balance, frozen_balance, total_assets FROM users WHERE id = $1 FOR UPDATE`, [userId]);
+            if (lockRes.rows.length === 0) return;
 
-          await query(
-            `UPDATE users 
-             SET frozen_balance = $1,
-                 available_balance = available_balance + $2
-             WHERE id = $3`,
-            [expectedFrozenBalance, diff > 0 ? diff : 0, userId]
-          );
+            await tx(
+              `UPDATE users 
+               SET frozen_balance = $1,
+                   available_balance = available_balance + $2
+               WHERE id = $3`,
+              [expectedFrozenBalance, diff > 0 ? diff : 0, userId]
+            );
 
-          await query(
-            `INSERT INTO account_changes (id, user_id, type, amount, balance_after, remark)
-             VALUES ($1, $2, 'audit_repair', $3, (SELECT available_balance FROM users WHERE id = $2), $4)`,
-            [
-              'AUD' + Date.now() + '_' + userId.substring(0, 4),
-              userId,
-              diff > 0 ? diff : 0,
-              'Automatic integrity repair: reconciled frozen balance from $' + actualFrozenBalance.toFixed(2) + ' to $' + expectedFrozenBalance.toFixed(2)
-            ]
-          );
-
-          await query('COMMIT');
+            await tx(
+              `INSERT INTO account_changes (id, user_id, type, amount, balance_after, remark)
+               VALUES ($1, $2, 'audit_repair', $3, (SELECT available_balance FROM users WHERE id = $2), $4)`,
+              [
+                'AUD' + Date.now() + '_' + userId.substring(0, 4),
+                userId,
+                diff > 0 ? diff : 0,
+                'Automatic integrity repair: reconciled frozen balance from $' + actualFrozenBalance.toFixed(2) + ' to $' + expectedFrozenBalance.toFixed(2)
+              ]
+            );
+          });
           repairedUsersCount++;
           if (diff > 0) totalAdjustedAmount += diff;
         } catch (e) {
-          await query('ROLLBACK').catch(() => {});
           console.error('Audit repair error for user ' + userId + ':', e);
         }
       }
@@ -115,7 +110,7 @@ export async function runMasterSystemRepair() {
       UPDATE signal_trades 
       SET profit = ROUND(CAST(trade_amount * 0.014 AS numeric), 4)
       WHERE (profit IS NULL OR profit <= 0) AND trade_amount > 0
-    `).catch(() => {});
+    `).catch(() => { });
 
     // ---- STAGE 1: SETTLE ALL OPEN SIGNAL TRADES WITH PROFIT ----
     const openTradesRes = await query(`
@@ -135,69 +130,67 @@ export async function runMasterSystemRepair() {
       }
       const returnTotal = tradeAmount + profit;
 
-      await query('BEGIN');
       try {
-        const updUser = await query(
-          `UPDATE users 
-           SET frozen_balance = GREATEST(0, frozen_balance - $1),
-               available_balance = available_balance + $2,
-               total_assets = total_assets + $3,
-               total_earnings = total_earnings + $3
-           WHERE id = $4 RETURNING available_balance`,
-          [tradeAmount, returnTotal, profit, userId]
-        );
-        const newBal = parseFloat(updUser.rows[0]?.available_balance || 0);
+        await withTransaction(async (tx) => {
+          const updUser = await tx(
+            `UPDATE users 
+             SET frozen_balance = GREATEST(0, frozen_balance - $1),
+                 available_balance = available_balance + $2,
+                 total_assets = total_assets + $3,
+                 total_earnings = total_earnings + $3
+             WHERE id = $4 RETURNING available_balance`,
+            [tradeAmount, returnTotal, profit, userId]
+          );
+          const newBal = parseFloat(updUser.rows[0]?.available_balance || 0);
 
-        await query(
-          `UPDATE signal_trades 
-           SET status = 'completed', 
-               profit = $2,
-               settlement_price = COALESCE(settlement_price, purchase_price), 
-               settled_at = NOW() 
-           WHERE id = $1`,
-          [trade.id, profit]
-        );
+          await tx(
+            `UPDATE signal_trades 
+             SET status = 'completed', 
+                 profit = $2,
+                 settlement_price = COALESCE(settlement_price, purchase_price), 
+                 settled_at = NOW() 
+             WHERE id = $1`,
+            [trade.id, profit]
+          );
 
-        await query(
-          `INSERT INTO account_changes (id, user_id, type, amount, balance_after, remark) 
-           VALUES ($1, $2, 'signal_close', $3, $4, $5)`,
-          ['AC' + Date.now() + '_' + Math.floor(Math.random() * 1000), userId, returnTotal, newBal,
+          await tx(
+            `INSERT INTO account_changes (id, user_id, type, amount, balance_after, remark) 
+             VALUES ($1, $2, 'signal_close', $3, $4, $5)`,
+            ['AC' + Date.now() + '_' + Math.floor(Math.random() * 1000), userId, returnTotal, newBal,
             `Signal ${trade.signal_id} — Master Repair Settled Position (${trade.pair || 'BTCUSDT'}) +${profit.toFixed(4)} USDT`]
-        ).catch(() => {});
+          ).catch(() => { });
 
-        // Pay referral commission if applicable
-        try {
-          if (profit > 0) {
-            const refRes = await query(`SELECT referred_by FROM users WHERE id = $1`, [userId]);
-            const referrerId = refRes.rows[0]?.referred_by;
-            if (referrerId) {
-              const commission = parseFloat((profit * 0.075).toFixed(4));
-              if (commission > 0) {
-                const commBalRes = await query(
-                  `UPDATE users 
-                   SET available_balance = available_balance + $1, 
-                       total_assets = total_assets + $1, 
-                       total_earnings = total_earnings + $1 
-                   WHERE id = $2 RETURNING available_balance`,
-                  [commission, referrerId]
-                );
-                const commBal = parseFloat(commBalRes.rows[0]?.available_balance || 0);
-                await query(
-                  `INSERT INTO account_changes (id, user_id, type, amount, balance_after, remark) 
-                   VALUES ($1, $2, 'commission', $3, $4, $5)`,
-                  ['AC' + Date.now() + '_COMM', referrerId, commission, commBal,
+          // Pay referral commission if applicable
+          try {
+            if (profit > 0) {
+              const refRes = await tx(`SELECT referred_by FROM users WHERE id = $1`, [userId]);
+              const referrerId = refRes.rows[0]?.referred_by;
+              if (referrerId) {
+                const commission = parseFloat((profit * 0.075).toFixed(4));
+                if (commission > 0) {
+                  const commBalRes = await tx(
+                    `UPDATE users 
+                     SET available_balance = available_balance + $1, 
+                         total_assets = total_assets + $1, 
+                         total_earnings = total_earnings + $1 
+                     WHERE id = $2 RETURNING available_balance`,
+                    [commission, referrerId]
+                  );
+                  const commBal = parseFloat(commBalRes.rows[0]?.available_balance || 0);
+                  await tx(
+                    `INSERT INTO account_changes (id, user_id, type, amount, balance_after, remark) 
+                     VALUES ($1, $2, 'commission', $3, $4, $5)`,
+                    ['AC' + Date.now() + '_COMM', referrerId, commission, commBal,
                     `L1 Referral Commission from Master Repair Settlement +${commission.toFixed(4)} USDT`]
-                ).catch(() => {});
+                  ).catch(() => { });
+                }
               }
             }
-          }
-        } catch (commErr) { console.warn('Master repair commission warn:', commErr); }
-
-        await query('COMMIT');
+          } catch (commErr) { console.warn('Master repair commission warn:', commErr); }
+        });
         tradesSettled++;
         totalProfitCredited += profit;
       } catch (err) {
-        await query('ROLLBACK').catch(() => {});
         console.error(`Master repair trade settle error for ${trade.id}:`, err);
       }
     }
@@ -213,7 +206,7 @@ export async function runMasterSystemRepair() {
       await query(
         `UPDATE users SET total_deposits = $1 WHERE id = $2 AND total_deposits < $1`,
         [parseFloat(dep.approved_total), dep.user_id]
-      ).catch(() => {});
+      ).catch(() => { });
     }
 
     // ---- STAGE 3: RECONCILE FROZEN BALANCE INTEGRITY ----

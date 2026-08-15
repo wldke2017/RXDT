@@ -1,5 +1,5 @@
 import express from 'express';
-import { query } from '../db.js';
+import { query, withTransaction } from '../db.js';
 import { requireAuth } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -110,29 +110,30 @@ router.post('/orders/create', requireAuth, async (req, res) => {
     const newAvailable = available - numAmount;
     const newFrozen = frozen + numAmount;
 
-    // Execute atomic SQL transaction
-    await query('BEGIN');
+    // Execute atomic SQL transaction using withTransaction (the previous
+    // manual query('BEGIN')/COMMIT/ROLLBACK pattern was broken because
+    // pool.query() picks a random connection per statement, so the BEGIN/COMMIT
+    // were silently ignored and each statement auto-committed independently).
+    const o = await withTransaction(async (tx) => {
+      await tx(`
+        UPDATE users SET available_balance = $1, frozen_balance = $2 WHERE id = $3;
+      `, [newAvailable, newFrozen, req.user.id]);
 
-    await query(`
-      UPDATE users SET available_balance = $1, frozen_balance = $2 WHERE id = $3;
-    `, [newAvailable, newFrozen, req.user.id]);
+      const newOrderRes = await tx(`
+        INSERT INTO follow_orders (
+          id, order_number, user_id, model_id, product_name, amount, daily_rate, period_days, status, auto_renew
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'buying', true)
+        RETURNING *;
+      `, [orderId, orderNum, req.user.id, modelId, productName || 'AI Quantitative Strategy', numAmount, dailyRate || 1.95, periodDays || 34]);
 
-    const newOrderRes = await query(`
-      INSERT INTO follow_orders (
-        id, order_number, user_id, model_id, product_name, amount, daily_rate, period_days, status, auto_renew
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'buying', true)
-      RETURNING *;
-    `, [orderId, orderNum, req.user.id, modelId, productName || 'AI Quantitative Strategy', numAmount, dailyRate || 1.95, periodDays || 34]);
+      // Record Account Change log
+      await tx(`
+        INSERT INTO account_changes (id, user_id, type, amount, balance_after, remark)
+        VALUES ($1, $2, 'AI Quant Investment', $3, $4, $5);
+      `, ['AC' + Date.now(), req.user.id, -numAmount, newAvailable, `Invested in ${productName || 'AI Strategy'}`]);
 
-    // Record Account Change log
-    await query(`
-      INSERT INTO account_changes (id, user_id, type, amount, balance_after, remark)
-      VALUES ($1, $2, 'AI Quant Investment', $3, $4, $5);
-    `, ['AC' + Date.now(), req.user.id, -numAmount, newAvailable, `Invested in ${productName || 'AI Strategy'}`]);
-
-    await query('COMMIT');
-
-    const o = newOrderRes.rows[0];
+      return newOrderRes.rows[0];
+    });
     res.json({
       message: 'AI Order created successfully!',
       order: {
@@ -157,7 +158,6 @@ router.post('/orders/create', requireAuth, async (req, res) => {
     });
 
   } catch (err) {
-    await query('ROLLBACK');
     console.error('Create order error:', err);
     res.status(500).json({ error: 'Failed to create order' });
   }

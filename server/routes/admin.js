@@ -1,5 +1,5 @@
 import express from 'express';
-import { query } from '../db.js';
+import { query, withTransaction } from '../db.js';
 import { runPositionAndBalanceAudit, runMasterSystemRepair, runDatabaseHardReset } from '../utils/audit.js';
 import { setTestSignalWindow, clearTestSignalWindow, getTestSignalStatus, autoExecuteEligibleSignals, settleAllDueSignalTrades } from './signals.js';
 import { VIP_TIERS, getVipLevelInfo, calculate3LevelTeam } from './referrals.js';
@@ -162,9 +162,9 @@ router.post('/users/release-frozen', requireAdminSecret, async (req, res) => {
     let releasedProfit = 0;
 
     for (const u of users) {
-      // Settle any open or processing signal trades for this user with full profit & history logs
+      // Settle any open signal trades for this user with full profit & history logs
       const openTrades = await query(
-        `SELECT id, signal_id, pair, trade_amount, profit FROM signal_trades WHERE user_id = $1 AND status IN ('open', 'processing')`,
+        `SELECT id, signal_id, pair, trade_amount, profit FROM signal_trades WHERE user_id = $1 AND status = 'open'`,
         [u.id]
       ).catch(() => ({ rows: [] }));
 
@@ -176,64 +176,50 @@ router.post('/users/release-frozen', requireAdminSecret, async (req, res) => {
         }
         const returnTotal = tradeAmount + profit;
 
-        await query('BEGIN');
+        await withTransaction(async (tx) => {
+          const upd = await tx(
+            `UPDATE users 
+             SET frozen_balance = GREATEST(0, frozen_balance - $1),
+                 available_balance = available_balance + $2,
+                 total_assets = total_assets + $3,
+                 total_earnings = total_earnings + $3
+             WHERE id = $4 RETURNING available_balance`,
+            [tradeAmount, returnTotal, profit, u.id]
+          );
+          const newBal = parseFloat(upd.rows[0]?.available_balance || 0);
 
-        const upd = await query(
-          `UPDATE users 
-           SET frozen_balance = GREATEST(0, frozen_balance - $1),
-               available_balance = available_balance + $2,
-               total_assets = total_assets + $3,
-               total_earnings = total_earnings + $3
-           WHERE id = $4 RETURNING available_balance`,
-          [tradeAmount, returnTotal, profit, u.id]
-        );
-        const newBal = parseFloat(upd.rows[0]?.available_balance || 0);
+          await tx(
+            `UPDATE signal_trades SET status = 'completed', settlement_price = COALESCE(settlement_price, purchase_price), settled_at = NOW() WHERE id = $1`,
+            [trade.id]
+          ).catch(() => { });
 
-        await query(
-          `UPDATE signal_trades SET status = 'completed', settlement_price = COALESCE(settlement_price, purchase_price), settled_at = NOW(), processing_at = NULL WHERE id = $1`,
-          [trade.id]
-        ).catch(() => { });
-
-        await query(
-          `INSERT INTO account_changes (id, user_id, type, amount, balance_after, remark) VALUES ($1,$2,$3,$4,$5,$6)`,
-          ['AC' + Date.now() + 'RF_' + trade.id.slice(-4), u.id, 'signal_close', returnTotal, newBal,
-          `Signal ${trade.signal_id} — Admin Release Position (${trade.pair || 'BTCUSDT'}) +${profit.toFixed(4)} USDT · trade ${trade.id}`]
-        ).catch(() => { });
-
-        await query('COMMIT');
+          await tx(
+            `INSERT INTO account_changes (id, user_id, type, amount, balance_after, remark) VALUES ($1,$2,$3,$4,$5,$6)`,
+            ['AC' + Date.now() + 'RF_' + trade.id.slice(-4), u.id, 'signal_close', returnTotal, newBal,
+            `Signal ${trade.signal_id} — Admin Release Position (${trade.pair || 'BTCUSDT'}) +${profit.toFixed(4)} USDT · trade ${trade.id}`]
+          ).catch(() => { });
+        });
         releasedCount++;
         releasedTotal += returnTotal;
         releasedProfit += profit;
       }
 
-      // If user still has leftover frozen balance not tied to open signal trades, release investment + profit
+      // If user still has leftover frozen balance not tied to open signal trades, clear it
       const userCheck = await query(`SELECT frozen_balance FROM users WHERE id = $1`, [u.id]);
       const remFrozen = parseFloat(userCheck.rows[0]?.frozen_balance || 0);
       if (remFrozen > 0) {
-        const remProfit = parseFloat((remFrozen * 0.014).toFixed(4));
-        const remTotal = remFrozen + remProfit;
-
-        await query('BEGIN');
-        const updRem = await query(
-          `UPDATE users SET 
-             frozen_balance = 0, 
-             available_balance = available_balance + $1,
-             total_assets = total_assets + $2,
-             total_earnings = total_earnings + $2
-           WHERE id = $3 RETURNING available_balance`,
-          [remTotal, remProfit, u.id]
-        );
-        const newRemBal = parseFloat(updRem.rows[0]?.available_balance || 0);
-
-        await query(
-          `INSERT INTO account_changes (id, user_id, type, amount, balance_after, remark) VALUES ($1,$2,$3,$4,$5,$6)`,
-          ['AC' + Date.now() + 'CLR', u.id, 'signal_close', remTotal, newRemBal,
-          `Admin released stuck In Order balance $${remFrozen.toFixed(2)} + $${remProfit.toFixed(4)} profit back to available balance`]
-        ).catch(() => { });
-        await query('COMMIT');
-        releasedCount++;
-        releasedTotal += remTotal;
-        releasedProfit += remProfit;
+        await withTransaction(async (tx) => {
+          const updRem = await tx(
+            `UPDATE users SET frozen_balance = 0, available_balance = available_balance + $1 WHERE id = $2 RETURNING available_balance`,
+            [remFrozen, u.id]
+          );
+          await tx(
+            `INSERT INTO account_changes (id, user_id, type, amount, balance_after, remark) VALUES ($1,$2,$3,$4,$5,$6)`,
+            ['AC' + Date.now() + 'CLR', u.id, 'admin_release', remFrozen, updRem.rows[0]?.available_balance || 0,
+            `Admin released leftover frozen balance $${remFrozen.toFixed(2)} back to available balance`]
+          ).catch(() => { });
+        });
+        releasedTotal += remFrozen;
       }
     }
 
@@ -244,7 +230,6 @@ router.post('/users/release-frozen', requireAdminSecret, async (req, res) => {
       releasedProfit
     });
   } catch (err) {
-    await query('ROLLBACK').catch(() => { });
     console.error('Release frozen error:', err);
     res.status(500).json({ error: 'Failed to release frozen funds' });
   }
@@ -320,14 +305,16 @@ router.post('/kyc/approve', requireAdminSecret, async (req, res) => {
   try {
     const { kycId } = req.body;
     if (!kycId) return res.status(400).json({ error: 'kycId is required' });
-    await query('BEGIN');
-    const kycRes = await query(`UPDATE kyc_records SET status = 'pass' WHERE id = $1 RETURNING *`, [kycId]);
-    const kyc = kycRes.rows[0];
-    await query(`UPDATE users SET kyc_status = 'pass', avatar_img = COALESCE(NULLIF($2, ''), avatar_img) WHERE id = $1`, [kyc.user_id, kyc.handheld_img || '']);
-    await query('COMMIT');
-    res.json({ message: `KYC for ${kyc.real_name} approved!` });
+    const result = await withTransaction(async (tx) => {
+      const kycRes = await tx(`UPDATE kyc_records SET status = 'pass' WHERE id = $1 RETURNING *`, [kycId]);
+      const kyc = kycRes.rows[0];
+      if (!kyc) return { error: 'KYC not found', status: 404 };
+      await tx(`UPDATE users SET kyc_status = 'pass', avatar_img = COALESCE(NULLIF($2, ''), avatar_img) WHERE id = $1`, [kyc.user_id, kyc.handheld_img || '']);
+      return { kyc };
+    });
+    if (result.error) return res.status(result.status || 400).json({ error: result.error });
+    res.json({ message: `KYC for ${result.kyc.real_name} approved!` });
   } catch (err) {
-    await query('ROLLBACK');
     res.status(500).json({ error: 'Failed to approve KYC' });
   }
 });
@@ -336,17 +323,18 @@ router.post('/kyc/reject', requireAdminSecret, async (req, res) => {
   try {
     const { kycId, reason } = req.body;
     if (!kycId) return res.status(400).json({ error: 'kycId is required' });
-    await query('BEGIN');
-    const kycRes = await query(
-      `UPDATE kyc_records SET status = 'rejected', reject_reason = $2 WHERE id = $1 RETURNING *`,
-      [kycId, reason || 'Unclear documents']
-    );
-    if (!kycRes.rows.length) { await query('ROLLBACK'); return res.status(404).json({ error: 'KYC not found' }); }
-    await query(`UPDATE users SET kyc_status = 'rejected' WHERE id = $1`, [kycRes.rows[0].user_id]);
-    await query('COMMIT');
-    res.json({ message: `KYC for ${kycRes.rows[0].real_name} rejected.` });
+    const result = await withTransaction(async (tx) => {
+      const kycRes = await tx(
+        `UPDATE kyc_records SET status = 'rejected', reject_reason = $2 WHERE id = $1 RETURNING *`,
+        [kycId, reason || 'Unclear documents']
+      );
+      if (!kycRes.rows.length) return { error: 'KYC not found', status: 404 };
+      await tx(`UPDATE users SET kyc_status = 'rejected' WHERE id = $1`, [kycRes.rows[0].user_id]);
+      return { kyc: kycRes.rows[0] };
+    });
+    if (result.error) return res.status(result.status || 400).json({ error: result.error });
+    res.json({ message: `KYC for ${result.kyc.real_name} rejected.` });
   } catch (err) {
-    await query('ROLLBACK');
     res.status(500).json({ error: 'Failed to reject KYC' });
   }
 });
@@ -358,88 +346,97 @@ router.post('/deposits/approve', requireAdminSecret, async (req, res) => {
   try {
     const { depositId } = req.body;
     if (!depositId) return res.status(400).json({ error: 'depositId is required' });
-    await query('BEGIN');
-    const depRes = await query(`SELECT * FROM deposits WHERE id = $1 FOR UPDATE`, [depositId]);
-    if (!depRes.rows.length) { await query('ROLLBACK'); return res.status(404).json({ error: 'Deposit not found' }); }
-    const dep = depRes.rows[0];
-    if (dep.audit_status !== 'pending') { await query('ROLLBACK'); return res.status(400).json({ error: `Already ${dep.audit_status}` }); }
-    const amount = parseFloat(dep.amount);
-    // Lucky Wheel spin rules:
-    // - Deposit < $500: 1 spin
-    // - Deposit >= $500: 2 spins
-    // - Deposit >= $1000: 3 spins (+1 for every extra $500)
-    // - Max 10 spins per deposit
-    let awardedSpins = 1;
-    if (amount >= 1000) {
-      awardedSpins = 3 + Math.floor((amount - 1000) / 500);
-    } else if (amount >= 500) {
-      awardedSpins = 2;
-    }
-    awardedSpins = Math.min(awardedSpins, 10);
 
-    await query(`UPDATE deposits SET status = 'success', audit_status = 'approved' WHERE id = $1`, [depositId]);
-
-    // Fetch user's current deposit state to determine if this is their FIRST deposit
-    const depUserRes = await query(
-      `SELECT total_deposits, initial_deposit, has_received_deposit_bonus, referred_by FROM users WHERE id = $1`,
-      [dep.user_id]
-    );
-    const depUser = depUserRes.rows[0];
-    const prevTotalDeposits = parseFloat(depUser?.total_deposits || 0);
-    const isFirstDeposit = prevTotalDeposits <= 0;
-
-    // Set last_deposit_amount and reset spin_winnings_used so the new deposit
-    // establishes a fresh 1%-10% win cap for the Lucky Wheel.
-    // Also track total_deposits and initial_deposit for tier & doubling logic.
-    const userRes = await query(
-      `UPDATE users SET 
-         available_balance = available_balance + $1, 
-         total_assets = total_assets + $1, 
-         spin_chances = spin_chances + $2, 
-         last_deposit_amount = $1, 
-         spin_winnings_used = 0,
-         total_deposits = total_deposits + $1,
-         initial_deposit = CASE WHEN initial_deposit = 0 THEN $1 ELSE initial_deposit END
-       WHERE id = $3 RETURNING available_balance, spin_chances, total_deposits, initial_deposit`,
-      [amount, awardedSpins, dep.user_id]
-    );
-
-    // 4% first-deposit bonus: credited to the depositor AND their referrer
-    let bonusMessage = '';
-    if (isFirstDeposit) {
-      const bonus = parseFloat((amount * 0.04).toFixed(2));
-      if (bonus > 0) {
-        // --- Bonus to the depositor ---
-        const bonusUserRes = await query(
-          `UPDATE users SET available_balance = available_balance + $1, total_assets = total_assets + $1, has_received_deposit_bonus = TRUE WHERE id = $2 RETURNING available_balance`,
-          [bonus, dep.user_id]
-        );
-        await query(
-          `INSERT INTO account_changes (id, user_id, type, amount, balance_after, remark) VALUES ($1,$2,$3,$4,$5,$6)`,
-          ['AC' + Date.now() + 'B1', dep.user_id, 'deposit_bonus', bonus, bonusUserRes.rows[0].available_balance, `4% First Deposit Bonus +$${bonus.toFixed(2)} USDT`]
-        ).catch(() => { });
-
-        // --- Bonus to the referrer (if any) ---
-        if (depUser?.referred_by) {
-          const refBonusRes = await query(
-            `UPDATE users SET available_balance = available_balance + $1, total_assets = total_assets + $1 WHERE id = $2 RETURNING available_balance`,
-            [bonus, depUser.referred_by]
-          );
-          await query(
-            `INSERT INTO account_changes (id, user_id, type, amount, balance_after, remark) VALUES ($1,$2,$3,$4,$5,$6)`,
-            ['AC' + Date.now() + 'B2', depUser.referred_by, 'referral_bonus', bonus, refBonusRes.rows[0].available_balance, `4% Referral Bonus from referred user's first deposit +$${bonus.toFixed(2)} USDT`]
-          ).catch(() => { });
-        }
-
-        bonusMessage = ` + 4% First Deposit Bonus ($${bonus.toFixed(2)}) to user & referrer`;
+    const result = await withTransaction(async (tx) => {
+      const depRes = await tx(`SELECT * FROM deposits WHERE id = $1 FOR UPDATE`, [depositId]);
+      if (!depRes.rows.length) return { error: 'Deposit not found', status: 404 };
+      const dep = depRes.rows[0];
+      if (dep.audit_status !== 'pending') return { error: `Already ${dep.audit_status}`, status: 400 };
+      const amount = parseFloat(dep.amount);
+      // Lucky Wheel spin rules:
+      // - Deposit < $500: 1 spin
+      // - Deposit >= $500: 2 spins
+      // - Deposit >= $1000: 3 spins (+1 for every extra $500)
+      // - Max 10 spins per deposit
+      let awardedSpins = 1;
+      if (amount >= 1000) {
+        awardedSpins = 3 + Math.floor((amount - 1000) / 500);
+      } else if (amount >= 500) {
+        awardedSpins = 2;
       }
+      awardedSpins = Math.min(awardedSpins, 10);
+
+      await tx(`UPDATE deposits SET status = 'success', audit_status = 'approved' WHERE id = $1`, [depositId]);
+
+      // Fetch user's current deposit state to determine if this is their FIRST deposit
+      const depUserRes = await tx(
+        `SELECT total_deposits, initial_deposit, has_received_deposit_bonus, referred_by FROM users WHERE id = $1`,
+        [dep.user_id]
+      );
+      const depUser = depUserRes.rows[0];
+      const prevTotalDeposits = parseFloat(depUser?.total_deposits || 0);
+      const isFirstDeposit = prevTotalDeposits <= 0;
+
+      // Set last_deposit_amount and reset spin_winnings_used so the new deposit
+      // establishes a fresh 1%-10% win cap for the Lucky Wheel.
+      // Also track total_deposits and initial_deposit for tier & doubling logic.
+      const userRes = await tx(
+        `UPDATE users SET 
+           available_balance = available_balance + $1, 
+           total_assets = total_assets + $1, 
+           spin_chances = spin_chances + $2, 
+           last_deposit_amount = $1, 
+           spin_winnings_used = 0,
+           total_deposits = total_deposits + $1,
+           initial_deposit = CASE WHEN initial_deposit = 0 THEN $1 ELSE initial_deposit END
+         WHERE id = $3 RETURNING available_balance, spin_chances, total_deposits, initial_deposit`,
+        [amount, awardedSpins, dep.user_id]
+      );
+
+      // 4% first-deposit bonus: credited to the depositor AND their referrer
+      let bonusMessage = '';
+      if (isFirstDeposit) {
+        const bonus = parseFloat((amount * 0.04).toFixed(2));
+        if (bonus > 0) {
+          // --- Bonus to the depositor ---
+          const bonusUserRes = await tx(
+            `UPDATE users SET available_balance = available_balance + $1, total_assets = total_assets + $1, has_received_deposit_bonus = TRUE WHERE id = $2 RETURNING available_balance`,
+            [bonus, dep.user_id]
+          );
+          await tx(
+            `INSERT INTO account_changes (id, user_id, type, amount, balance_after, remark) VALUES ($1,$2,$3,$4,$5,$6)`,
+            ['AC' + Date.now() + 'B1', dep.user_id, 'deposit_bonus', bonus, bonusUserRes.rows[0].available_balance, `4% First Deposit Bonus +$${bonus.toFixed(2)} USDT`]
+          ).catch(() => { });
+
+          // --- Bonus to the referrer (if any) ---
+          if (depUser?.referred_by) {
+            const refBonusRes = await tx(
+              `UPDATE users SET available_balance = available_balance + $1, total_assets = total_assets + $1 WHERE id = $2 RETURNING available_balance`,
+              [bonus, depUser.referred_by]
+            );
+            await tx(
+              `INSERT INTO account_changes (id, user_id, type, amount, balance_after, remark) VALUES ($1,$2,$3,$4,$5,$6)`,
+              ['AC' + Date.now() + 'B2', depUser.referred_by, 'referral_bonus', bonus, refBonusRes.rows[0].available_balance, `4% Referral Bonus from referred user's first deposit +$${bonus.toFixed(2)} USDT`]
+            ).catch(() => { });
+          }
+
+          bonusMessage = ` + 4% First Deposit Bonus ($${bonus.toFixed(2)}) to user & referrer`;
+        }
+      }
+
+      await tx(
+        `INSERT INTO account_changes (id, user_id, type, amount, balance_after, remark) VALUES ($1,$2,$3,$4,$5,$6)`,
+        ['AC' + Date.now(), dep.user_id, 'deposit', amount, userRes.rows[0].available_balance, `Deposit approved: ${dep.order_number} (+${awardedSpins} Lucky Spin Chances)`]
+      );
+
+      return { dep, amount, awardedSpins, bonusMessage, userRes: userRes.rows[0], depUser };
+    });
+
+    if (result.error) {
+      return res.status(result.status || 400).json({ error: result.error });
     }
 
-    await query(
-      `INSERT INTO account_changes (id, user_id, type, amount, balance_after, remark) VALUES ($1,$2,$3,$4,$5,$6)`,
-      ['AC' + Date.now(), dep.user_id, 'deposit', amount, userRes.rows[0].available_balance, `Deposit approved: ${dep.order_number} (+${awardedSpins} Lucky Spin Chances)`]
-    );
-    await query('COMMIT');
+    const { dep, amount, awardedSpins, bonusMessage, userRes, depUser } = result;
 
     // Trigger Admin Social Notification for Deposit Approval
     try {
@@ -481,9 +478,8 @@ router.post('/deposits/approve', requireAdminSecret, async (req, res) => {
       });
     } catch (e) { console.warn('Deposit notification trigger error:', e.message); }
 
-    res.json({ message: `Deposit ${dep.order_number} ($${amount}) approved! Granted ${awardedSpins} spin chance(s).${bonusMessage}`, newBalance: parseFloat(userRes.rows[0].available_balance), spinChances: parseInt(userRes.rows[0].spin_chances) });
+    res.json({ message: `Deposit ${dep.order_number} ($${amount}) approved! Granted ${awardedSpins} spin chance(s).${bonusMessage}`, newBalance: parseFloat(userRes.available_balance), spinChances: parseInt(userRes.spin_chances) });
   } catch (err) {
-    await query('ROLLBACK');
     res.status(500).json({ error: 'Failed to approve deposit' });
   }
 });
@@ -559,28 +555,29 @@ router.post('/withdrawals/reject', requireAdminSecret, async (req, res) => {
   try {
     const { withdrawalId, reason } = req.body;
     if (!withdrawalId) return res.status(400).json({ error: 'withdrawalId is required' });
-    await query('BEGIN');
-    const witRes = await query(`SELECT * FROM withdrawals WHERE id = $1 FOR UPDATE`, [withdrawalId]);
-    if (!witRes.rows.length) { await query('ROLLBACK'); return res.status(404).json({ error: 'Withdrawal not found' }); }
-    const w = witRes.rows[0];
-    if (w.audit_status !== 'pending') { await query('ROLLBACK'); return res.status(400).json({ error: `Already ${w.audit_status}` }); }
-    // Refund the full amount plus the $1 fee that was deducted when the withdrawal was created
-    const amount = parseFloat(w.amount);
-    const fee = parseFloat(w.fee || 0);
-    const refundTotal = amount + fee;
-    await query(`UPDATE withdrawals SET status = 'failed', audit_status = 'rejected' WHERE id = $1`, [withdrawalId]);
-    const userRes = await query(
-      `UPDATE users SET available_balance = available_balance + $1, total_assets = total_assets + $1 WHERE id = $2 RETURNING available_balance`,
-      [refundTotal, w.user_id]
-    );
-    await query(
-      `INSERT INTO account_changes (id, user_id, type, amount, balance_after, remark) VALUES ($1,$2,$3,$4,$5,$6)`,
-      ['AC' + Date.now(), w.user_id, 'withdrawal_refund', refundTotal, userRes.rows[0].available_balance, `Withdrawal rejected & refunded (incl. fee): ${reason || 'Audit failed'}`]
-    );
-    await query('COMMIT');
-    res.json({ message: `Withdrawal ${w.order_number} rejected & $${refundTotal.toFixed(2)} (incl. fee) refunded!` });
+    const result = await withTransaction(async (tx) => {
+      const witRes = await tx(`SELECT * FROM withdrawals WHERE id = $1 FOR UPDATE`, [withdrawalId]);
+      if (!witRes.rows.length) return { error: 'Withdrawal not found', status: 404 };
+      const w = witRes.rows[0];
+      if (w.audit_status !== 'pending') return { error: `Already ${w.audit_status}`, status: 400 };
+      // Refund the full amount plus the $1 fee that was deducted when the withdrawal was created
+      const amount = parseFloat(w.amount);
+      const fee = parseFloat(w.fee || 0);
+      const refundTotal = amount + fee;
+      await tx(`UPDATE withdrawals SET status = 'failed', audit_status = 'rejected' WHERE id = $1`, [withdrawalId]);
+      const userRes = await tx(
+        `UPDATE users SET available_balance = available_balance + $1, total_assets = total_assets + $1 WHERE id = $2 RETURNING available_balance`,
+        [refundTotal, w.user_id]
+      );
+      await tx(
+        `INSERT INTO account_changes (id, user_id, type, amount, balance_after, remark) VALUES ($1,$2,$3,$4,$5,$6)`,
+        ['AC' + Date.now(), w.user_id, 'withdrawal_refund', refundTotal, userRes.rows[0].available_balance, `Withdrawal rejected & refunded (incl. fee): ${reason || 'Audit failed'}`]
+      );
+      return { w, refundTotal };
+    });
+    if (result.error) return res.status(result.status || 400).json({ error: result.error });
+    res.json({ message: `Withdrawal ${result.w.order_number} rejected & $${result.refundTotal.toFixed(2)} (incl. fee) refunded!` });
   } catch (err) {
-    await query('ROLLBACK');
     res.status(500).json({ error: 'Failed to reject withdrawal' });
   }
 });
@@ -604,132 +601,133 @@ router.post('/signals/reconcile', requireAdminSecret, async (req, res) => {
     const { userId } = req.body;
     if (!userId) return res.status(400).json({ error: 'userId is required' });
 
-    await query('BEGIN');
+    const result = await withTransaction(async (tx) => {
+      // Lock the user row to serialize reconciliation
+      const userLock = await tx(`SELECT id, available_balance, total_assets, total_earnings, frozen_balance FROM users WHERE id = $1 FOR UPDATE`, [userId]);
+      if (!userLock.rows.length) return { error: 'User not found', status: 404 };
 
-    // Lock the user row to serialize reconciliation
-    const userLock = await query(`SELECT id, available_balance, total_assets, total_earnings, frozen_balance FROM users WHERE id = $1 FOR UPDATE`, [userId]);
-    if (!userLock.rows.length) { await query('ROLLBACK'); return res.status(404).json({ error: 'User not found' }); }
-
-    // Find ALL signal_close records for this user (with their timestamps)
-    const closeRes = await query(
-      `SELECT id, amount, remark, created_at FROM account_changes
-       WHERE user_id = $1 AND type = 'signal_close' AND remark NOT LIKE '%[REVERSED]%'
-       ORDER BY created_at ASC, id ASC`,
-      [userId]
-    );
-
-    // Strategy A: group by trade id from remark
-    const tradeGroups = {};
-    // Strategy B: track records with no trade id for amount+time grouping
-    const noIdRecords = [];
-
-    for (const rec of closeRes.rows) {
-      const m = rec.remark.match(/trade (ST[^\s]+)/);
-      if (m) {
-        const tradeId = m[1];
-        if (!tradeGroups[tradeId]) tradeGroups[tradeId] = [];
-        tradeGroups[tradeId].push(rec);
-      } else {
-        noIdRecords.push(rec);
-      }
-    }
-
-    const reversed = [];
-    const reverseRecord = async (dup) => {
-      const dupAmount = parseFloat(dup.amount);
-      // Reverse: subtract the duplicate credit from available_balance ONLY.
-      // (The settlement added the FULL return total to available_balance, so that's
-      // what must be withdrawn here. total_assets is recomputed from the authoritative
-      // ledger below — it only ever received the PROFIT portion per settlement, so
-      // subtracting the full return would incorrectly thrash it.)
-      await query(
-        `UPDATE users
-         SET available_balance = GREATEST(0, available_balance - $1)
-         WHERE id = $2`,
-        [dupAmount, userId]
+      // Find ALL signal_close records for this user (with their timestamps)
+      const closeRes = await tx(
+        `SELECT id, amount, remark, created_at FROM account_changes
+         WHERE user_id = $1 AND type = 'signal_close' AND remark NOT LIKE '%[REVERSED]%'
+         ORDER BY created_at ASC, id ASC`,
+        [userId]
       );
-      // Mark the duplicate close record as reversed
-      await query(
-        `UPDATE account_changes SET remark = remark || ' [REVERSED]' WHERE id = $1`,
-        [dup.id]
-      );
-      reversed.push({ recordId: dup.id, amount: dupAmount, basis: dup.basis || 'same-trade' });
-    };
 
-    // Strategy A: same trade id = duplicates (keep earliest)
-    for (const [tradeId, records] of Object.entries(tradeGroups)) {
-      if (records.length <= 1) continue;
-      records.sort((a, b) => new Date(a.created_at) - new Date(b.created_at) || a.id.localeCompare(b.id));
-      for (const dup of records.slice(1)) {
-        dup.basis = `same-trade ${tradeId}`;
-        await reverseRecord(dup);
-      }
-    }
+      // Strategy A: group by trade id from remark
+      const tradeGroups = {};
+      // Strategy B: track records with no trade id for amount+time grouping
+      const noIdRecords = [];
 
-    // Strategy B: legacy records without trade id — group by rounded amount
-    // within a 2-minute window (the triple-close bug fired at the same instant).
-    const legacyGroups = {};
-    for (const rec of noIdRecords) {
-      const key = rec.amount.toFixed(2);
-      if (!legacyGroups[key]) legacyGroups[key] = [];
-      legacyGroups[key].push(rec);
-    }
-    for (const records of Object.values(legacyGroups)) {
-      if (records.length <= 1) continue;
-      // Sort chronologically
-      records.sort((a, b) => new Date(a.created_at) - new Date(b.created_at) || a.id.localeCompare(b.id));
-      // Keep the first record as the legitimate settlement, but only mark the
-      // FOLLOWING records as duplicates if they occurred within 2 minutes.
-      for (let i = 1; i < records.length; i++) {
-        const prev = records[i - 1];
-        const diffMs = new Date(records[i].created_at) - new Date(prev.created_at);
-        if (diffMs <= 120000) { // within 2 minutes
-          records[i].basis = `same-amount ${records[i].amount.toFixed(2)} (${diffMs}ms apart)`;
-          await reverseRecord(records[i]);
+      for (const rec of closeRes.rows) {
+        const m = rec.remark.match(/trade (ST[^\s]+)/);
+        if (m) {
+          const tradeId = m[1];
+          if (!tradeGroups[tradeId]) tradeGroups[tradeId] = [];
+          tradeGroups[tradeId].push(rec);
+        } else {
+          noIdRecords.push(rec);
         }
       }
-    }
 
-    // ---- Recompute total_assets from the authoritative ledger ----
-    // total_assets is a cumulative-inflow metric:
-    //   deposits (approved) + bonuses/commissions + signal profits (exactly once)
-    // The signal_trades table stores ONE row per opened position, so summing its
-    // profit column counts each position's profit EXACTLY once — ignoring the
-    // multiple settlements that may have credited it to available_balance.
-    const assetsLedger = await query(
-      `SELECT
-         (SELECT COALESCE(SUM(amount),0) FROM deposits
-           WHERE user_id = $1 AND status = 'success') AS deposits,
-         (SELECT COALESCE(SUM(amount),0) FROM account_changes
-           WHERE user_id = $1 AND type IN ('deposit_bonus','referral_bonus','commission')) AS bonuses,
-         (SELECT COALESCE(SUM(profit),0) FROM signal_trades
-           WHERE user_id = $1 AND status = 'completed') AS profits`,
-      [userId]
-    );
-    const l = assetsLedger.rows[0];
-    const correctTotalAssets = parseFloat(l.deposits) + parseFloat(l.bonuses) + parseFloat(l.profits);
-    await query(
-      `UPDATE users SET total_assets = $1 WHERE id = $2`,
-      [correctTotalAssets, userId]
-    );
+      const reversed = [];
+      const reverseRecord = async (dup) => {
+        const dupAmount = parseFloat(dup.amount);
+        // Reverse: subtract the duplicate credit from available_balance ONLY.
+        // (The settlement added the FULL return total to available_balance, so that's
+        // what must be withdrawn here. total_assets is recomputed from the authoritative
+        // ledger below — it only ever received the PROFIT portion per settlement, so
+        // subtracting the full return would incorrectly thrash it.)
+        await tx(
+          `UPDATE users
+           SET available_balance = GREATEST(0, available_balance - $1)
+           WHERE id = $2`,
+          [dupAmount, userId]
+        );
+        // Mark the duplicate close record as reversed
+        await tx(
+          `UPDATE account_changes SET remark = remark || ' [REVERSED]' WHERE id = $1`,
+          [dup.id]
+        );
+        reversed.push({ recordId: dup.id, amount: dupAmount, basis: dup.basis || 'same-trade' });
+      };
 
-    // Re-fetch the user's corrected balances
-    const corrected = await query(
-      `SELECT available_balance, total_assets, total_earnings, frozen_balance FROM users WHERE id = $1`,
-      [userId]
-    );
+      // Strategy A: same trade id = duplicates (keep earliest)
+      for (const [tradeId, records] of Object.entries(tradeGroups)) {
+        if (records.length <= 1) continue;
+        records.sort((a, b) => new Date(a.created_at) - new Date(b.created_at) || a.id.localeCompare(b.id));
+        for (const dup of records.slice(1)) {
+          dup.basis = `same-trade ${tradeId}`;
+          await reverseRecord(dup);
+        }
+      }
 
-    await query('COMMIT');
+      // Strategy B: legacy records without trade id — group by rounded amount
+      // within a 2-minute window (the triple-close bug fired at the same instant).
+      const legacyGroups = {};
+      for (const rec of noIdRecords) {
+        const key = rec.amount.toFixed(2);
+        if (!legacyGroups[key]) legacyGroups[key] = [];
+        legacyGroups[key].push(rec);
+      }
+      for (const records of Object.values(legacyGroups)) {
+        if (records.length <= 1) continue;
+        // Sort chronologically
+        records.sort((a, b) => new Date(a.created_at) - new Date(b.created_at) || a.id.localeCompare(b.id));
+        // Keep the first record as the legitimate settlement, but only mark the
+        // FOLLOWING records as duplicates if they occurred within 2 minutes.
+        for (let i = 1; i < records.length; i++) {
+          const prev = records[i - 1];
+          const diffMs = new Date(records[i].created_at) - new Date(prev.created_at);
+          if (diffMs <= 120000) { // within 2 minutes
+            records[i].basis = `same-amount ${records[i].amount.toFixed(2)} (${diffMs}ms apart)`;
+            await reverseRecord(records[i]);
+          }
+        }
+      }
+
+      // ---- Recompute total_assets from the authoritative ledger ----
+      // total_assets is a cumulative-inflow metric:
+      //   deposits (approved) + bonuses/commissions + signal profits (exactly once)
+      // The signal_trades table stores ONE row per opened position, so summing its
+      // profit column counts each position's profit EXACTLY once — ignoring the
+      // multiple settlements that may have credited it to available_balance.
+      const assetsLedger = await tx(
+        `SELECT
+           (SELECT COALESCE(SUM(amount),0) FROM deposits
+             WHERE user_id = $1 AND status = 'success') AS deposits,
+           (SELECT COALESCE(SUM(amount),0) FROM account_changes
+             WHERE user_id = $1 AND type IN ('deposit_bonus','referral_bonus','commission')) AS bonuses,
+           (SELECT COALESCE(SUM(profit),0) FROM signal_trades
+             WHERE user_id = $1 AND status = 'completed') AS profits`,
+        [userId]
+      );
+      const l = assetsLedger.rows[0];
+      const correctTotalAssets = parseFloat(l.deposits) + parseFloat(l.bonuses) + parseFloat(l.profits);
+      await tx(
+        `UPDATE users SET total_assets = $1 WHERE id = $2`,
+        [correctTotalAssets, userId]
+      );
+
+      // Re-fetch the user's corrected balances
+      const corrected = await tx(
+        `SELECT available_balance, total_assets, total_earnings, frozen_balance FROM users WHERE id = $1`,
+        [userId]
+      );
+
+      return { reversed, correctTotalAssets, corrected: corrected.rows[0] };
+    });
+
+    if (result.error) return res.status(result.status || 400).json({ error: result.error });
 
     res.json({
-      message: reversed.length
-        ? `Reversed ${reversed.length} duplicate signal settlement(s) for user ${userId} and recomputed total_assets: $${correctTotalAssets.toFixed(2)}`
-        : `No duplicate settlements found for user ${userId}. Recomputed total_assets: $${correctTotalAssets.toFixed(2)}`,
-      reversed,
-      user: corrected.rows[0],
+      message: result.reversed.length
+        ? `Reversed ${result.reversed.length} duplicate signal settlement(s) for user ${userId} and recomputed total_assets: $${result.correctTotalAssets.toFixed(2)}`
+        : `No duplicate settlements found for user ${userId}. Recomputed total_assets: $${result.correctTotalAssets.toFixed(2)}`,
+      reversed: result.reversed,
+      user: result.corrected,
     });
   } catch (err) {
-    await query('ROLLBACK').catch(() => { });
     console.error('Signal reconcile error:', err);
     res.status(500).json({ error: 'Failed to reconcile signal trades' });
   }

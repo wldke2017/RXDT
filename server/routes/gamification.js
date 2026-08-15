@@ -1,5 +1,5 @@
 import express from 'express';
-import { query } from '../db.js';
+import { query, withTransaction } from '../db.js';
 import { requireAuth } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -79,27 +79,25 @@ router.post('/spin', requireAuth, async (req, res) => {
     const newWinningsUsed = winningsUsed + prizeValue;
     const remainingSpins = currentSpins - 1;
 
-    await query('BEGIN');
+    await withTransaction(async (tx) => {
+      await tx(
+        `UPDATE users SET available_balance = $1, total_assets = $2, spin_chances = $3, spin_winnings_used = $4 WHERE id = $5;`,
+        [newAvailable, newTotal, remainingSpins, newWinningsUsed, req.user.id]
+      );
 
-    await query(
-      `UPDATE users SET available_balance = $1, total_assets = $2, spin_chances = $3, spin_winnings_used = $4 WHERE id = $5;`,
-      [newAvailable, newTotal, remainingSpins, newWinningsUsed, req.user.id]
-    );
+      if (prizeValue > 0) {
+        await tx(`
+          INSERT INTO account_changes (id, user_id, type, amount, balance_after, remark)
+          VALUES ($1, $2, 'Lucky Wheel Prize', $3, $4, $5);
+        `, ['AC' + Date.now(), req.user.id, prizeValue, newAvailable, `Won ${won.name} on Lucky Wheel`]);
+      }
 
-    if (prizeValue > 0) {
-      await query(`
-        INSERT INTO account_changes (id, user_id, type, amount, balance_after, remark)
-        VALUES ($1, $2, 'Lucky Wheel Prize', $3, $4, $5);
-      `, ['AC' + Date.now(), req.user.id, prizeValue, newAvailable, `Won ${won.name} on Lucky Wheel`]);
-    }
-
-    const logId = 'L' + Date.now();
-    await query(`
-      INSERT INTO lucky_wheel_logs (id, user_id, user_name, prize_name, prize_value)
-      VALUES ($1, $2, $3, $4, $5);
-    `, [logId, req.user.id, user.name, won.name, prizeValue]);
-
-    await query('COMMIT');
+      const logId = 'L' + Date.now();
+      await tx(`
+        INSERT INTO lucky_wheel_logs (id, user_id, user_name, prize_name, prize_value)
+        VALUES ($1, $2, $3, $4, $5);
+      `, [logId, req.user.id, user.name, won.name, prizeValue]);
+    });
 
     res.json({
       prize: won,
@@ -108,7 +106,6 @@ router.post('/spin', requireAuth, async (req, res) => {
     });
 
   } catch (err) {
-    await query('ROLLBACK');
     console.error('Spin error:', err);
     res.status(500).json({ error: 'Failed to process spin' });
   }

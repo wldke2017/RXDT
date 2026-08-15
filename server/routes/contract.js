@@ -1,5 +1,5 @@
 import express from 'express';
-import { query } from '../db.js';
+import { query, withTransaction } from '../db.js';
 import { requireAuth } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -133,18 +133,21 @@ router.post('/open', requireAuth, async (req, res) => {
   if (![10, 20, 50, 100].includes(Number(leverage))) return res.status(400).json({ error: 'Leverage must be 10, 20, 50, or 100' });
   if (Number(amount) < 10) return res.status(400).json({ error: 'Minimum position size is $10 USDT' });
 
-  await query('BEGIN');
-  try {
+  // Use a REAL transaction (withTransaction checks out ONE client so the
+  // BEGIN/COMMIT/ROLLBACK all run on the same connection). The previous
+  // manual query('BEGIN')/COMMIT/ROLLBACK pattern was broken because
+  // pool.query() picks a random connection per statement, so the row lock
+  // and atomicity were silently ignored — allowing double-spending and
+  // partial updates.
+  const result = await withTransaction(async (tx) => {
     // Lock user row exclusively to prevent concurrent double-spending / over-opening
-    const userRes = await query(`SELECT available_balance FROM users WHERE id = $1 FOR UPDATE`, [req.userId]);
+    const userRes = await tx(`SELECT available_balance FROM users WHERE id = $1 FOR UPDATE`, [req.userId]);
     const user = userRes.rows[0];
     if (!user) {
-      await query('ROLLBACK');
-      return res.status(404).json({ error: 'User not found' });
+      return { error: 'User not found', status: 404 };
     }
     if (parseFloat(user.available_balance) < parseFloat(amount)) {
-      await query('ROLLBACK');
-      return res.status(400).json({ error: 'Insufficient balance' });
+      return { error: 'Insufficient balance', status: 400 };
     }
 
     // Fetch live entry price from Binance (getBinancePrice handles
@@ -160,7 +163,7 @@ router.post('/open', requireAuth, async (req, res) => {
     const orderNumber = `CTR${Date.now()}`;
 
     // Move margin from available_balance to frozen_balance ("In Orders")
-    await query(
+    await tx(
       `UPDATE users 
        SET available_balance = available_balance - $1,
            frozen_balance = frozen_balance + $1
@@ -169,7 +172,7 @@ router.post('/open', requireAuth, async (req, res) => {
     );
 
     // Create order
-    await query(
+    await tx(
       `INSERT INTO contract_orders 
        (id, order_number, user_id, pair, direction, leverage, amount, entry_price, liquidation_price, status)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'open')`,
@@ -177,25 +180,24 @@ router.post('/open', requireAuth, async (req, res) => {
     );
 
     // Log account change
-    await query(
+    await tx(
       `INSERT INTO account_changes (id, user_id, type, amount, balance_after, remark)
        VALUES ($1, $2, 'contract_open', $3, (SELECT available_balance FROM users WHERE id = $2), $4)`,
       [`AC${Date.now()}`, req.userId, -Number(amount), `Opened ${direction} ${pair} x${leverage}`]
     );
 
-    await query('COMMIT');
+    return { id, pair, direction, leverage, amount, entryPrice, liquidationPrice };
+  });
 
-    res.json({
-      success: true,
-      position: { id, pair, direction, leverage, amount, entryPrice, liquidationPrice },
-      message: `${direction === 'long' ? '▲ Long' : '▼ Short'} position opened at $${entryPrice.toFixed(2)}`
-    });
-  } catch (err) {
-    await query('ROLLBACK');
-    console.error('Open position error:', err);
-    res.status(500).json({ error: err.message || 'Failed to open position' });
+  if (result.error) {
+    return res.status(result.status || 400).json({ error: result.error });
   }
 
+  res.json({
+    success: true,
+    position: { id: result.id, pair: result.pair, direction: result.direction, leverage: result.leverage, amount: result.amount, entryPrice: result.entryPrice, liquidationPrice: result.liquidationPrice },
+    message: `${result.direction === 'long' ? '▲ Long' : '▼ Short'} position opened at $${result.entryPrice.toFixed(2)}`
+  });
 });
 
 // ---- Auto-Liquidation: Liquidate positions past their liquidation price ----
@@ -219,37 +221,38 @@ export async function autoLiquidatePositions() {
         if (!shouldLiquidate) continue;
 
         // Atomic close: lock and close in one transaction
-        await query('BEGIN');
-        const lockRes = await query(
-          `SELECT * FROM contract_orders WHERE id = $1 AND status = 'open' FOR UPDATE`,
-          [pos.id]
-        );
-        if (!lockRes.rows.length) { await query('ROLLBACK'); continue; }
+        const liqResult = await withTransaction(async (tx) => {
+          const lockRes = await tx(
+            `SELECT * FROM contract_orders WHERE id = $1 AND status = 'open' FOR UPDATE`,
+            [pos.id]
+          );
+          if (!lockRes.rows.length) return { skipped: true };
 
-        const loss = -parseFloat(pos.amount); // Full margin loss on liquidation
-        await query(
-          `UPDATE contract_orders 
-           SET status = 'liquidated', profit_loss = $1, close_price = $2, closed_at = NOW()
-           WHERE id = $3 AND status = 'open'`,
-          [loss, currentPrice, pos.id]
-        );
-        // No funds returned: returnAmount = 0 (full liquidation)
-        await query(
-          `UPDATE users 
-           SET frozen_balance = GREATEST(0, frozen_balance - $1),
-               total_assets = total_assets + $2
-           WHERE id = $3`,
-          [pos.amount, loss, pos.user_id]
-        );
-        await query(
-          `INSERT INTO account_changes (id, user_id, type, amount, balance_after, remark)
-           VALUES ($1, $2, 'contract_liquidation', $3, (SELECT available_balance FROM users WHERE id = $2), $4)`,
-          [`LIQ${Date.now()}`, pos.user_id, loss, `Liquidated ${pos.direction} ${pos.pair} x${pos.leverage} @ $${currentPrice.toFixed(2)}`]
-        );
-        await query('COMMIT');
+          const loss = -parseFloat(pos.amount); // Full margin loss on liquidation
+          await tx(
+            `UPDATE contract_orders 
+             SET status = 'liquidated', profit_loss = $1, close_price = $2, closed_at = NOW()
+             WHERE id = $3 AND status = 'open'`,
+            [loss, currentPrice, pos.id]
+          );
+          // No funds returned: returnAmount = 0 (full liquidation)
+          await tx(
+            `UPDATE users 
+             SET frozen_balance = GREATEST(0, frozen_balance - $1),
+                 total_assets = total_assets + $2
+             WHERE id = $3`,
+            [pos.amount, loss, pos.user_id]
+          );
+          await tx(
+            `INSERT INTO account_changes (id, user_id, type, amount, balance_after, remark)
+             VALUES ($1, $2, 'contract_liquidation', $3, (SELECT available_balance FROM users WHERE id = $2), $4)`,
+            [`LIQ${Date.now()}`, pos.user_id, loss, `Liquidated ${pos.direction} ${pos.pair} x${pos.leverage} @ $${currentPrice.toFixed(2)}`]
+          );
+          return { skipped: false };
+        });
+        if (liqResult.skipped) continue;
         liquidated++;
       } catch (e) {
-        await query('ROLLBACK').catch(() => { });
         console.warn(`Auto-liquidation check error for position ${pos.id}:`, e.message);
       }
     }
@@ -265,20 +268,17 @@ export async function autoLiquidatePositions() {
 router.post('/close/:id', requireAuth, async (req, res) => {
   const { id } = req.params;
 
-  await query('BEGIN');
-  try {
+  const result = await withTransaction(async (tx) => {
     // Acquire exclusive lock on the position row to prevent concurrent duplicate closes
-    const posRes = await query(
+    const posRes = await tx(
       `SELECT * FROM contract_orders WHERE id = $1 AND user_id = $2 AND status = 'open' FOR UPDATE`,
       [id, req.userId]
     );
     const pos = posRes.rows[0];
     if (!pos) {
-      await query('ROLLBACK');
-      return res.status(404).json({ error: 'Position not found or already closed' });
+      return { error: 'Position not found or already closed', status: 404 };
     }
 
-    // Immediately mark position as closed inside the transaction
     // Fetch live close price from Binance
     const closePrice = await getBinancePrice(pos.pair);
 
@@ -295,7 +295,7 @@ router.post('/close/:id', requireAuth, async (req, res) => {
     const finalPnl = returnAmount - parseFloat(pos.amount);
 
     // Update position status inside transaction
-    await query(
+    await tx(
       `UPDATE contract_orders 
        SET status = 'closed', profit_loss = $1, close_price = $2, closed_at = NOW()
        WHERE id = $3 AND status = 'open'`,
@@ -303,7 +303,7 @@ router.post('/close/:id', requireAuth, async (req, res) => {
     );
 
     // Release frozen margin and credit return amount back to available_balance.
-    await query(
+    await tx(
       `UPDATE users 
        SET frozen_balance = GREATEST(0, frozen_balance - $1),
            available_balance = available_balance + $2,
@@ -313,7 +313,7 @@ router.post('/close/:id', requireAuth, async (req, res) => {
     );
 
     // Log account change inside transaction
-    await query(
+    await tx(
       `INSERT INTO account_changes (id, user_id, type, amount, balance_after, remark)
        VALUES ($1, $2, $3, $4, (SELECT available_balance FROM users WHERE id = $2), $5)`,
       [
@@ -325,20 +325,20 @@ router.post('/close/:id', requireAuth, async (req, res) => {
       ]
     );
 
-    await query('COMMIT');
+    return { finalPnl, closePrice, returnAmount };
+  });
 
-    res.json({
-      success: true,
-      pnl: finalPnl,
-      closePrice,
-      returnAmount,
-      message: `Position closed. P&L: ${finalPnl >= 0 ? '+' : ''}$${finalPnl.toFixed(2)}`
-    });
-  } catch (err) {
-    await query('ROLLBACK');
-    console.error('Close position error:', err);
-    res.status(500).json({ error: err.message || 'Failed to close position' });
+  if (result.error) {
+    return res.status(result.status || 400).json({ error: result.error });
   }
+
+  res.json({
+    success: true,
+    pnl: result.finalPnl,
+    closePrice: result.closePrice,
+    returnAmount: result.returnAmount,
+    message: `Position closed. P&L: ${result.finalPnl >= 0 ? '+' : ''}$${result.finalPnl.toFixed(2)}`
+  });
 });
 
 
