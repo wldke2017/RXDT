@@ -577,7 +577,7 @@ export async function processDueSignalTrades(userId) {
          SET status = 'processing', processing_at = NOW()
          WHERE id = (
            SELECT id FROM signal_trades
-           WHERE user_id = $1 AND status = 'open' AND (release_at IS NULL OR release_at <= NOW())
+           WHERE user_id = $1 AND status = 'open' AND (release_at IS NULL OR release_at <= NOW() + INTERVAL '2 seconds')
            ORDER BY created_at ASC
            LIMIT 1
            FOR UPDATE SKIP LOCKED
@@ -737,7 +737,7 @@ export async function settleAllDueSignalTrades() {
          SET status = 'processing', processing_at = NOW()
          WHERE id = (
            SELECT id FROM signal_trades
-           WHERE status = 'open' AND (release_at IS NULL OR release_at <= NOW())
+           WHERE status = 'open' AND (release_at IS NULL OR release_at <= NOW() + INTERVAL '2 seconds')
            ORDER BY release_at ASC
            LIMIT 1
            FOR UPDATE SKIP LOCKED

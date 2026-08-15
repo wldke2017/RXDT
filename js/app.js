@@ -75,9 +75,17 @@ function startSignalPoller() {
 let signalHeartbeatTimer = null;
 function startSignalHeartbeat() {
   if (signalHeartbeatTimer) return;
-  signalHeartbeatTimer = setInterval(() => {
-    fetch('/api/signals/poll', { method: 'GET', cache: 'no-store' }).catch(() => { });
-  }, 8 * 1000);
+  signalHeartbeatTimer = setInterval(async () => {
+    try {
+      const res = await fetch('/api/signals/poll', { method: 'GET', cache: 'no-store' });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.settle && data.settle.settled > 0 && store.isLoggedIn()) {
+          if (store.checkAuth) await store.checkAuth();
+        }
+      }
+    } catch (e) { }
+  }, 4 * 1000);
 }
 
 function renderShell() {

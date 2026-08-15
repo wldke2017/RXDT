@@ -1086,8 +1086,24 @@ export async function init() {
   loadHistory();
   loadConsumeRecord(); // load consume record by default
 
-  // Auto-refresh positions every 5s for live P&L
-  positionsInterval = setInterval(() => loadPositions(), 5000);
+  // Auto-refresh positions, balance & signal trade history every 4s for real-time 30s settlement
+  positionsInterval = setInterval(() => {
+    loadPositions();
+    if (store.isLoggedIn()) {
+      if (store.checkAuth) store.checkAuth();
+      const activeTab = document.querySelector('.signal-main-tab.active')?.id;
+      if (activeTab === 'tab-invited') {
+        const activeSub = document.querySelector('.signal-subtab.active')?.id;
+        if (activeSub === 'subtab-history') {
+          const activeHist = document.querySelector('.sh-tab.active')?.id;
+          if (activeHist === 'shtab-submitted') loadSubmittedOrders();
+          if (activeHist === 'shtab-finished') loadSignalHistory();
+        }
+      } else if (activeTab === 'tab-consume') {
+        loadConsumeRecord();
+      }
+    }
+  }, 4000);
 
   // Cleanup on navigate away
   window.addEventListener('hashchange', () => {
