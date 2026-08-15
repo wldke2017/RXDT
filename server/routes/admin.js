@@ -162,9 +162,9 @@ router.post('/users/release-frozen', requireAdminSecret, async (req, res) => {
     let releasedProfit = 0;
 
     for (const u of users) {
-      // Settle any open signal trades for this user with full profit & history logs
+      // Settle any open or processing signal trades for this user with full profit & history logs
       const openTrades = await query(
-        `SELECT id, signal_id, pair, trade_amount, profit FROM signal_trades WHERE user_id = $1 AND status = 'open'`,
+        `SELECT id, signal_id, pair, trade_amount, profit FROM signal_trades WHERE user_id = $1 AND status IN ('open', 'processing')`,
         [u.id]
       ).catch(() => ({ rows: [] }));
 
@@ -190,7 +190,7 @@ router.post('/users/release-frozen', requireAdminSecret, async (req, res) => {
         const newBal = parseFloat(upd.rows[0]?.available_balance || 0);
 
         await query(
-          `UPDATE signal_trades SET status = 'completed', settlement_price = COALESCE(settlement_price, purchase_price), settled_at = NOW() WHERE id = $1`,
+          `UPDATE signal_trades SET status = 'completed', settlement_price = COALESCE(settlement_price, purchase_price), settled_at = NOW(), processing_at = NULL WHERE id = $1`,
           [trade.id]
         ).catch(() => { });
 
@@ -206,22 +206,34 @@ router.post('/users/release-frozen', requireAdminSecret, async (req, res) => {
         releasedProfit += profit;
       }
 
-      // If user still has leftover frozen balance not tied to open signal trades, clear it
+      // If user still has leftover frozen balance not tied to open signal trades, release investment + profit
       const userCheck = await query(`SELECT frozen_balance FROM users WHERE id = $1`, [u.id]);
       const remFrozen = parseFloat(userCheck.rows[0]?.frozen_balance || 0);
       if (remFrozen > 0) {
+        const remProfit = parseFloat((remFrozen * 0.014).toFixed(4));
+        const remTotal = remFrozen + remProfit;
+
         await query('BEGIN');
         const updRem = await query(
-          `UPDATE users SET frozen_balance = 0, available_balance = available_balance + $1 WHERE id = $2 RETURNING available_balance`,
-          [remFrozen, u.id]
+          `UPDATE users SET 
+             frozen_balance = 0, 
+             available_balance = available_balance + $1,
+             total_assets = total_assets + $2,
+             total_earnings = total_earnings + $2
+           WHERE id = $3 RETURNING available_balance`,
+          [remTotal, remProfit, u.id]
         );
+        const newRemBal = parseFloat(updRem.rows[0]?.available_balance || 0);
+
         await query(
           `INSERT INTO account_changes (id, user_id, type, amount, balance_after, remark) VALUES ($1,$2,$3,$4,$5,$6)`,
-          ['AC' + Date.now() + 'CLR', u.id, 'admin_release', remFrozen, updRem.rows[0]?.available_balance || 0,
-          `Admin released leftover frozen balance $${remFrozen.toFixed(2)} back to available balance`]
+          ['AC' + Date.now() + 'CLR', u.id, 'signal_close', remTotal, newRemBal,
+          `Admin released stuck In Order balance $${remFrozen.toFixed(2)} + $${remProfit.toFixed(4)} profit back to available balance`]
         ).catch(() => { });
         await query('COMMIT');
-        releasedTotal += remFrozen;
+        releasedCount++;
+        releasedTotal += remTotal;
+        releasedProfit += remProfit;
       }
     }
 
