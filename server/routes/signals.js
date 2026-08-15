@@ -1012,21 +1012,9 @@ router.get('/missed', requireAuth, async (req, res) => {
         // Skip windows that haven't ended yet (current/future)
         if (windowEnd > now) continue;
 
-        // Skip windows before the user's account was created
-        if (windowEnd < accountCreatedAt) continue;
-
         // Already traded this window
         const key = `${dayStr}_${w.id}`;
         if (executed.has(key)) continue;
-
-        // Determine eligibility for this window
-        let qualified = false;
-        if (w.isFreeSignal) {
-          qualified = freeSignalCredits > 0;
-        } else {
-          qualified = !!tier && tier.signals.includes(w.id);
-        }
-        if (!qualified) continue;
 
         // Format EAT time labels (signal windows are defined in UTC)
         const eatStartHour = (w.utcHour + 3) % 24;
