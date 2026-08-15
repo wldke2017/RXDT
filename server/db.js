@@ -20,12 +20,13 @@ if (!connectionString) {
     on: () => { }
   };
 } else {
+  const isVercel = !!(process.env.VERCEL || process.env.VERCEL_ENV);
   pool = new Pool({
     connectionString,
     ssl: { rejectUnauthorized: false },
-    max: 10,
-    idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 10000,
+    max: isVercel ? 2 : 10,
+    idleTimeoutMillis: isVercel ? 10000 : 30000,
+    connectionTimeoutMillis: 5000,
   });
 
   pool.on('error', (err) => {

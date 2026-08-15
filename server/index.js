@@ -40,15 +40,7 @@ app.use((req, res, next) => {
   next();
 });
 
-// Global Auto-Settlement Middleware:
-// Every API request triggers a background check to:
-// 1. Settle any past-due signal positions
-// 2. Auto-liquidate contract positions past their liquidation price
-app.use('/api', (req, res, next) => {
-  settleAllDueSignalTrades().catch(e => console.warn('[auto-settle middleware]', e.message));
-  autoLiquidatePositions().catch(e => console.warn('[auto-liquidation middleware]', e.message));
-  next();
-});
+
 
 
 // Fail fast if the critical JWT secret is missing — do not accept a leaked default

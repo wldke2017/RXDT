@@ -85,7 +85,7 @@ function startSignalHeartbeat() {
         }
       }
     } catch (e) { }
-  }, 4 * 1000);
+  }, 6 * 1000);
 }
 
 function renderShell() {
