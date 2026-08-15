@@ -12,9 +12,9 @@ import gamificationRoutes from './routes/gamification.js';
 import kycRoutes from './routes/kyc.js';
 import adminRoutes from './routes/admin.js';
 import emailRoutes from './routes/email.js';
-import contractRoutes, { autoLiquidatePositions } from './routes/contract.js';
+import contractRoutes from './routes/contract.js';
 import referralRoutes from './routes/referrals.js';
-import signalRoutes, { settleAllDueSignalTrades } from './routes/signals.js';
+import signalRoutes from './routes/signals.js';
 import chatRoutes from './routes/chat.js';
 import { runPositionAndBalanceAudit } from './utils/audit.js';
 
@@ -39,9 +39,6 @@ app.use((req, res, next) => {
   res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
   next();
 });
-
-
-
 
 // Fail fast if the critical JWT secret is missing — do not accept a leaked default
 if (!process.env.JWT_SECRET && !process.env.VERCEL) {
@@ -116,7 +113,6 @@ if (process.env.VERCEL !== '1' && !process.env.VERCEL_ENV) {
   ensureDbInit();
 }
 
-
 // For local dev: start listening
 if (process.env.VERCEL !== '1' && !process.env.VERCEL_ENV) {
   const startLocal = async () => {
@@ -141,6 +137,5 @@ if (process.env.VERCEL !== '1' && !process.env.VERCEL_ENV) {
   };
   startLocal();
 }
-
 
 export default app;
