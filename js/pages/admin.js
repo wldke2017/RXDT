@@ -220,11 +220,15 @@ function renderDashboard() {
             <option value="2">Signal 2 (6:00 PM)</option>
             <option value="3">Signal 3 (7:00 PM)</option>
           </select>
-          <select id="trigger-signal-duration" class="form-control" style="max-width:140px;height:40px;font-size:13px;">
+          <select id="trigger-signal-duration" class="form-control" style="max-width:140px;height:40px;font-size:13px;" onchange="toggleCustomDuration(this.value)">
             <option value="15">Active for 15 mins</option>
             <option value="30">Active for 30 mins</option>
             <option value="60">Active for 1 hour</option>
+            <option value="custom">⏱ Custom minutes</option>
           </select>
+          <input type="number" id="trigger-signal-custom-duration" class="form-control" 
+                 placeholder="Minutes (e.g. 2)" min="1" max="120" value="2"
+                 style="max-width:100px;height:40px;font-size:13px;display:none;"/>
           <button class="btn-primary" style="height:40px;padding:0 20px;font-size:14px;font-weight:700;border-radius:8px;" onclick="triggerTestSignal('start')">🚀 Start Test Signal</button>
           <button class="btn-outline" style="height:40px;padding:0 16px;font-size:13px;border-color:#ef4444;color:#ef4444;" onclick="triggerTestSignal('stop')">🛑 Stop Signal</button>
           <button class="btn-success" style="height:40px;padding:0 16px;font-size:13px;font-weight:700;border-radius:8px;" onclick="adminAutoExecuteSignals()">⚡ Auto-Execute Signals</button>
@@ -847,9 +851,27 @@ function initDashboard() {
     } catch (e) { }
   }
 
+  // Show/hide custom duration input when "Custom" is selected
+  window.toggleCustomDuration = function (value) {
+    const customInput = document.getElementById('trigger-signal-custom-duration');
+    if (customInput) {
+      customInput.style.display = value === 'custom' ? 'block' : 'none';
+    }
+  };
+
   window.triggerTestSignal = async function (action) {
     const signalId = document.getElementById('trigger-signal-id')?.value || '1';
-    const duration = document.getElementById('trigger-signal-duration')?.value || '15';
+    const durationSelect = document.getElementById('trigger-signal-duration');
+    const customInput = document.getElementById('trigger-signal-custom-duration');
+    let duration = durationSelect?.value || '15';
+    if (duration === 'custom') {
+      const customVal = parseInt(customInput?.value);
+      if (!customVal || customVal < 1) {
+        window.toast('Please enter a valid custom duration (min 1 minute)', 'error');
+        return;
+      }
+      duration = String(customVal);
+    }
     try {
       const res = await adminFetch('/trigger-signal', 'POST', { action, signalId, duration });
       window.toast(res.message, 'success');
@@ -1482,7 +1504,7 @@ function initDashboard() {
   // ============================================================
   // 📢 Marketing, Brand Assets & VIP Congratulation Storage Hub
   // ============================================================
-  
+
   window.copyToClipboard = function (text, label = 'Message') {
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(text).then(() => {
@@ -1728,95 +1750,95 @@ Today’s efforts aren’t just about participating in a platform — they are a
   ];
 
   const DEFAULT_BRAND_IMAGES = [
-    { 
-      id: 'img-daily-signal-1', 
-      name: 'AI Signal 1 (5:00 PM EAT / 14:00 UTC) Poster', 
-      category: 'Daily AI Signals', 
+    {
+      id: 'img-daily-signal-1',
+      name: 'AI Signal 1 (5:00 PM EAT / 14:00 UTC) Poster',
+      category: 'Daily AI Signals',
       path: 'assets/images/daily_signal_1_5pm.png',
       caption: `⏰ *DAILY AI SIGNAL #1 IS LIVE! (5:00 PM EAT)* ⏰\n\n🎯 Signal Time: 5:00 PM - 5:30 PM EAT\n📈 Daily Return: 1.4% Yield\n💰 Tier 1 ($100+ Total Deposit)\n\n👉 Join live signal copy-trading now on RXDT Exchange!\n💬 Telegram Support: @RXDT888`
     },
-    { 
-      id: 'img-daily-signal-2', 
-      name: 'AI Signal 2 (6:00 PM EAT / 15:00 UTC) Poster', 
-      category: 'Daily AI Signals', 
+    {
+      id: 'img-daily-signal-2',
+      name: 'AI Signal 2 (6:00 PM EAT / 15:00 UTC) Poster',
+      category: 'Daily AI Signals',
       path: 'assets/images/daily_signal_2_6pm.png',
       caption: `🚀 *DAILY AI SIGNAL #2 IS LIVE! (6:00 PM EAT)* 🚀\n\n🎯 Signal Time: 6:00 PM - 6:30 PM EAT\n📈 Daily Return: 2.4% Cumulative Yield\n💰 Tier 2 ($300+ Total Deposit)\n\n👉 Connect your account to automated AI execution today!\n💬 CEO Telegram: @RXDT888`
     },
-    { 
-      id: 'img-daily-signal-3', 
-      name: 'AI Signal 3 (7:00 PM EAT / 16:00 UTC) Poster', 
-      category: 'Daily AI Signals', 
+    {
+      id: 'img-daily-signal-3',
+      name: 'AI Signal 3 (7:00 PM EAT / 16:00 UTC) Poster',
+      category: 'Daily AI Signals',
       path: 'assets/images/daily_signal_3_7pm.png',
       caption: `🔥 *DAILY AI SIGNAL #3 MAX YIELD! (7:00 PM EAT)* 🔥\n\n🎯 Signal Time: 7:00 PM - 7:30 PM EAT\n📈 Daily Return: 3.1% Max Yield\n💰 Tier 3 ($1,000+ Deposit) & VIP Ranks\n\n👉 Maximize your passive income with verified AI signal feeds!\n💬 CEO Telegram: @RXDT888`
     },
-    { 
-      id: 'img-sig-banner-1', 
-      name: 'RXDT AI Quant Signals Banner', 
-      category: 'AI Signals', 
+    {
+      id: 'img-sig-banner-1',
+      name: 'RXDT AI Quant Signals Banner',
+      category: 'AI Signals',
       path: 'assets/images/ai_signals_banner_1.png',
       caption: `🚀 *RXDT AI QUANT SIGNALS LIVE!* 🚀\n\nExperience next-gen automated high-frequency crypto trading with 94.8% win accuracy.\n⚡ Real-time Buy/Sell triggers\n💹 1.8% – 2.8% Average Daily Returns\n🛡️ USA Colorado State Compliant (Entity ID: 20261325716)\n\n👉 Join live signal copy-trading now on RXDT Exchange!\n💬 Telegram Support: @RXDT888`
     },
 
-    { 
-      id: 'img-sig-banner-2', 
-      name: 'RXDT High-Frequency Arbitrage Banner', 
-      category: 'AI Signals', 
+    {
+      id: 'img-sig-banner-2',
+      name: 'RXDT High-Frequency Arbitrage Banner',
+      category: 'AI Signals',
       path: 'assets/images/ai_signals_banner_2.png',
       caption: `⚡ *RXDT HIGH-FREQUENCY ARBITRAGE V4* ⚡\n\nAutomated cross-exchange liquidity arbitrage operating 24/7!\n📈 Daily Return: 1.8% – 2.8%\n⏱️ Doubling Cycle: 26–34 Days\n🤖 92.3% Win Rate\n\n👉 Connect your deposit to automated AI signal execution today!\n💬 CEO Telegram: @RXDT888`
     },
-    { 
-      id: 'img-sig-banner-3', 
-      name: 'Automated AI Execution Guard Banner', 
-      category: 'AI Signals', 
+    {
+      id: 'img-sig-banner-3',
+      name: 'Automated AI Execution Guard Banner',
+      category: 'AI Signals',
       path: 'assets/images/ai_signals_banner_3.png',
       caption: `🛡️ *AUTOMATED AI EXECUTION & TREND GUARD* 🛡️\n\nInstitutional-grade momentum analytics protecting capital while maximizing returns.\n🎯 96.1% Win Rate\n💰 Passive Daily Yields\n\n👉 Start copying verified AI signals on RXDT Exchange!\n💬 Official CEO Contact: @RXDT888`
     },
-    { 
-      id: 'img-founder', 
-      name: 'Arthur Vance — Founder & CEO', 
-      category: 'Founder', 
+    {
+      id: 'img-founder',
+      name: 'Arthur Vance — Founder & CEO',
+      category: 'Founder',
       path: 'assets/images/warren_pennington.png',
       caption: `👤 *MEET ARTHUR VANCE — RXDT FOUNDER & CEO*\n\nLeading the future of AI quantitative trading. RXDT Exchange operates under USA Colorado State Compliance (Entity ID: 20261325716).\n\n💬 Official Telegram: @RXDT888`
     },
-    { 
-      id: 'img-logo', 
-      name: 'RXDT Exchange Official Logo', 
-      category: 'Branding', 
+    {
+      id: 'img-logo',
+      name: 'RXDT Exchange Official Logo',
+      category: 'Branding',
       path: 'assets/images/rxdt_logo.png',
       caption: `🚀 *RXDT EXCHANGE OFFICIAL LOGO*\n\nYour trusted partner in AI quantitative crypto trading. Join our global community today!`
     },
-    { 
-      id: 'img-tier1', 
-      name: 'Tier 1 ($100 Plan) Strategy Poster', 
-      category: 'Strategy Posters', 
+    {
+      id: 'img-tier1',
+      name: 'Tier 1 ($100 Plan) Strategy Poster',
+      category: 'Strategy Posters',
       path: 'assets/images/rxdt_100_strategy.png',
       caption: `🔥 *START TRADING WITH JUST $100 ON RXDT!* 🔥\n\nUnlock Tier 1 AI Quantitative Signals and earn steady daily returns!\n👉 Register today and access live signals!`
     },
-    { 
-      id: 'img-tier2', 
-      name: 'Tier 2 ($300 Plan) Strategy Poster', 
-      category: 'Strategy Posters', 
+    {
+      id: 'img-tier2',
+      name: 'Tier 2 ($300 Plan) Strategy Poster',
+      category: 'Strategy Posters',
       path: 'assets/images/rxdt_300_strategy.png',
       caption: `📈 *GROW YOUR PORTFOLIO WITH RXDT TIER 2 ($300)!* 📈\n\nAccelerated returns powered by high-frequency AI quantitative trading.`
     },
-    { 
-      id: 'img-tier3', 
-      name: 'Tier 3 ($1,000 Plan) Strategy Poster', 
-      category: 'Strategy Posters', 
+    {
+      id: 'img-tier3',
+      name: 'Tier 3 ($1,000 Plan) Strategy Poster',
+      category: 'Strategy Posters',
       path: 'assets/images/rxdt_1000_strategy.png',
       caption: `💎 *MAXIMIZE YIELDS WITH RXDT TIER 3 ($1,000)!* 💎\n\nInstitutional-grade AI signal feeds designed for high capital growth!`
     },
-    { 
-      id: 'img-vip-matrix', 
-      name: 'VIP Monthly Salary & Promotion Reward Matrix', 
-      category: 'VIP Banners', 
+    {
+      id: 'img-vip-matrix',
+      name: 'VIP Monthly Salary & Promotion Reward Matrix',
+      category: 'VIP Banners',
       path: 'assets/images/rxdt_vip_rewards.png',
       caption: `🏆 *RXDT VIP SALARY & REWARD MATRIX* 🏆\n\nBuild your team and earn 10-day salaries up to $3,000 ($9,000/mo) plus promotion bonuses up to $11,000 USDT!`
     },
-    { 
-      id: 'img-signal-popup', 
-      name: 'Strategy Copy Trading Signal Popup Header', 
-      category: 'Signals', 
+    {
+      id: 'img-signal-popup',
+      name: 'Strategy Copy Trading Signal Popup Header',
+      category: 'Signals',
       path: 'assets/images/signal_popup.png',
       caption: `📡 *LIVE AI COPY-TRADING SIGNALS ACTIVE!* 📡\n\nCopy verified signals at 5pm, 6pm & 7pm EAT!`
     },
@@ -1930,8 +1952,8 @@ Today’s efforts aren’t just about participating in a platform — they are a
         </div>
         <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(300px, 1fr));gap:16px;">
           ${VIP_TIER_DATA.map(vip => {
-            const groupMsg = `🎉 *CONGRATULATIONS TO OUR NEW VIP TRADER!* 🎉\n\n👏 Huge congratulations to user **[Username / Phone]** for reaching **${vip.name}** on RXDT Exchange!\n\n${vip.icon} **VIP Level:** ${vip.name}\n💰 **10-Day Salary:** ${vip.salary} (Paid 3rd, 13th & 23rd)\n💵 **Monthly Income:** ${vip.salaryTotal}\n🎁 **Promotion Bonus:** ${vip.bonus} USDT\n\n🚀 Keep climbing the ranks on RXDT! Join live signals today at 5pm, 6pm & 7pm EAT!\n💬 CEO Telegram: @RXDT888`;
-            return `
+      const groupMsg = `🎉 *CONGRATULATIONS TO OUR NEW VIP TRADER!* 🎉\n\n👏 Huge congratulations to user **[Username / Phone]** for reaching **${vip.name}** on RXDT Exchange!\n\n${vip.icon} **VIP Level:** ${vip.name}\n💰 **10-Day Salary:** ${vip.salary} (Paid 3rd, 13th & 23rd)\n💵 **Monthly Income:** ${vip.salaryTotal}\n🎁 **Promotion Bonus:** ${vip.bonus} USDT\n\n🚀 Keep climbing the ranks on RXDT! Join live signals today at 5pm, 6pm & 7pm EAT!\n💬 CEO Telegram: @RXDT888`;
+      return `
             <div style="background:#090d16;border:1px solid #f59e0b;border-radius:14px;padding:16px;text-align:center;position:relative;box-shadow:0 8px 24px rgba(0,0,0,0.5);">
               <div style="font-size:36px;margin-bottom:6px;">${vip.icon}</div>
               <div style="font-size:16px;font-weight:800;color:#f59e0b;margin-bottom:4px;">${vip.name}</div>
@@ -1948,7 +1970,7 @@ Today’s efforts aren’t just about participating in a platform — they are a
               </div>
             </div>
             `;
-          }).join('')}
+    }).join('')}
         </div>
       </div>
 
@@ -1956,8 +1978,8 @@ Today’s efforts aren’t just about participating in a platform — they are a
       <div id="mkt-subtab-images" style="display:none;">
         <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(280px, 1fr));gap:16px;">
           ${images.map(img => {
-            const captionText = img.caption || `🚀 *${img.name}*\n\nOfficial RXDT Exchange AI Quantitative Trading Asset.\n👉 Join live signal copy trading on RXDT Exchange!\n💬 Telegram: @RXDT888`;
-            return `
+      const captionText = img.caption || `🚀 *${img.name}*\n\nOfficial RXDT Exchange AI Quantitative Trading Asset.\n👉 Join live signal copy trading on RXDT Exchange!\n💬 Telegram: @RXDT888`;
+      return `
             <div style="background:#090d16;border:1px solid rgba(0,242,254,0.25);border-radius:14px;padding:14px;display:flex;flex-direction:column;justify-content:space-between;">
               <div>
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
@@ -1979,7 +2001,7 @@ Today’s efforts aren’t just about participating in a platform — they are a
               </div>
             </div>
             `;
-          }).join('')}
+    }).join('')}
         </div>
       </div>
 
@@ -2345,11 +2367,11 @@ Today’s efforts aren’t just about participating in a platform — they are a
 
       <!-- Filter Bar -->
       <div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;align-items:center;">
-        <button class="btn-outline" style="font-size:13px;padding:6px 14px;${filterCategory==='ALL'?'background:rgba(0,242,254,0.15);border-color:#00f2fe;color:#00f2fe;':''}" onclick="renderAdminNotificationsTab('ALL')">🌐 All Activity (${combinedNotifs.length})</button>
-        <button class="btn-outline" style="font-size:13px;padding:6px 14px;${filterCategory==='New User'?'background:rgba(0,242,254,0.15);border-color:#00f2fe;color:#00f2fe;':''}" onclick="renderAdminNotificationsTab('New User')">🎉 New Users</button>
-        <button class="btn-outline" style="font-size:13px;padding:6px 14px;${filterCategory==='Deposit'?'background:rgba(255,226,89,0.15);border-color:#ffe259;color:#ffe259;':''}" onclick="renderAdminNotificationsTab('Deposit')">💰 Deposits</button>
-        <button class="btn-outline" style="font-size:13px;padding:6px 14px;${filterCategory==='VIP Rank'?'background:rgba(168,85,247,0.15);border-color:#a855f7;color:#c084fc;':''}" onclick="renderAdminNotificationsTab('VIP Rank')">🏆 VIP Ranks</button>
-        <button class="btn-outline" style="font-size:13px;padding:6px 14px;${filterCategory==='Withdrawal'?'background:rgba(56,239,125,0.15);border-color:#38ef7d;color:#38ef7d;':''}" onclick="renderAdminNotificationsTab('Withdrawal')">📤 Withdrawals</button>
+        <button class="btn-outline" style="font-size:13px;padding:6px 14px;${filterCategory === 'ALL' ? 'background:rgba(0,242,254,0.15);border-color:#00f2fe;color:#00f2fe;' : ''}" onclick="renderAdminNotificationsTab('ALL')">🌐 All Activity (${combinedNotifs.length})</button>
+        <button class="btn-outline" style="font-size:13px;padding:6px 14px;${filterCategory === 'New User' ? 'background:rgba(0,242,254,0.15);border-color:#00f2fe;color:#00f2fe;' : ''}" onclick="renderAdminNotificationsTab('New User')">🎉 New Users</button>
+        <button class="btn-outline" style="font-size:13px;padding:6px 14px;${filterCategory === 'Deposit' ? 'background:rgba(255,226,89,0.15);border-color:#ffe259;color:#ffe259;' : ''}" onclick="renderAdminNotificationsTab('Deposit')">💰 Deposits</button>
+        <button class="btn-outline" style="font-size:13px;padding:6px 14px;${filterCategory === 'VIP Rank' ? 'background:rgba(168,85,247,0.15);border-color:#a855f7;color:#c084fc;' : ''}" onclick="renderAdminNotificationsTab('VIP Rank')">🏆 VIP Ranks</button>
+        <button class="btn-outline" style="font-size:13px;padding:6px 14px;${filterCategory === 'Withdrawal' ? 'background:rgba(56,239,125,0.15);border-color:#38ef7d;color:#38ef7d;' : ''}" onclick="renderAdminNotificationsTab('Withdrawal')">📤 Withdrawals</button>
       </div>
 
       <!-- Cards Grid -->
@@ -2432,11 +2454,11 @@ Today’s efforts aren’t just about participating in a platform — they are a
         window.toast(res.message || 'Master Repair Completed!', 'success');
       }
       alert(`✅ MASTER REPAIR COMPLETED SUCCESSFULLY!\n\n` +
-            `• Signal Trades Settled: ${res.tradesSettled || 0}\n` +
-            `• Total Profit Paid Out: $${res.totalProfitCredited?.toFixed(2) || '0.00'}\n` +
-            `• Accounts Repaired: ${res.accountsRepaired || 0}\n` +
-            `• Stuck Frozen Funds Recovered: $${res.totalFrozenRecovered?.toFixed(2) || '0.00'}\n` +
-            `• Total Assets Aligned: ${res.totalAssetsAdjustedUsers || 0} user(s)`);
+        `• Signal Trades Settled: ${res.tradesSettled || 0}\n` +
+        `• Total Profit Paid Out: $${res.totalProfitCredited?.toFixed(2) || '0.00'}\n` +
+        `• Accounts Repaired: ${res.accountsRepaired || 0}\n` +
+        `• Stuck Frozen Funds Recovered: $${res.totalFrozenRecovered?.toFixed(2) || '0.00'}\n` +
+        `• Total Assets Aligned: ${res.totalAssetsAdjustedUsers || 0} user(s)`);
       if (window.loadAdminStats) window.loadAdminStats();
     } catch (err) {
       if (window.toast) window.toast('Master Repair error: ' + err.message, 'error');
@@ -2455,9 +2477,9 @@ Today’s efforts aren’t just about participating in a platform — they are a
         window.toast(res.message || 'Database Reset Successful!', 'success');
       }
       alert(`💣 DATABASE HARD-RESET COMPLETED SUCCESSFULLY!\n\n` +
-            `• User Accounts Preserved (Login intact): ${res.resetUserCount || 0}\n` +
-            `• All Account Balances: Reset to $0.00\n` +
-            `• All Transaction Histories: Wiped (0 records)`);
+        `• User Accounts Preserved (Login intact): ${res.resetUserCount || 0}\n` +
+        `• All Account Balances: Reset to $0.00\n` +
+        `• All Transaction Histories: Wiped (0 records)`);
       if (window.loadAdminStats) window.loadAdminStats();
     } catch (err) {
       if (window.toast) window.toast('Database Reset error: ' + err.message, 'error');
