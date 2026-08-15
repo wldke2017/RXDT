@@ -197,7 +197,7 @@ router.post('/users/release-frozen', requireAdminSecret, async (req, res) => {
         await query(
           `INSERT INTO account_changes (id, user_id, type, amount, balance_after, remark) VALUES ($1,$2,$3,$4,$5,$6)`,
           ['AC' + Date.now() + 'RF_' + trade.id.slice(-4), u.id, 'signal_close', returnTotal, newBal,
-            `Signal ${trade.signal_id} — Admin Release Position (${trade.pair || 'BTCUSDT'}) +${profit.toFixed(4)} USDT · trade ${trade.id}`]
+          `Signal ${trade.signal_id} — Admin Release Position (${trade.pair || 'BTCUSDT'}) +${profit.toFixed(4)} USDT · trade ${trade.id}`]
         ).catch(() => { });
 
         await query('COMMIT');
@@ -218,7 +218,7 @@ router.post('/users/release-frozen', requireAdminSecret, async (req, res) => {
         await query(
           `INSERT INTO account_changes (id, user_id, type, amount, balance_after, remark) VALUES ($1,$2,$3,$4,$5,$6)`,
           ['AC' + Date.now() + 'CLR', u.id, 'admin_release', remFrozen, updRem.rows[0]?.available_balance || 0,
-            `Admin released leftover frozen balance $${remFrozen.toFixed(2)} back to available balance`]
+          `Admin released leftover frozen balance $${remFrozen.toFixed(2)} back to available balance`]
         ).catch(() => { });
         await query('COMMIT');
         releasedTotal += remFrozen;
@@ -263,7 +263,7 @@ router.get('/signal-status', requireAdminSecret, async (req, res) => {
 });
 
 router.post('/trigger-signal', requireAdminSecret, async (req, res) => {
-  const { action, signalId, duration } = req.body;
+  const { action, signalId, duration, deliverySeconds } = req.body;
   if (action === 'stop') {
     await clearTestSignalWindow();
     return res.json({ message: '🛑 Test signal deactivated.' });
@@ -271,8 +271,9 @@ router.post('/trigger-signal', requireAdminSecret, async (req, res) => {
 
   const mins = parseInt(duration || 15);
   const sigId = parseInt(signalId || 1);
-  await setTestSignalWindow(mins, sigId);
-  res.json({ message: `🚀 Test Signal ${sigId} triggered for ${mins} minutes! Users will now see the pop-up modal.` });
+  const deliverySecs = parseInt(deliverySeconds || 30);
+  await setTestSignalWindow(mins, sigId, deliverySecs);
+  res.json({ message: `🚀 Test Signal ${sigId} triggered for ${mins} minutes (delivery ${deliverySecs}s)! Users will now see the pop-up modal.` });
 });
 
 // ----------------------------------------------------

@@ -1,6 +1,33 @@
 import express from 'express';
-import { query } from '../db.js';
+import { query, withTransaction } from '../db.js';
 import { requireAuth } from '../middleware/auth.js';
+
+// ---- Unique ID helper (collision-safe within the same millisecond) ----
+function uid(prefix) {
+  return prefix + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+}
+
+//// Recover signal_trades stuck in 'processing' (e.g. a serverless timeout
+//// or a prior price-fetch failure in the old code aborted settlement mid-way).
+//// The claim queries stamp processing_at = NOW(); any claim older than 2
+//// minutes (or legacy claims with NULL processing_at older than created_at)
+//// is safely reset so the next poll/request retries it.
+async function recoverStaleProcessingTrades(scopeUserId = null) {
+  const whereUser = scopeUserId ? 'AND user_id = $1' : '';
+  const params = scopeUserId ? [scopeUserId] : [];
+  await query(
+    `UPDATE signal_trades
+     SET status = 'open', processing_at = NULL
+     WHERE status = 'processing'
+       AND (
+         (processing_at IS NOT NULL AND processing_at < NOW() - INTERVAL '2 minutes')
+         OR
+         (processing_at IS NULL AND created_at < NOW() - INTERVAL '2 minutes')
+       )
+       ${whereUser}`,
+    params
+  ).catch(() => { });
+}
 
 const router = express.Router();
 
@@ -106,9 +133,10 @@ async function getMarketPrice(symbol) {
 }
 
 
-export async function setTestSignalWindow(durationMinutes = 15, signalId = 1) {
+export async function setTestSignalWindow(durationMinutes = 15, signalId = 1, deliverySeconds = 30) {
   const expiresAt = new Date(Date.now() + durationMinutes * 60 * 1000).toISOString();
-  const val = JSON.stringify({ signalId, expiresAt });
+  const safeDeliverySeconds = Math.max(5, parseInt(deliverySeconds || 30));
+  const val = JSON.stringify({ signalId, expiresAt, deliverySeconds: safeDeliverySeconds });
   await query(`
     CREATE TABLE IF NOT EXISTS system_settings (
       key VARCHAR(100) PRIMARY KEY,
@@ -138,11 +166,13 @@ export async function getTestSignalStatus() {
       return null;
     }
     const minsLeft = Math.ceil((expiresAt.getTime() - Date.now()) / 60000);
+    const deliverySeconds = parseInt(data.deliverySeconds || 30);
     return {
       signalId: data.signalId || 1,
       tradingPair: 'BTC/USDT',
       pairSymbol: 'BTCUSDT',
-      purchaseDuration: '30 seconds',
+      purchaseDuration: `${deliverySeconds} seconds`,
+      deliverySeconds,
       openTime: new Date().toISOString(),
       closeTime: expiresAt.toISOString(),
       minutesRemaining: minsLeft,
@@ -273,143 +303,113 @@ export async function autoExecuteEligibleSignals() {
  * @param {number} [tradeAmount] - optional amount to trade; defaults to full balance
  * @returns {Promise<object|false>} trade record on success, false if duplicate/skipped
  */
-async function executeSignalTrade(userId, signal, balance, tier, isFreeSignalTrade, freeSignalCredits, tradeAmount) {
+async function executeSignalTrade(userId, signal, balance, tier, isFreeSignalTrade, freeSignalCredits, amount) {
   const today = new Date().toISOString().split('T')[0];
 
   // Default to 100% capital allocation if no amount specified
-  const amount = tradeAmount && tradeAmount > 0 && tradeAmount <= balance ? tradeAmount : balance;
+  const tradeAmount = amount && amount > 0 && amount <= balance ? amount : balance;
 
   const now = Date.now();
-  // Set releaseAt to exactly 30 seconds after trade creation time for 30-second delivery contract mode
-  const releaseAt = new Date(now + 30 * 1000).toISOString();
+  // deliverySeconds is configurable (admin can customise it for test
+  // signals); standard signals use the 30-second delivery contract.
+  const deliverySeconds = Math.max(5, parseInt(signal.deliverySeconds || 30));
+  const releaseAt = new Date(now + deliverySeconds * 1000).toISOString();
 
-  const tradeId = 'ST' + now + '_' + userId.substring(0, 4);
-  const openId = 'AC' + now + 'O_' + userId.substring(0, 4);
+  const tradeId = uid('ST');
+  const openId = uid('AC');
 
-  // Capture the live market price BEFORE opening the transaction (network
-  // call) so the Copy Trade History shows a real Purchase price, and derive
-  // the delivery duration in seconds (e.g. 30s) for the history record.
+  // Capture the live purchase price BEFORE the transaction (network call).
+  // getMarketPrice never throws — it falls back to a cached/drifted price.
   const purchasePrice = await getMarketPrice(signal.pairSymbol);
-  const deliverySeconds = 30;
 
-  await query('BEGIN');
-
-
-  try {
+  const tradeResult = await withTransaction(async (tx) => {
     // Lock the user row to serialize concurrent executions for this user.
     // Any other concurrent request for the same user will block here until
     // this transaction commits/rolls back, preventing the duplicate race.
-    const lockRes = await query(
+    const lockRes = await tx(
       `SELECT id, available_balance, free_signal_credits FROM users WHERE id = $1 FOR UPDATE`,
       [userId]
     );
-    if (!lockRes.rows.length) {
-      await query('ROLLBACK');
-      return false;
-    }
+    if (!lockRes.rows.length) return false;
 
     // Re-read the balance under the lock (it may have changed while waiting)
     const lockedBalance = parseFloat(lockRes.rows[0].available_balance);
     const lockedFreeCredits = parseInt(lockRes.rows[0].free_signal_credits || 0);
 
-    // Re-check for duplicate INSIDE the transaction (after acquiring the lock).
-    // This is the critical fix: two concurrent requests can no longer both pass
-    // the duplicate check because the second one blocks on FOR UPDATE until the
-    // first commits its INSERT.
-    const execCheck = await query(
+    // Re-check for duplicate INSIDE the transaction (after acquiring the lock)
+    const execCheck = await tx(
       `SELECT id FROM signal_trades WHERE user_id = $1 AND signal_id = $2 AND DATE(created_at) = $3`,
       [userId, signal.signalId, today]
     );
-    if (execCheck.rows.length > 0) {
-      await query('ROLLBACK');
-      return false;
-    }
+    if (execCheck.rows.length > 0) return false;
 
     // Re-validate balance under lock
-    if (lockedBalance <= 0) {
-      await query('ROLLBACK');
-      return false;
-    }
+    if (lockedBalance <= 0) return false;
 
     // Re-validate free signal credits under lock
-    if (isFreeSignalTrade && lockedFreeCredits <= 0) {
-      await query('ROLLBACK');
-      return false;
-    }
+    if (isFreeSignalTrade && lockedFreeCredits <= 0) return false;
 
     // Use the locked balance for the trade amount if no explicit amount was given
-    const effectiveAmount = amount > 0 && amount <= lockedBalance ? amount : lockedBalance;
+    const effectiveAmount = tradeAmount > 0 && tradeAmount <= lockedBalance ? tradeAmount : lockedBalance;
 
-    const variation = Math.random() * 0.10 - 0.05; // ±5% realistic market variation
-
+    const variation = Math.random() * 0.10 - 0.05; // ±5% realistic market movement
     const safeTier = tier || SIGNAL_TIERS.TIER_1;
     const rawProfitRate = isFreeSignalTrade
       ? getPerSignalProfitRate(SIGNAL_TIERS.TIER_1)
       : getPerSignalProfitRate(safeTier);
     const profitRate = rawProfitRate > 0 ? rawProfitRate : 0.014; // Guarantee minimum 1.4% profit rate
-    const profitAmount = Math.max(0.01, parseFloat((effectiveAmount * profitRate * (1 + variation)).toFixed(4)));
-    // The projected return after settlement (used for display in history)
-    const projectedReturn = parseFloat((effectiveAmount + profitAmount).toFixed(4));
-    // The ACTUAL available balance immediately after this trade is placed
-    // (available_balance is reduced by effectiveAmount, moved to frozen).
+    const profitBefore = Math.max(0.01, parseFloat((effectiveAmount * profitRate * (1 + variation)).toFixed(4)));
+    const projectedReturn = parseFloat((effectiveAmount + profitBefore).toFixed(4));
     const actualBalanceAfter = parseFloat((lockedBalance - effectiveAmount).toFixed(4));
     const tierLabel = isFreeSignalTrade ? 'Free Signal' : (safeTier?.label || 'Tier 1');
 
     // 1. Move available_balance into frozen_balance ("In Order")
-    await query(
-      `UPDATE users 
+    await tx(
+      `UPDATE users
        SET available_balance = available_balance - $1,
            frozen_balance = frozen_balance + $1
        WHERE id = $2`,
       [effectiveAmount, userId]
     );
 
-    // 1b. If this is a free 8pm referral signal, consume one free signal credit
+    // 1b. If this is a free 8pm referral signal, consume one free credit
     if (isFreeSignalTrade) {
-      await query(
+      await tx(
         `UPDATE users SET free_signal_credits = GREATEST(0, free_signal_credits - 1) WHERE id = $1`,
         [userId]
       );
     }
 
-    // 2. Insert signal trade record (with purchase price + delivery time so
-    //    the Copy Trade History shows full delivery-contract style details).
-    //    balance_before = available balance before the trade
-    //    balance_after  = actual available balance after the trade is placed
-    await query(
+    // 2. Insert signal trade record (with custom purchase price + delivery seconds)
+    await tx(
       `INSERT INTO signal_trades (id, user_id, signal_id, pair, trade_amount, profit, balance_before, balance_after, tier_label, status, release_at, purchase_price, delivery_seconds)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'open', $10, $11, $12)`,
-      [tradeId, userId, signal.signalId, signal.pairSymbol, effectiveAmount, profitAmount, lockedBalance, actualBalanceAfter, tierLabel, releaseAt, purchasePrice, deliverySeconds]
+      [tradeId, userId, signal.signalId, signal.pairSymbol, effectiveAmount, profitBefore, lockedBalance, actualBalanceAfter, tierLabel, releaseAt, purchasePrice, deliverySeconds]
     );
 
-
-    // 3. Log Open Position — record the actual available balance after the
-    //    trade is placed (lockedBalance - effectiveAmount), not 0.
-    await query(
+    // 3. Log Open Position
+    await tx(
       `INSERT INTO account_changes (id, user_id, type, amount, balance_after, remark)
        VALUES ($1, $2, 'signal_open', $3, $4, $5)`,
-      [openId, userId, -effectiveAmount, actualBalanceAfter, `Signal ${signal.signalId} — Auto-executed (${signal.pairSymbol}) placed in Order`]
+      [openId, userId, -effectiveAmount, actualBalanceAfter, `Signal ${signal.signalId} closes in ${deliverySeconds}s — (${signal.pairSymbol}) in Order`]
     );
-
-    await query('COMMIT');
 
     return {
       id: tradeId,
       signalId: signal.signalId,
       pair: signal.pairSymbol,
+      profit: profitBefore,
       tradeAmount: effectiveAmount,
-      profit: profitAmount,
       balanceBefore: lockedBalance,
       balanceAfter: actualBalanceAfter,
       projectedReturn,
       tier: tierLabel,
       status: 'open',
       releaseAt,
+      deliverySeconds,
     };
-  } catch (err) {
-    await query('ROLLBACK').catch(() => { });
-    throw err;
-  }
+  });
+  return tradeResult;
 }
 
 export async function getActiveSignal() {
@@ -432,6 +432,7 @@ export async function getActiveSignal() {
         tradingPair: 'BTC/USDT',
         pairSymbol: 'BTCUSDT',
         purchaseDuration: '30 seconds',
+        deliverySeconds: 30,
         openTime: openTime.toISOString(),
         closeTime: closeTime.toISOString(),
         minutesRemaining: durationMins - (utcMin - w.utcMinStart),
@@ -566,11 +567,14 @@ router.get('/poll', async (req, res) => {
 // the user 2-3x for a single position.
 export async function processDueSignalTrades(userId) {
   try {
+    // Recover any trades stuck in 'processing' by a prior attempt (crash/timeout)
+    await recoverStaleProcessingTrades(userId);
+
     // Atomically claim & settle due trades one at a time.
     while (true) {
       const claimRes = await query(
         `UPDATE signal_trades
-         SET status = 'processing'
+         SET status = 'processing', processing_at = NOW()
          WHERE id = (
            SELECT id FROM signal_trades
            WHERE user_id = $1 AND status = 'open' AND (release_at IS NULL OR release_at <= NOW())
@@ -586,8 +590,8 @@ export async function processDueSignalTrades(userId) {
 
       // Capture the live settlement price for the history record (outside
       // the transaction; the price helper caches for 10s so batch settlements
-      // of the same pair share one fetch).
-      const settlementPrice = await getMarketPrice(claimed.pair);
+      // of the same pair share one fetch). Never throws — falls back to cache.
+      const settlementPrice = await getMarketPrice(claimed.pair).catch(() => null);
 
       try {
         const trade = claimed;
@@ -600,114 +604,113 @@ export async function processDueSignalTrades(userId) {
         }
         const returnTotal = tradeAmount + profit;
 
-        await query('BEGIN');
-
-        // 1. Release frozen balance and add profit to available_balance & total_assets & total_earnings
-        const userRes = await query(
-          `UPDATE users 
+        await withTransaction(async (tx) => {
+          // 1. Release frozen balance and add profit to available_balance & total_assets & total_earnings
+          const userRes = await tx(
+            `UPDATE users 
            SET frozen_balance = GREATEST(0, frozen_balance - $1),
                available_balance = available_balance + $2,
                total_assets = total_assets + $3,
                total_earnings = total_earnings + $3
            WHERE id = $4 RETURNING available_balance`,
-          [tradeAmount, returnTotal, profit, userId]
-        );
+            [tradeAmount, returnTotal, profit, userId]
+          );
 
-        const newBal = parseFloat(userRes.rows[0]?.available_balance || 0);
+          const newBal = parseFloat(userRes.rows[0]?.available_balance || 0);
 
-        // 2. Mark trade completed (was atomically claimed as 'processing')
-        //    and stamp the settlement price + time for the history record.
-        await query(
-          `UPDATE signal_trades SET status = 'completed', settlement_price = $2, settled_at = NOW() WHERE id = $1`,
-          [trade.id, settlementPrice]
-        );
+          // 2. Mark completed (was atomically claimed as 'processing') and stamp
+          //    settlement price + time + clear processing_at for the history record.
+          await tx(
+            `UPDATE signal_trades SET status = 'completed', settlement_price = $2, settled_at = NOW(), processing_at = NULL WHERE id = $1`,
+            [trade.id, settlementPrice]
+          );
 
 
-        // 2b. Check if the user has now doubled their invested capital.
-        //     If total_earnings >= initial_deposit, mark doubled_capital = true
-        //     (this unlocks the lower 10% withdrawal fee).
-        const capRes = await query(
-          `SELECT initial_deposit, total_earnings FROM users WHERE id = $1`,
-          [userId]
-        );
-        const cap = capRes.rows[0];
-        if (cap) {
-          const initialDeposit = parseFloat(cap.initial_deposit || 0);
-          const totalEarnings = parseFloat(cap.total_earnings || 0);
-          if (initialDeposit > 0 && totalEarnings >= initialDeposit) {
-            await query(`UPDATE users SET doubled_capital = TRUE WHERE id = $1`, [userId]);
+          // 2b. Check if the user has now doubled their invested capital.
+          //     If total_earnings >= initial_deposit, mark doubled_capital = true
+          //     (this unlocks the lower 10% withdrawal fee).
+          const capRes = await tx(
+            `SELECT initial_deposit, total_earnings FROM users WHERE id = $1`,
+            [userId]
+          );
+          const cap = capRes.rows[0];
+          if (cap) {
+            const initialDeposit = parseFloat(cap.initial_deposit || 0);
+            const totalEarnings = parseFloat(cap.total_earnings || 0);
+            if (initialDeposit > 0 && totalEarnings >= initialDeposit) {
+              await tx(`UPDATE users SET doubled_capital = TRUE WHERE id = $1`, [userId]);
+            }
           }
-        }
 
-        // 3. Log Close Position in account_changes (includes the unique trade id
-        //    in the remark so any future duplicate settlement is easy to detect).
-        const closeId = 'AC' + Date.now() + 'C';
-        await query(
-          `INSERT INTO account_changes (id, user_id, type, amount, balance_after, remark)
+          // 3. Log Close Position in account_changes (includes the unique trade id
+          //    in the remark so any future duplicate settlement is easy to detect).
+          const closeId = 'AC' + Date.now() + 'C';
+          await tx(
+            `INSERT INTO account_changes (id, user_id, type, amount, balance_after, remark)
            VALUES ($1, $2, 'signal_close', $3, $4, $5)`,
-          [closeId, userId, returnTotal, newBal,
-            `Signal ${trade.signal_id} — Close Position (${trade.pair}) +${profit.toFixed(4)} USDT · trade ${trade.id}`]
-        ).catch(() => { });
+            [closeId, userId, returnTotal, newBal,
+              `Signal ${trade.signal_id} — Close Position (${trade.pair}) +${profit.toFixed(4)} USDT · trade ${trade.id}`]
+          ).catch(() => { });
 
-        // 4. Referral Commissions — halving chain model.
-        //    Level 1 (direct referrer): 7.5% of profit
-        //    Level 2: 3.75% (half of L1)
-        //    Level 3: 1.875% (half of L2)
-        //    ... continues halving up the chain until the commission rounds to 0.
-        try {
-          if (profit > 0) {
-            let currentUserId = userId;
-            let commissionRate = 0.075; // Level 1 starts at 7.5%
-            let level = 1;
+          // 4. Referral Commissions — halving chain model.
+          //    Level 1 (direct referrer): 7.5% of profit
+          //    Level 2: 3.75% (half of L1)
+          //    Level 3: 1.875% (half of L2)
+          //    ... continues halving up the chain until the commission rounds to 0.
+          try {
+            if (profit > 0) {
+              let currentUserId = userId;
+              let commissionRate = 0.075; // Level 1 starts at 7.5%
+              let level = 1;
 
-            // Walk up the referral chain, halving the rate each level.
-            // Stop when the rate becomes negligible (rounds to 0) or no more referrers.
-            while (commissionRate > 0.0001) {
-              const refRes = await query(`SELECT referred_by FROM users WHERE id = $1`, [currentUserId]);
-              const referrerId = refRes.rows[0]?.referred_by;
-              if (!referrerId) break; // top of chain reached
+              // Walk up the referral chain, halving the rate each level.
+              // Stop when the rate becomes negligible (rounds to 0) or no more referrers.
+              while (commissionRate > 0.0001) {
+                const refRes = await tx(`SELECT referred_by FROM users WHERE id = $1`, [currentUserId]);
+                const referrerId = refRes.rows[0]?.referred_by;
+                if (!referrerId) break; // top of chain reached
 
-              const commission = parseFloat((profit * commissionRate).toFixed(4));
-              if (commission <= 0) break;
+                const commission = parseFloat((profit * commissionRate).toFixed(4));
+                if (commission <= 0) break;
 
-              const rcId = 'RC' + Date.now() + 'L' + level;
-              await query(
-                `INSERT INTO referral_commissions (id, referrer_id, referred_user_id, level, trade_amount, amount)
+                const rcId = 'RC' + Date.now() + 'L' + level;
+                await tx(
+                  `INSERT INTO referral_commissions (id, referrer_id, referred_user_id, level, trade_amount, amount)
                  VALUES ($1, $2, $3, $4, $5, $6)`,
-                [rcId, referrerId, userId, level, tradeAmount, commission]
-              );
+                  [rcId, referrerId, userId, level, tradeAmount, commission]
+                );
 
-              const balRes = await query(
-                `UPDATE users 
+                const balRes = await tx(
+                  `UPDATE users 
                  SET available_balance = available_balance + $1,
                      total_assets = total_assets + $1,
                      total_earnings = total_earnings + $1
                  WHERE id = $2 RETURNING available_balance`,
-                [commission, referrerId]
-              );
-              const newBal = parseFloat(balRes.rows[0]?.available_balance || 0);
-              await query(
-                `INSERT INTO account_changes (id, user_id, type, amount, balance_after, remark)
+                  [commission, referrerId]
+                );
+                const newBal = parseFloat(balRes.rows[0]?.available_balance || 0);
+                await tx(
+                  `INSERT INTO account_changes (id, user_id, type, amount, balance_after, remark)
                  VALUES ($1, $2, 'commission', $3, $4, $5)`,
-                ['AC' + Date.now() + 'R' + level, referrerId, commission, newBal,
-                `L${level} Referral Commission — ${trade.pair} trade by referred user +${commission.toFixed(4)} USDT`]
-              ).catch(() => { });
+                  ['AC' + Date.now() + 'R' + level, referrerId, commission, newBal,
+                  `L${level} Referral Commission — ${trade.pair} trade by referred user +${commission.toFixed(4)} USDT`]
+                ).catch(() => { });
 
-              // Move up the chain and halve the rate
-              currentUserId = referrerId;
-              commissionRate = commissionRate / 2;
-              level++;
+                // Move up the chain and halve the rate
+                currentUserId = referrerId;
+                commissionRate = commissionRate / 2;
+                level++;
+              }
             }
+          } catch (commErr) {
+            console.error('Referral commission error (non-fatal):', commErr);
           }
-        } catch (commErr) {
-          console.error('Referral commission error (non-fatal):', commErr);
-        }
 
-        await query('COMMIT');
+        });
       } catch (err) {
-        await query('ROLLBACK').catch(() => { });
-        // Reset the claim so the trade can be retried on the next poll
-        await query(`UPDATE signal_trades SET status = 'open' WHERE id = $1`, [claimed.id]).catch(() => { });
+        // withTransaction already rolled back; reset the claim so the trade
+        // can be retried on the next poll
+        await query(`UPDATE signal_trades SET status = 'open', processing_at = NULL WHERE id = $1`, [claimed.id]).catch(() => { });
         throw err;
       }
     }
@@ -724,11 +727,14 @@ export async function settleAllDueSignalTrades() {
   let settled = 0;
   let errors = 0;
   try {
+    // Recover any stale 'processing' trades first (crash/timeout recovery)
+    await recoverStaleProcessingTrades();
+
     // Atomically claim all due trades one at a time
     while (true) {
       const claimRes = await query(
         `UPDATE signal_trades
-         SET status = 'processing'
+         SET status = 'processing', processing_at = NOW()
          WHERE id = (
            SELECT id FROM signal_trades
            WHERE status = 'open' AND (release_at IS NULL OR release_at <= NOW())
@@ -753,93 +759,92 @@ export async function settleAllDueSignalTrades() {
         }
         const returnTotal = tradeAmount + profit;
 
-        await query('BEGIN');
-
-        // Release frozen balance + credit profit
-        const userRes = await query(
-          `UPDATE users
+        await withTransaction(async (tx) => {
+          // Release frozen balance + credit profit
+          const userRes = await tx(
+            `UPDATE users
            SET frozen_balance = GREATEST(0, frozen_balance - $1),
                available_balance = available_balance + $2,
                total_assets = total_assets + $3,
                total_earnings = total_earnings + $3
            WHERE id = $4 RETURNING available_balance`,
-          [tradeAmount, returnTotal, profit, userId]
-        );
-        const newBal = parseFloat(userRes.rows[0]?.available_balance || 0);
+            [tradeAmount, returnTotal, profit, userId]
+          );
+          const newBal = parseFloat(userRes.rows[0]?.available_balance || 0);
 
-        // Mark trade completed
-        await query(
-          `UPDATE signal_trades SET status = 'completed', settlement_price = $2, settled_at = NOW() WHERE id = $1`,
-          [claimed.id, settlementPrice]
-        );
+          // Mark trade completed + clear processing_at
+          await tx(
+            `UPDATE signal_trades SET status = 'completed', settlement_price = $2, settled_at = NOW(), processing_at = NULL WHERE id = $1`,
+            [claimed.id, settlementPrice]
+          );
 
-        // Check doubled-capital milestone
-        const capRes = await query(`SELECT initial_deposit, total_earnings FROM users WHERE id = $1`, [userId]);
-        const cap = capRes.rows[0];
-        if (cap) {
-          const initialDeposit = parseFloat(cap.initial_deposit || 0);
-          const totalEarnings = parseFloat(cap.total_earnings || 0);
-          if (initialDeposit > 0 && totalEarnings >= initialDeposit) {
-            await query(`UPDATE users SET doubled_capital = TRUE WHERE id = $1`, [userId]);
+          // Check doubled-capital milestone
+          const capRes = await tx(`SELECT initial_deposit, total_earnings FROM users WHERE id = $1`, [userId]);
+          const cap = capRes.rows[0];
+          if (cap) {
+            const initialDeposit = parseFloat(cap.initial_deposit || 0);
+            const totalEarnings = parseFloat(cap.total_earnings || 0);
+            if (initialDeposit > 0 && totalEarnings >= initialDeposit) {
+              await tx(`UPDATE users SET doubled_capital = TRUE WHERE id = $1`, [userId]);
+            }
           }
-        }
 
-        // Log close in account_changes
-        const closeId = 'AC' + Date.now() + 'GC';
-        await query(
-          `INSERT INTO account_changes (id, user_id, type, amount, balance_after, remark)
+          // Log close in account_changes
+          const closeId = 'AC' + Date.now() + 'GC';
+          await tx(
+            `INSERT INTO account_changes (id, user_id, type, amount, balance_after, remark)
            VALUES ($1, $2, 'signal_close', $3, $4, $5)`,
-          [closeId, userId, returnTotal, newBal,
-            `Signal ${claimed.signal_id} — Auto-Close Position (${claimed.pair}) +${profit.toFixed(4)} USDT · trade ${claimed.id}`]
-        ).catch(() => { });
+            [closeId, userId, returnTotal, newBal,
+              `Signal ${claimed.signal_id} — Auto-Close Position (${claimed.pair}) +${profit.toFixed(4)} USDT · trade ${claimed.id}`]
+          ).catch(() => { });
 
-        // Referral commissions (halving chain)
-        try {
-          if (profit > 0) {
-            let currentUserId = userId;
-            let commissionRate = 0.075;
-            let level = 1;
-            while (commissionRate > 0.0001) {
-              const refRes = await query(`SELECT referred_by FROM users WHERE id = $1`, [currentUserId]);
-              const referrerId = refRes.rows[0]?.referred_by;
-              if (!referrerId) break;
-              const commission = parseFloat((profit * commissionRate).toFixed(4));
-              if (commission <= 0) break;
-              const rcId = 'RC' + Date.now() + 'GL' + level;
-              await query(
-                `INSERT INTO referral_commissions (id, referrer_id, referred_user_id, level, trade_amount, amount)
+          // Referral commissions (halving chain)
+          try {
+            if (profit > 0) {
+              let currentUserId = userId;
+              let commissionRate = 0.075;
+              let level = 1;
+              while (commissionRate > 0.0001) {
+                const refRes = await tx(`SELECT referred_by FROM users WHERE id = $1`, [currentUserId]);
+                const referrerId = refRes.rows[0]?.referred_by;
+                if (!referrerId) break;
+                const commission = parseFloat((profit * commissionRate).toFixed(4));
+                if (commission <= 0) break;
+                const rcId = 'RC' + Date.now() + 'GL' + level;
+                await tx(
+                  `INSERT INTO referral_commissions (id, referrer_id, referred_user_id, level, trade_amount, amount)
                  VALUES ($1, $2, $3, $4, $5, $6)`,
-                [rcId, referrerId, userId, level, tradeAmount, commission]
-              );
-              const balRes = await query(
-                `UPDATE users
+                  [rcId, referrerId, userId, level, tradeAmount, commission]
+                );
+                const balRes = await tx(
+                  `UPDATE users
                  SET available_balance = available_balance + $1,
                      total_assets = total_assets + $1,
                      total_earnings = total_earnings + $1
                  WHERE id = $2 RETURNING available_balance`,
-                [commission, referrerId]
-              );
-              const refBal = parseFloat(balRes.rows[0]?.available_balance || 0);
-              await query(
-                `INSERT INTO account_changes (id, user_id, type, amount, balance_after, remark)
+                  [commission, referrerId]
+                );
+                const refBal = parseFloat(balRes.rows[0]?.available_balance || 0);
+                await tx(
+                  `INSERT INTO account_changes (id, user_id, type, amount, balance_after, remark)
                  VALUES ($1, $2, 'commission', $3, $4, $5)`,
-                ['AC' + Date.now() + 'GR' + level, referrerId, commission, refBal,
-                `L${level} Referral Commission — ${claimed.pair} +${commission.toFixed(4)} USDT`]
-              ).catch(() => { });
-              currentUserId = referrerId;
-              commissionRate = commissionRate / 2;
-              level++;
+                  ['AC' + Date.now() + 'GR' + level, referrerId, commission, refBal,
+                  `L${level} Referral Commission — ${claimed.pair} +${commission.toFixed(4)} USDT`]
+                ).catch(() => { });
+                currentUserId = referrerId;
+                commissionRate = commissionRate / 2;
+                level++;
+              }
             }
+          } catch (commErr) {
+            console.error('Global settle referral commission error:', commErr);
           }
-        } catch (commErr) {
-          console.error('Global settle referral commission error:', commErr);
-        }
 
-        await query('COMMIT');
+        });
         settled++;
       } catch (err) {
-        await query('ROLLBACK').catch(() => { });
-        await query(`UPDATE signal_trades SET status = 'open' WHERE id = $1`, [claimed.id]).catch(() => { });
+        // withTransaction already rolled back; reset so the trade can retry
+        await query(`UPDATE signal_trades SET status = 'open', processing_at = NULL WHERE id = $1`, [claimed.id]).catch(() => { });
         console.error(`Global settle error for trade ${claimed.id}:`, err.message);
         errors++;
       }

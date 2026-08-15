@@ -321,6 +321,7 @@ export async function initDatabase() {
     ALTER TABLE signal_trades ADD COLUMN IF NOT EXISTS settlement_price NUMERIC(20, 8);
     ALTER TABLE signal_trades ADD COLUMN IF NOT EXISTS delivery_seconds INT DEFAULT 30;
     ALTER TABLE signal_trades ADD COLUMN IF NOT EXISTS settled_at TIMESTAMP WITH TIME ZONE;
+    ALTER TABLE signal_trades ADD COLUMN IF NOT EXISTS processing_at TIMESTAMP WITH TIME ZONE;
   `).catch(err => console.log('signal_trades price columns migration notice:', err.message));
 
   // One-time backfill for legacy signal trades that predate price recording:

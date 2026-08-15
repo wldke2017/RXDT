@@ -229,6 +229,10 @@ function renderDashboard() {
           <input type="number" id="trigger-signal-custom-duration" class="form-control" 
                  placeholder="Minutes (e.g. 2)" min="1" max="120" value="2"
                  style="max-width:100px;height:40px;font-size:13px;display:none;"/>
+          <input type="number" id="trigger-signal-delivery-seconds" class="form-control" 
+                 placeholder="Delivery secs" min="5" max="3600" value="30"
+                 style="max-width:110px;height:40px;font-size:13px;" 
+                 title="How long the trade stays In Order before auto-settlement (seconds). 30 = default 30-second delivery contract."/>
           <button class="btn-primary" style="height:40px;padding:0 20px;font-size:14px;font-weight:700;border-radius:8px;" onclick="triggerTestSignal('start')">🚀 Start Test Signal</button>
           <button class="btn-outline" style="height:40px;padding:0 16px;font-size:13px;border-color:#ef4444;color:#ef4444;" onclick="triggerTestSignal('stop')">🛑 Stop Signal</button>
           <button class="btn-success" style="height:40px;padding:0 16px;font-size:13px;font-weight:700;border-radius:8px;" onclick="adminAutoExecuteSignals()">⚡ Auto-Execute Signals</button>
@@ -872,8 +876,22 @@ function initDashboard() {
       }
       duration = String(customVal);
     }
+
+    // Custom delivery seconds: how long the trade stays "In Order" before auto-settlement.
+    let deliverySeconds = 30;
+    if (action === 'start') {
+      const deliveryInput = document.getElementById('trigger-signal-delivery-seconds');
+      const deliveryVal = parseInt(deliveryInput?.value);
+      if (deliveryVal && deliveryVal >= 5) {
+        deliverySeconds = deliveryVal;
+      } else {
+        window.toast('Please enter a valid delivery duration (min 5 seconds)', 'error');
+        return;
+      }
+    }
+
     try {
-      const res = await adminFetch('/trigger-signal', 'POST', { action, signalId, duration });
+      const res = await adminFetch('/trigger-signal', 'POST', { action, signalId, duration, deliverySeconds });
       window.toast(res.message, 'success');
       await checkTestSignalStatus();
     } catch (err) {
