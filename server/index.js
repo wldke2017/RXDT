@@ -12,7 +12,7 @@ import gamificationRoutes from './routes/gamification.js';
 import kycRoutes from './routes/kyc.js';
 import adminRoutes from './routes/admin.js';
 import emailRoutes from './routes/email.js';
-import contractRoutes from './routes/contract.js';
+import contractRoutes, { autoLiquidatePositions } from './routes/contract.js';
 import referralRoutes from './routes/referrals.js';
 import signalRoutes, { settleAllDueSignalTrades } from './routes/signals.js';
 import chatRoutes from './routes/chat.js';
@@ -41,9 +41,12 @@ app.use((req, res, next) => {
 });
 
 // Global Auto-Settlement Middleware:
-// Every API request triggers a background check to settle any past-due signal positions.
+// Every API request triggers a background check to:
+// 1. Settle any past-due signal positions
+// 2. Auto-liquidate contract positions past their liquidation price
 app.use('/api', (req, res, next) => {
   settleAllDueSignalTrades().catch(e => console.warn('[auto-settle middleware]', e.message));
+  autoLiquidatePositions().catch(e => console.warn('[auto-liquidation middleware]', e.message));
   next();
 });
 
@@ -114,7 +117,7 @@ function ensureDbInit() {
 // In local dev, initialize DB and run initial audit
 if (process.env.VERCEL !== '1' && !process.env.VERCEL_ENV) {
   ensureDbInit().then(() => {
-    runPositionAndBalanceAudit().catch(() => {});
+    runPositionAndBalanceAudit().catch(() => { });
   });
 } else {
   // On Vercel, run ensureDbInit in non-blocking background
@@ -129,7 +132,7 @@ if (process.env.VERCEL !== '1' && !process.env.VERCEL_ENV) {
     while (retries > 0) {
       try {
         await ensureDbInit();
-        await runPositionAndBalanceAudit().catch(() => {});
+        await runPositionAndBalanceAudit().catch(() => { });
         app.listen(PORT, () => {
           console.log(`\n🚀 RXDT Exchange Backend Server running on http://localhost:${PORT}`);
           console.log(`🐘 Connected to Neon PostgreSQL Database`);

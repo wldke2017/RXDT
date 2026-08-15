@@ -348,7 +348,11 @@ async function executeSignalTrade(userId, signal, balance, tier, isFreeSignalTra
       : getPerSignalProfitRate(safeTier);
     const profitRate = rawProfitRate > 0 ? rawProfitRate : 0.014; // Guarantee minimum 1.4% profit rate
     const profitAmount = Math.max(0.01, parseFloat((effectiveAmount * profitRate * (1 + variation)).toFixed(4)));
-    const newBalance = parseFloat((effectiveAmount + profitAmount).toFixed(4));
+    // The projected return after settlement (used for display in history)
+    const projectedReturn = parseFloat((effectiveAmount + profitAmount).toFixed(4));
+    // The ACTUAL available balance immediately after this trade is placed
+    // (available_balance is reduced by effectiveAmount, moved to frozen).
+    const actualBalanceAfter = parseFloat((lockedBalance - effectiveAmount).toFixed(4));
     const tierLabel = isFreeSignalTrade ? 'Free Signal' : (safeTier?.label || 'Tier 1');
 
     // 1. Move available_balance into frozen_balance ("In Order")
@@ -369,19 +373,22 @@ async function executeSignalTrade(userId, signal, balance, tier, isFreeSignalTra
     }
 
     // 2. Insert signal trade record (with purchase price + delivery time so
-    //    the Copy Trade History shows full delivery-contract style details)
+    //    the Copy Trade History shows full delivery-contract style details).
+    //    balance_before = available balance before the trade
+    //    balance_after  = actual available balance after the trade is placed
     await query(
       `INSERT INTO signal_trades (id, user_id, signal_id, pair, trade_amount, profit, balance_before, balance_after, tier_label, status, release_at, purchase_price, delivery_seconds)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'open', $10, $11, $12)`,
-      [tradeId, userId, signal.signalId, signal.pairSymbol, effectiveAmount, profitAmount, lockedBalance, newBalance, tierLabel, releaseAt, purchasePrice, deliverySeconds]
+      [tradeId, userId, signal.signalId, signal.pairSymbol, effectiveAmount, profitAmount, lockedBalance, actualBalanceAfter, tierLabel, releaseAt, purchasePrice, deliverySeconds]
     );
 
 
-    // 3. Log Open Position
+    // 3. Log Open Position — record the actual available balance after the
+    //    trade is placed (lockedBalance - effectiveAmount), not 0.
     await query(
       `INSERT INTO account_changes (id, user_id, type, amount, balance_after, remark)
-       VALUES ($1, $2, 'signal_open', $3, 0, $4)`,
-      [openId, userId, -effectiveAmount, `Signal ${signal.signalId} — Auto-executed (${signal.pairSymbol}) placed in Order`]
+       VALUES ($1, $2, 'signal_open', $3, $4, $5)`,
+      [openId, userId, -effectiveAmount, actualBalanceAfter, `Signal ${signal.signalId} — Auto-executed (${signal.pairSymbol}) placed in Order`]
     );
 
     await query('COMMIT');
@@ -393,7 +400,8 @@ async function executeSignalTrade(userId, signal, balance, tier, isFreeSignalTra
       tradeAmount: effectiveAmount,
       profit: profitAmount,
       balanceBefore: lockedBalance,
-      balanceAfter: newBalance,
+      balanceAfter: actualBalanceAfter,
+      projectedReturn,
       tier: tierLabel,
       status: 'open',
       releaseAt,
@@ -568,6 +576,7 @@ export async function processDueSignalTrades(userId) {
            WHERE user_id = $1 AND status = 'open' AND (release_at IS NULL OR release_at <= NOW())
            ORDER BY created_at ASC
            LIMIT 1
+           FOR UPDATE SKIP LOCKED
          )
          RETURNING id, signal_id, pair, trade_amount, profit, balance_before, balance_after`,
         [userId]
@@ -782,7 +791,7 @@ export async function settleAllDueSignalTrades() {
            VALUES ($1, $2, 'signal_close', $3, $4, $5)`,
           [closeId, userId, returnTotal, newBal,
             `Signal ${claimed.signal_id} — Auto-Close Position (${claimed.pair}) +${profit.toFixed(4)} USDT · trade ${claimed.id}`]
-        ).catch(() => {});
+        ).catch(() => { });
 
         // Referral commissions (halving chain)
         try {
@@ -815,8 +824,8 @@ export async function settleAllDueSignalTrades() {
                 `INSERT INTO account_changes (id, user_id, type, amount, balance_after, remark)
                  VALUES ($1, $2, 'commission', $3, $4, $5)`,
                 ['AC' + Date.now() + 'GR' + level, referrerId, commission, refBal,
-                  `L${level} Referral Commission — ${claimed.pair} +${commission.toFixed(4)} USDT`]
-              ).catch(() => {});
+                `L${level} Referral Commission — ${claimed.pair} +${commission.toFixed(4)} USDT`]
+              ).catch(() => { });
               currentUserId = referrerId;
               commissionRate = commissionRate / 2;
               level++;
@@ -829,8 +838,8 @@ export async function settleAllDueSignalTrades() {
         await query('COMMIT');
         settled++;
       } catch (err) {
-        await query('ROLLBACK').catch(() => {});
-        await query(`UPDATE signal_trades SET status = 'open' WHERE id = $1`, [claimed.id]).catch(() => {});
+        await query('ROLLBACK').catch(() => { });
+        await query(`UPDATE signal_trades SET status = 'open' WHERE id = $1`, [claimed.id]).catch(() => { });
         console.error(`Global settle error for trade ${claimed.id}:`, err.message);
         errors++;
       }

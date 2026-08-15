@@ -68,6 +68,55 @@ export function render() {
       <div class="cstat"><span class="cstat-lbl">Funding Rate</span><span class="cstat-val color-up" id="cs-idx">0.01%</span></div>
     </div>
 
+    <!-- Trading Form: Leverage, Amount, Open Long/Short -->
+    <div class="contract-trade-panel">
+      <div class="ctp-section-title">Place Order</div>
+      <div class="trade-form-row">
+        <span class="trade-label">Leverage</span>
+        <div class="leverage-selector">
+          <button class="lev-btn active" data-lev="10" onclick="selectLeverage(10)">10x</button>
+          <button class="lev-btn" data-lev="20" onclick="selectLeverage(20)">20x</button>
+          <button class="lev-btn" data-lev="50" onclick="selectLeverage(50)">50x</button>
+          <button class="lev-btn" data-lev="100" onclick="selectLeverage(100)">100x</button>
+        </div>
+      </div>
+      <div class="trade-form-row">
+        <span class="trade-label">Amount (USDT)</span>
+        <div class="quick-amounts">
+          <button class="qa-btn" onclick="setQuickAmount(100)">100</button>
+          <button class="qa-btn" onclick="setQuickAmount(500)">500</button>
+          <button class="qa-btn" onclick="setQuickAmount(1000)">1000</button>
+          <button class="qa-btn" onclick="setQuickAmount(5000)">5000</button>
+        </div>
+        <input type="number" id="contract-amount" class="form-control" placeholder="Enter amount (min $10)" min="10" oninput="updateCalc()"/>
+      </div>
+      <div class="contract-calc-info">
+        <div class="calc-row"><span>Notional</span><span id="calc-notional">$0.00</span></div>
+        <div class="calc-row"><span>Est. P&L (1%)</span><span id="calc-pnl">±$0.00</span></div>
+        <div class="calc-row"><span>Liq. Price</span><span id="calc-liq">L:-- | S:--</span></div>
+      </div>
+      <div class="contract-action-btns">
+        <button class="btn-long" id="btn-open-long" onclick="openPosition('long')">▲ Open Long</button>
+        <button class="btn-short" id="btn-open-short" onclick="openPosition('short')">▼ Open Short</button>
+      </div>
+    </div>
+
+    <!-- Open Positions List -->
+    <div class="card">
+      <div class="ctp-section-title" style="margin-bottom:12px;">Open Positions</div>
+      <div id="positions-list">
+        <div style="text-align:center;padding:24px;color:var(--text-muted);font-size:14px;">Loading positions...</div>
+      </div>
+    </div>
+
+    <!-- Position History List -->
+    <div class="card">
+      <div class="ctp-section-title" style="margin-bottom:12px;">Position History</div>
+      <div id="history-list">
+        <div style="text-align:center;padding:16px;color:var(--text-muted);font-size:13px;">Loading history...</div>
+      </div>
+    </div>
+
     <!-- Consume Record / Invited Me Tabs -->
 
     <div class="card signal-tabs-card">

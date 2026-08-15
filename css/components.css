@@ -990,6 +990,7 @@
   border: 1px solid var(--border-color);
   border-radius: 16px;
   padding: 14px;
+  margin-bottom: 16px;
 }
 
 .ctp-section-title {
@@ -997,6 +998,24 @@
   font-weight: 800;
   color: var(--text-main);
   margin-bottom: 16px;
+}
+
+/* Trade Form Rows */
+.trade-form-row {
+  margin-bottom: 14px;
+}
+
+.trade-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-sub);
+  margin-bottom: 8px;
+}
+
+.trade-form-row .form-control {
+  width: 100%;
+  margin-top: 8px;
 }
 
 /* Leverage Selector */
@@ -4466,8 +4485,13 @@ select.form-control option:checked {
     gap: 5px;
   }
 
-  .hsc-icon { font-size: 18px; }
-  .hsc-value { font-size: 11px; }
+  .hsc-icon {
+    font-size: 18px;
+  }
+
+  .hsc-value {
+    font-size: 11px;
+  }
 
   .home-cta-row {
     flex-direction: column;
