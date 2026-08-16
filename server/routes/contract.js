@@ -89,9 +89,10 @@ async function getBinancePrice(symbol) {
     return price;
   } catch (e) {
     const fallback = cached?.price || DEFAULT_PRICES[sym] || 65000;
-    const drifted = parseFloat((fallback * (1 + (Math.random() - 0.5) * 0.002)).toFixed(2));
-    priceCache.set(sym, { price: drifted, ts: Date.now() });
     return drifted;
+  }
+}
+
 // GET /api/contract/pairs — list supported futures trading pairs
 router.get('/pairs', async (req, res) => {
   try {
