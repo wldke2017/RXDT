@@ -156,16 +156,86 @@ function renderShell() {
         </div>
       </div>
     </nav>
+
+    <!-- Floating Bottom-Right Live Chat Widget (Option 1) -->
+    <div class="vance-floating-widget" id="vance-floating-widget">
+      <div class="vance-speech-bubble" id="vance-speech-bubble">
+        <span>👋 Hi! Need help with Signal Copy-Trading? Chat with Prof. Vance direct!</span>
+        <button class="vance-speech-bubble-close" onclick="dismissVanceBubble(event)">✕</button>
+      </div>
+      <div class="vance-avatar-trigger" onclick="openChat()">
+        <div class="vance-avatar-wrapper">
+          <img src="assets/images/warren_pennington.png" alt="Prof. Arthur Vance" class="vance-avatar-img" />
+          <span class="vance-status-dot"></span>
+        </div>
+        <div class="vance-trigger-info">
+          <span class="vance-trigger-title">Prof. Vance</span>
+          <span class="vance-trigger-sub">Live Support · Online</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Global Live Chat Modal (Prof. Vance Persona) -->
+    <div class="vance-chat-modal-overlay" id="vance-chat-modal" onclick="if(event.target===this)closeChat()">
+      <div class="vance-chat-modal-container">
+        <div class="vance-chat-header">
+          <div class="vance-chat-header-profile">
+            <img src="assets/images/warren_pennington.png" alt="Prof. Arthur Vance" class="vance-header-avatar" />
+            <div>
+              <div class="vance-header-name">Prof. Arthur Vance</div>
+              <div class="vance-header-role">RXDT CEO & Quantitative Director</div>
+              <div class="vance-header-status">
+                <span class="online-dot"></span> Online · Avg response: &lt;2 mins
+              </div>
+            </div>
+          </div>
+          <button class="modal-close" onclick="closeChat()" style="background:none;border:none;color:#a5b4fc;font-size:20px;cursor:pointer;">✕</button>
+        </div>
+
+        <div class="vance-quick-chips">
+          <div class="vance-chip" onclick="sendQuickChip('How do daily Signal Trades work?')">📡 Signal Schedule</div>
+          <div class="vance-chip" onclick="sendQuickChip('I need help with my Deposit')">💳 Deposit Assistance</div>
+          <div class="vance-chip" onclick="sendQuickChip('Can I speak directly with Prof. Vance?')">💬 Contact Prof. Vance</div>
+        </div>
+
+        <div id="vance-chat-messages" style="flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px;background:rgba(0,0,0,0.15);">
+          <div class="chat-msg support" style="display:flex;gap:10px;align-items:flex-start;">
+            <img src="assets/images/warren_pennington.png" style="width:32px;height:32px;border-radius:50%;object-fit:cover;border:1px solid #00f2fe;" />
+            <div>
+              <div class="chat-bubble" style="background:#1e293b;color:#e2e8f0;padding:10px 14px;border-radius:0 14px 14px 14px;font-size:13px;max-width:85%;">
+                👋 Hello! I am <strong>Prof. Arthur Vance</strong>, CEO and Lead Quantitative Strategist at RXDT Exchange.<br/><br/>How can I assist you with your Copy-Trading account, deposits, or daily signals today?
+              </div>
+              <div class="chat-time" style="font-size:10px;color:#64748b;margin-top:4px;">Just now</div>
+            </div>
+          </div>
+        </div>
+
+        <div style="padding:14px 16px;border-top:1px solid rgba(255,255,255,0.08);background:#0f172a;display:flex;gap:10px;align-items:center;">
+          <input type="text" id="vance-chat-input" class="form-control" placeholder="Message Prof. Vance..."
+            style="border-radius:20px;padding:10px 16px;background:#1e293b;border:1px solid rgba(0,242,254,0.3);color:#fff;font-size:13px;"
+            onkeydown="if(event.key==='Enter')sendChatMsg()"/>
+          <button class="btn-primary" onclick="sendChatMsg()" style="border-radius:20px;padding:10px 20px;font-size:13px;font-weight:700;">Send</button>
+        </div>
+      </div>
+    </div>
   `;
 }
 
-
 function renderUserActions() {
   const isLoggedIn = store.isLoggedIn();
+  const user = store.getUser();
+  const displayName = user?.name || user?.phone || user?.email || 'User';
+
+  const chatBtnHtml = `
+    <button class="header-chat-btn" onclick="openChat()" title="Live Chat with Prof. Vance">
+      <span class="online-dot"></span>
+      <span>💬 Chat with Prof. Vance</span>
+    </button>
+  `;
+
   if (isLoggedIn) {
-    const user = store.getUser();
-    const displayName = user?.name || user?.phone || user?.email || 'User';
     return `
+      ${chatBtnHtml}
       <div class="user-avatar-btn" onclick="toggleUserMenu()">
         <div class="user-avatar-circle" style="background:linear-gradient(135deg,#00f2fe,#7928ca);">${displayName[0].toUpperCase()}</div>
         <span style="font-size:14px;font-weight:600;">${displayName}</span>
@@ -185,40 +255,139 @@ function renderUserActions() {
     `;
   } else {
     return `
+      ${chatBtnHtml}
       <button class="btn-outline" onclick="navigateTo('login')">Login</button>
       <button class="btn-primary" onclick="navigateTo('register')">Register</button>
     `;
   }
 }
 
-function updateUserNav() {
-  const area = document.getElementById('user-actions-area');
-  if (area) area.innerHTML = renderUserActions();
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
 }
 
-window.toggleUserMenu = function () {
-  const dd = document.getElementById('user-dropdown');
-  if (dd) dd.classList.toggle('open');
+window.dismissVanceBubble = function (e) {
+  if (e) e.stopPropagation();
+  const bubble = document.getElementById('vance-speech-bubble');
+  if (bubble) bubble.style.display = 'none';
 };
 
-window.closeUserMenu = function () {
-  const dd = document.getElementById('user-dropdown');
-  if (dd) dd.classList.remove('open');
+window.openChat = function () {
+  const modal = document.getElementById('vance-chat-modal');
+  if (modal) modal.classList.add('active');
+  loadChatMessages();
+  setTimeout(() => {
+    const input = document.getElementById('vance-chat-input');
+    if (input) input.focus();
+  }, 100);
 };
 
-window.doLogout = function () {
-  if (confirm('Are you sure you want to logout?')) {
-    store.logout();
-    window.location.hash = '#/home';
+window.closeChat = function () {
+  const modal = document.getElementById('vance-chat-modal');
+  if (modal) modal.classList.remove('active');
+};
+
+async function loadChatMessages() {
+  const token = localStorage.getItem('rxdt_token');
+  if (!token) return;
+  try {
+    const res = await fetch('/api/chat/messages', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const data = await res.json();
+    renderChatMessages(data.messages || []);
+  } catch (e) { console.warn('Load chat messages error:', e); }
+}
+
+function renderChatMessages(messages) {
+  const container = document.getElementById('vance-chat-messages');
+  if (!container) return;
+  let html = `
+    <div class="chat-msg support" style="display:flex;gap:10px;align-items:flex-start;">
+      <img src="assets/images/warren_pennington.png" style="width:32px;height:32px;border-radius:50%;object-fit:cover;border:1px solid #00f2fe;" />
+      <div>
+        <div class="chat-bubble" style="background:#1e293b;color:#e2e8f0;padding:10px 14px;border-radius:0 14px 14px 14px;font-size:13px;max-width:85%;">
+          👋 Hello! I am <strong>Prof. Arthur Vance</strong>, CEO and Lead Quantitative Strategist at RXDT Exchange.<br/><br/>How can I assist you with your Copy-Trading account, deposits, or daily signals today?
+        </div>
+        <div class="chat-time" style="font-size:10px;color:#64748b;margin-top:4px;">Just now</div>
+      </div>
+    </div>
+  `;
+  messages.forEach(m => {
+    if (m.sender === 'admin') {
+      html += `
+        <div class="chat-msg support" style="display:flex;gap:10px;align-items:flex-start;margin-top:8px;">
+          <img src="assets/images/warren_pennington.png" style="width:32px;height:32px;border-radius:50%;object-fit:cover;border:1px solid #00f2fe;" />
+          <div>
+            <div class="chat-bubble" style="background:#1e293b;color:#e2e8f0;padding:10px 14px;border-radius:0 14px 14px 14px;font-size:13px;max-width:85%;">
+              ${escapeHtml(m.message)}
+            </div>
+            <div class="chat-time" style="font-size:10px;color:#64748b;margin-top:4px;">${new Date(m.created_at || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+          </div>
+        </div>
+      `;
+    } else {
+      html += `
+        <div class="chat-msg user" style="display:flex;justify-content:flex-end;margin-top:8px;">
+          <div style="text-align:right;max-width:85%;">
+            <div class="chat-bubble" style="background:linear-gradient(135deg,#00f2fe,#0284c7);color:#060b19;font-weight:600;padding:10px 14px;border-radius:14px 0 14px 14px;font-size:13px;display:inline-block;text-align:left;">
+              ${escapeHtml(m.message)}
+            </div>
+            <div class="chat-time" style="font-size:10px;color:#64748b;margin-top:4px;">Just now</div>
+          </div>
+        </div>
+      `;
+    }
+  });
+  container.innerHTML = html;
+  container.scrollTop = container.scrollHeight;
+}
+
+window.sendQuickChip = function (text) {
+  const input = document.getElementById('vance-chat-input');
+  if (input) {
+    input.value = text;
+    window.sendChatMsg();
   }
 };
 
-document.addEventListener('click', function (e) {
-  const dd = document.getElementById('user-dropdown');
-  if (dd && !e.target.closest('.user-avatar-btn')) {
-    dd.classList.remove('open');
-  }
-});
+window.sendChatMsg = async function () {
+  const input = document.getElementById('vance-chat-input');
+  if (!input || !input.value.trim()) return;
+  const msg = input.value.trim();
+  input.value = '';
+  const container = document.getElementById('vance-chat-messages');
+  if (!container) return;
+
+  const userEl = document.createElement('div');
+  userEl.className = 'chat-msg user';
+  userEl.style.cssText = 'display:flex;justify-content:flex-end;margin-top:8px;';
+  userEl.innerHTML = `
+    <div style="text-align:right;max-width:85%;">
+      <div class="chat-bubble" style="background:linear-gradient(135deg,#00f2fe,#0284c7);color:#060b19;font-weight:600;padding:10px 14px;border-radius:14px 0 14px 14px;font-size:13px;display:inline-block;text-align:left;">
+        ${escapeHtml(msg)}
+      </div>
+      <div class="chat-time" style="font-size:10px;color:#64748b;margin-top:4px;">Just now</div>
+    </div>
+  `;
+  container.appendChild(userEl);
+  container.scrollTop = container.scrollHeight;
+
+  const token = localStorage.getItem('rxdt_token');
+  try {
+    await fetch('/api/chat/send', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: msg })
+    });
+  } catch (e) { console.warn('Send chat message error:', e); }
+};
 
 function startMarketUpdates() {
   setInterval(() => {
