@@ -124,9 +124,6 @@ if (process.env.VERCEL !== '1' && !process.env.VERCEL_ENV) {
   ensureDbInit().then(() => {
     runPositionAndBalanceAudit().catch(() => { });
   });
-} else {
-  // On Vercel, run ensureDbInit in non-blocking background
-  ensureDbInit();
 }
 
 
