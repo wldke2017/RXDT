@@ -20,9 +20,9 @@ async function recoverStaleProcessingTrades(scopeUserId = null) {
      SET status = 'open', processing_at = NULL
      WHERE status = 'processing'
        AND (
-         (processing_at IS NOT NULL AND processing_at < NOW() - INTERVAL '2 minutes')
+         (processing_at IS NOT NULL AND processing_at < NOW() - INTERVAL '30 seconds')
          OR
-         (processing_at IS NULL AND created_at < NOW() - INTERVAL '2 minutes')
+         (processing_at IS NULL AND created_at < NOW() - INTERVAL '30 seconds')
        )
        ${whereUser}`,
     params
@@ -446,11 +446,9 @@ export async function getActiveSignal() {
 // ---- GET /api/signals/active ----
 router.get('/active', requireAuth, async (req, res) => {
   try {
-    // Auto-execute eligible signals for ALL qualified users.
-    // This ensures every user receives their entitled signal even if
-    // they are not online to manually click "Join Copy Trading".
-    // The auto-execute is triggered by the frontend poller (every 8s)
-    // and by any user hitting this endpoint during a signal window.
+    // Always settle any past-due signal trades first
+    await settleAllDueSignalTrades();
+
     if (req.query.auto !== 'false') {
       await autoExecuteEligibleSignals();
     }
@@ -577,7 +575,7 @@ export async function processDueSignalTrades(userId) {
          SET status = 'processing', processing_at = NOW()
          WHERE id = (
            SELECT id FROM signal_trades
-           WHERE user_id = $1 AND status = 'open' AND (release_at IS NULL OR release_at <= NOW())
+           WHERE user_id = $1 AND status = 'open' AND (release_at IS NULL OR release_at <= NOW() OR created_at <= NOW() - INTERVAL '30 seconds')
            ORDER BY created_at ASC
            LIMIT 1
            FOR UPDATE SKIP LOCKED
@@ -737,7 +735,7 @@ export async function settleAllDueSignalTrades() {
          SET status = 'processing', processing_at = NOW()
          WHERE id = (
            SELECT id FROM signal_trades
-           WHERE status = 'open' AND (release_at IS NULL OR release_at <= NOW())
+           WHERE status = 'open' AND (release_at IS NULL OR release_at <= NOW() OR created_at <= NOW() - INTERVAL '30 seconds')
            ORDER BY release_at ASC
            LIMIT 1
            FOR UPDATE SKIP LOCKED

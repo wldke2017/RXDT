@@ -34,7 +34,7 @@ export async function runPositionAndBalanceAudit() {
       const activeContractMargin = parseFloat(contractOrdersRes.rows[0]?.total || 0);
 
       const signalTradesRes = await query(
-        `SELECT COALESCE(SUM(trade_amount), 0) AS total FROM signal_trades WHERE user_id = $1 AND status = 'open'`,
+        `SELECT COALESCE(SUM(trade_amount), 0) AS total FROM signal_trades WHERE user_id = $1 AND status IN ('open', 'processing')`,
         [userId]
       );
       const activeSignalMargin = parseFloat(signalTradesRes.rows[0]?.total || 0);
