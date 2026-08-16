@@ -252,7 +252,12 @@ router.post('/send-otp-public', async (req, res) => {
       `SELECT id FROM users WHERE email_bound = $1 OR email = $1`, [email]
     );
     const user = result.rows[0];
-    if (!user) return res.status(404).json({ error: 'No account found with this email address' });
+    // Do NOT reveal whether an account exists (email enumeration).
+    // Return the same success message regardless so attackers can't probe
+    // which emails are registered on the platform.
+    if (!user) {
+      return res.json({ success: true, message: `If an account exists, a reset code has been sent to ${email}` });
+    }
 
     // Rate-limit: reject if an OTP was issued within the last 60 seconds
     const rateCheck = await query(`SELECT email_otp_expires FROM users WHERE id = $1`, [user.id]);
@@ -454,16 +459,10 @@ export async function sendTradingSignalReminderEmails() {
   };
 }
 
-// POST /api/email/send-signal-reminders
-router.post('/send-signal-reminders', async (req, res) => {
-  try {
-    const result = await sendTradingSignalReminderEmails();
-    res.json(result);
-  } catch (err) {
-    console.error('Signal reminder broadcast error:', err);
-    res.status(500).json({ error: err.message || 'Failed to send signal reminders' });
-  }
-});
+// NOTE: The /send-signal-reminders endpoint is intentionally NOT exposed here.
+// It is available via the protected admin route: POST /api/admin/send-signal-reminders
+// (see server/routes/admin.js). Exposing it publicly would let anyone trigger
+// mass emails to all users, exhausting the Resend quota and spamming users.
 
 /**
  * Sends a welcome email to a newly registered user.

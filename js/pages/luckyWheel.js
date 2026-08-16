@@ -132,23 +132,30 @@ export function init() {
         spinDeg = targetDeg % 360;
         isSpinning = false;
 
-        // Get result from backend/store
-        const won = await store.spendLuckyWheelChance();
+        try {
+          // Get result from backend/store
+          const won = await store.spendLuckyWheelChance();
 
-        // Update remaining spins display
-        const updatedUser = store.getUser();
-        const newCount = updatedUser && updatedUser.spinChances !== undefined ? updatedUser.spinChances : store.getLuckyWheel().remainingChances;
-        const banner = document.getElementById('remaining-spins-count');
-        if (banner) banner.textContent = newCount;
+          // Update remaining spins display
+          const updatedUser = store.getUser();
+          const newCount = updatedUser && updatedUser.spinChances !== undefined ? updatedUser.spinChances : store.getLuckyWheel().remainingChances;
+          const banner = document.getElementById('remaining-spins-count');
+          if (banner) banner.textContent = newCount;
 
-        // Update win log
-        const logEl = document.getElementById('win-log-list');
-        if (logEl) logEl.innerHTML = renderWinLog(store.getLuckyWheel().winLog);
+          // Update win log
+          const logEl = document.getElementById('win-log-list');
+          if (logEl) logEl.innerHTML = renderWinLog(store.getLuckyWheel().winLog);
 
-        // Show result modal
-        if (won) {
-          document.getElementById('win-message').textContent = `You won: ${won.name}!${won.value > 0 ? ` ($${won.value} added to your wallet)` : ''}`;
-          document.getElementById('win-modal').classList.add('active');
+          // Show result modal
+          if (won) {
+            document.getElementById('win-message').textContent = `You won: ${won.name}!${won.value > 0 ? ` ($${won.value} added to your wallet)` : ''}`;
+            document.getElementById('win-modal').classList.add('active');
+          }
+        } catch (err) {
+          // Server rejected the spin (e.g. no chances, network error, auth expired).
+          // Re-enable the button and surface the error so the user isn't stuck.
+          console.error('Lucky wheel spin failed:', err);
+          toast(err.message || 'Spin failed. Please try again.', 'error');
         }
 
         document.getElementById('spin-btn').disabled = false;
