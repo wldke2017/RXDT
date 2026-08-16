@@ -2012,10 +2012,24 @@ Today’s efforts aren’t just about participating in a platform — they are a
     },
     {
       id: 'img-notif-welcome',
-      name: '🎉 New User Welcome Notification Banner',
+      name: '🎉 Welcome to RXDT Exchange Banner',
       category: 'Notifications',
       path: 'assets/images/rxdt_welcome_notification.png',
-      caption: `🚀 *WELCOME TO RXDT EXCHANGE!* 🎉\n\nYour account is now activated. Explore Tier 1, Tier 2, and Tier 3 AI Quantitative signals and start building your financial future today!`
+      caption: `🚀 *WELCOME TO RXDT EXCHANGE!* 🎉\n\nYour trading journey begins here. Access AI quantitative strategy signals and automated copy-trading.`
+    },
+    {
+      id: 'img-notif-signal',
+      name: '📡 Quantitative Signal Alert Banner',
+      category: 'Notifications',
+      path: 'assets/images/rxdt_signal_alert_banner.png',
+      caption: `📡 *DAILY QUANTITATIVE TRADING SIGNALS ACTIVE* 📡\n\nOfficial AI copy-trading signals are now active. Log in to rxdt.site to participate!`
+    },
+    {
+      id: 'img-notif-announcement',
+      name: '📢 Official Platform Announcement Banner',
+      category: 'Notifications',
+      path: 'assets/images/rxdt_official_announcement.png',
+      caption: `📢 *OFFICIAL RXDT ANNOUNCEMENT* 📢\n\nStay updated with the latest platform guidelines, compliance notices, and official security announcements.`
     }
   ];
 
