@@ -262,6 +262,11 @@ function renderUserActions() {
   }
 }
 
+function updateUserNav() {
+  const area = document.getElementById('user-actions-area');
+  if (area) area.innerHTML = renderUserActions();
+}
+
 function escapeHtml(str) {
   if (!str) return '';
   return String(str)
