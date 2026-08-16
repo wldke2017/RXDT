@@ -89,63 +89,10 @@ export async function initDatabase() {
     );
   `);
 
-  // Create AI Models Table
-  await query(`
-    CREATE TABLE IF NOT EXISTS ai_models (
-      id VARCHAR(50) PRIMARY KEY,
-      name VARCHAR(100) NOT NULL,
-      avatar VARCHAR(50),
-      one_day_profit NUMERIC(15, 2) DEFAULT 0,
-      one_day_return_rate NUMERIC(5, 2) DEFAULT 0,
-      seven_day_profit NUMERIC(15, 2) DEFAULT 0,
-      seven_day_return_rate NUMERIC(5, 2) DEFAULT 0,
-      fifteen_day_profit NUMERIC(15, 2) DEFAULT 0,
-      fifteen_day_return_rate NUMERIC(5, 2) DEFAULT 0,
-      thirty_day_profit NUMERIC(15, 2) DEFAULT 0,
-      thirty_day_return_rate NUMERIC(5, 2) DEFAULT 0,
-      total_followers INT DEFAULT 0,
-      total_funds NUMERIC(15, 2) DEFAULT 0,
-      commission NUMERIC(5, 2) DEFAULT 5,
-      min_order NUMERIC(15, 2) DEFAULT 500,
-      max_order NUMERIC(15, 2) DEFAULT 500000,
-      win_rate NUMERIC(5, 2) DEFAULT 94.0,
-      intro TEXT,
-      created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-    );
-  `);
-
-  // Create AI Products Table
-  await query(`
-    CREATE TABLE IF NOT EXISTS ai_products (
-      id VARCHAR(50) PRIMARY KEY,
-      model_id VARCHAR(50) REFERENCES ai_models(id) ON DELETE CASCADE,
-      name VARCHAR(100) NOT NULL,
-      period_days INT NOT NULL,
-      min_amount NUMERIC(15, 2) NOT NULL,
-      max_amount NUMERIC(15, 2) NOT NULL,
-      daily_rate NUMERIC(5, 2) NOT NULL,
-      status VARCHAR(20) DEFAULT 'active'
-    );
-  `);
-
-  // Create Follow Orders Table
-  await query(`
-    CREATE TABLE IF NOT EXISTS follow_orders (
-      id VARCHAR(50) PRIMARY KEY,
-      order_number VARCHAR(100) NOT NULL,
-      user_id VARCHAR(50) REFERENCES users(id) ON DELETE CASCADE,
-      model_id VARCHAR(50) REFERENCES ai_models(id),
-      product_name VARCHAR(100) NOT NULL,
-      amount NUMERIC(15, 2) NOT NULL,
-      daily_rate NUMERIC(5, 2) NOT NULL,
-      period_days INT NOT NULL,
-      status VARCHAR(20) DEFAULT 'pending',
-      profit_loss NUMERIC(15, 2) DEFAULT 0,
-      total_profit_loss NUMERIC(15, 2) DEFAULT 0,
-      auto_renew BOOLEAN DEFAULT FALSE,
-      apply_time TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-    );
-  `);
+  // Drop legacy AI model tables if they exist
+  await query(`DROP TABLE IF EXISTS follow_orders CASCADE;`).catch(() => {});
+  await query(`DROP TABLE IF EXISTS ai_products CASCADE;`).catch(() => {});
+  await query(`DROP TABLE IF EXISTS ai_models CASCADE;`).catch(() => {});
 
   // Create Deposits Table
   await query(`
@@ -409,42 +356,6 @@ async function reconcileBalances() {
 }
 
 async function seedInitialData() {
-  // Check if AI Models exist
-  const modelsCountRes = await query(`SELECT COUNT(*) FROM ai_models;`);
-  if (parseInt(modelsCountRes.rows[0].count) === 0) {
-    console.log('🌱 Seeding AI Quantitative Models into Neon DB...');
-    await query(`
-      INSERT INTO ai_models (
-        id, name, avatar, one_day_profit, one_day_return_rate, seven_day_profit, seven_day_return_rate,
-        fifteen_day_profit, fifteen_day_return_rate, thirty_day_profit, thirty_day_return_rate,
-        total_followers, total_funds, commission, min_order, max_order, win_rate, intro
-      ) VALUES 
-      (
-        'AI001', 'RXDT Quant VI Model Alpha', '🤖', 2450.50, 2.10, 16800.00, 14.50,
-        38200.00, 32.80, 89500.00, 72.40, 14210, 28500000.00, 5, 500, 500000, 94.8,
-        'Proprietary Quantitative AI Model VI developed by Arthur Vance (Ex-Vanguard FinTech Head). High-precision algorithmic execution on BTC, ETH, and NASDAQ-100.'
-      ),
-      (
-        'AI002', 'RXDT Neural Arbitrage v4', '⚡', 1890.00, 1.85, 12630.00, 12.80,
-        29100.00, 28.50, 68500.00, 64.00, 9820, 18200000.00, 5, 500, 200000, 92.3,
-        'Sub-millisecond cross-exchange liquidity arbitrage AI algorithm operating on KORE / Voyage infrastructure.'
-      ),
-      (
-        'AI003', 'RXDT High-Freq Trend AI', '📈', 3100.00, 2.45, 21700.00, 17.20,
-        48500.00, 38.60, 112000.00, 88.00, 21102, 45000000.00, 5, 1000, 1000000, 96.1,
-        'Institutional-grade high frequency AI momentum engine targeting top 20 crypto assets.'
-      );
-    `);
-
-    await query(`
-      INSERT INTO ai_products (id, model_id, name, period_days, min_amount, max_amount, daily_rate, status) VALUES
-      ('P001', 'AI001', '3-Signal Daily Quantitative Pool', 34, 500, 100000, 1.95, 'active'),
-      ('P002', 'AI001', '4-Signal VIP Team Leader Pool', 26, 1000, 500000, 2.60, 'active'),
-      ('P003', 'AI002', 'Cross-Exchange Crypto Arbitrage', 34, 500, 200000, 1.85, 'active'),
-      ('P004', 'AI003', 'Institutional HFT Pool', 26, 1000, 1000000, 2.70, 'active');
-    `);
-  }
-
   // Check if default demo user exists
   const userCountRes = await query(`SELECT COUNT(*) FROM users;`);
   if (parseInt(userCountRes.rows[0].count) === 0) {
@@ -463,12 +374,6 @@ async function seedInitialData() {
     await query(`
       INSERT INTO bind_addresses (id, user_id, method, coin, network, address, label) VALUES
       ('BA001', 'U880192', 'crypto', 'USDT', 'TRC-20', 'TQn5gt9JfVE...RkzV', 'Primary USDT Wallet');
-    `);
-
-    // Insert sample follow order
-    await query(`
-      INSERT INTO follow_orders (id, order_number, user_id, model_id, product_name, amount, daily_rate, period_days, status, profit_loss, total_profit_loss, auto_renew) VALUES
-      ('FO1001', 'ORD1722600001', 'U880192', 'AI001', '3-Signal Daily Quantitative Pool', 4219.50, 1.95, 34, 'buying', 82.28, 412.50, true);
     `);
   }
 }

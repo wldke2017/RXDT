@@ -265,7 +265,6 @@ export async function runDatabaseHardReset() {
     await query(`TRUNCATE TABLE withdrawals CASCADE;`).catch(() => query(`DELETE FROM withdrawals;`));
     await query(`TRUNCATE TABLE referral_commissions CASCADE;`).catch(() => query(`DELETE FROM referral_commissions;`));
     await query(`TRUNCATE TABLE contract_orders CASCADE;`).catch(() => query(`DELETE FROM contract_orders;`));
-    await query(`TRUNCATE TABLE follow_orders CASCADE;`).catch(() => query(`DELETE FROM follow_orders;`));
     await query(`TRUNCATE TABLE salary_payouts CASCADE;`).catch(() => query(`DELETE FROM salary_payouts;`));
     await query(`TRUNCATE TABLE vip_promotion_claims CASCADE;`).catch(() => query(`DELETE FROM vip_promotion_claims;`));
     await query(`TRUNCATE TABLE lucky_wheel_logs CASCADE;`).catch(() => query(`DELETE FROM lucky_wheel_logs;`));

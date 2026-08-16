@@ -174,7 +174,7 @@ function renderUserActions() {
       <div class="user-dropdown" id="user-dropdown" style="background:#131926;border:1px solid rgba(255,255,255,0.15);">
         <div class="udrop-item" onclick="navigateTo('profile');closeUserMenu()">My Profile</div>
         <div class="udrop-item" onclick="navigateTo('assets');closeUserMenu()">My Assets</div>
-        <div class="udrop-item" onclick="navigateTo('follow/note');closeUserMenu()">My AI Orders</div>
+        <div class="udrop-item" onclick="navigateTo('contract');closeUserMenu()">Signal Trade History</div>
         <div class="udrop-item" onclick="navigateTo('invite-friends');closeUserMenu()">Invite Friends</div>
         <div class="udrop-item" onclick="navigateTo('earn-guide');closeUserMenu()">How to Earn</div>
         <div class="udrop-item" onclick="navigateTo('security-settings');closeUserMenu()">Security Settings</div>

@@ -31,49 +31,6 @@ const MOCK_DATA = {
     language: 'en'
   },
 
-  aiModels: [
-    {
-      id: 'AI001', name: 'RXDT Quant VI Model Alpha', avatar: '🤖',
-      oneDayProfit: 2450.5, oneDayReturnRate: 2.10,
-      sevenDayProfit: 16800.0, sevenDayReturnRate: 14.50,
-      fifteenDayProfit: 38200.0, fifteenDayReturnRate: 32.80,
-      thirtyDayProfit: 89500.0, thirtyDayReturnRate: 72.40,
-      totalFollowers: 14210, totalFunds: 28500000,
-      commission: 5, minOrder: 500, maxOrder: 500000,
-      winRate: 94.8, intro: 'Proprietary Quantitative AI Model VI developed by Arthur Vance (Ex-Vanguard FinTech Head). High-precision algorithmic execution on BTC, ETH, and NASDAQ-100.',
-      products: [
-        { id: 'P001', name: '3-Signal Daily Quantitative Pool', period: 34, minAmount: 500, maxAmount: 100000, dailyRate: 1.95, status: 'active' },
-        { id: 'P002', name: '4-Signal VIP Team Leader Pool', period: 26, minAmount: 1000, maxAmount: 500000, dailyRate: 2.60, status: 'active' }
-      ]
-    },
-    {
-      id: 'AI002', name: 'RXDT Neural Arbitrage v4', avatar: '⚡',
-      oneDayProfit: 1890.0, oneDayReturnRate: 1.85,
-      sevenDayProfit: 12630.0, sevenDayReturnRate: 12.80,
-      fifteenDayProfit: 29100.0, fifteenDayReturnRate: 28.50,
-      thirtyDayProfit: 68500.0, thirtyDayReturnRate: 64.00,
-      totalFollowers: 9820, totalFunds: 18200000,
-      commission: 5, minOrder: 500, maxOrder: 200000,
-      winRate: 92.3, intro: 'Sub-millisecond cross-exchange liquidity arbitrage AI algorithm operating on KORE / Voyage infrastructure.',
-      products: [
-        { id: 'P003', name: 'Cross-Exchange Crypto Arbitrage', period: 34, minAmount: 500, maxAmount: 200000, dailyRate: 1.85, status: 'active' }
-      ]
-    },
-    {
-      id: 'AI003', name: 'RXDT High-Freq Trend AI', avatar: '📈',
-      oneDayProfit: 3100.0, oneDayReturnRate: 2.45,
-      sevenDayProfit: 21700.0, sevenDayReturnRate: 17.20,
-      fifteenDayProfit: 48500.0, fifteenDayReturnRate: 38.60,
-      thirtyDayProfit: 112000.0, thirtyDayReturnRate: 88.00,
-      totalFollowers: 21102, totalFunds: 45000000,
-      commission: 5, minOrder: 1000, maxOrder: 1000000,
-      winRate: 96.1, intro: 'Institutional-grade high frequency AI momentum engine targeting top 20 crypto assets.',
-      products: [
-        { id: 'P004', name: 'Institutional HFT Pool', period: 26, minAmount: 1000, maxAmount: 1000000, dailyRate: 2.70, status: 'active' }
-      ]
-    }
-  ],
-
   // First Deposit Bonus: 4% flat to depositor + 4% to referrer (matches backend rule)
   depositPromotions: [
     { range: 'Any amount', newUserBonus: '4%', referrerBonus: '4%', rewardPct: 'Percentage' }
@@ -104,27 +61,6 @@ const MOCK_DATA = {
     { day: 34, c100: 200.00, c200: 400.00, c500: 1160.20, c1000: 2320.40, c2000: 4640.80, c5000: 11602.00 }
   ],
 
-  followOrders: [
-    {
-      id: 'FO001', analystId: 'AI001', analystName: 'RXDT Quant VI Model Alpha',
-      productName: '3-Signal Daily Quantitative Pool', productId: 'P001',
-      orderNumber: 'ORD20260710001', amount: 1000,
-      status: 'buying',
-      applyTime: '2026-07-10 09:32:00',
-      buyPrice: 98420.00, buyQuantity: 0.01016, buyTime: '2026-07-10 10:00:00',
-      currentValue: 1184.50,
-      profitLoss: 184.50, totalProfitLoss: 184.50,
-      analystCommission: 9.22, platformCommission: 4.61,
-      autoRenew: true, period: 34,
-      positionRecords: [
-        { date: '2026-07-10', profit: 21.00 },
-        { date: '2026-07-11', profit: 20.80 },
-        { date: '2026-07-12', profit: 21.50 },
-        { date: '2026-07-13', profit: 19.80 },
-        { date: '2026-07-14', profit: 22.10 }
-      ]
-    }
-  ],
 
   marketData: [
     { symbol: 'BTC/USDT', name: 'Bitcoin AI Pool', price: 98420.00, change: 1250.00, changeRate: 1.29, high: 99800.00, low: 96500.00, volume: '$42.1B', marketCap: '$1.94T', hot: true },

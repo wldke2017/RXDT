@@ -14,64 +14,65 @@ function fmt(n, d = 2) {
   return Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
 }
 
-function statusBadge(status) {
-  const map = {
-    pending: ['badge-warning', 'Pending AI Order'],
-    buying: ['badge-success', 'Active AI Trading'],
-    ended: ['badge-info', 'Cycle Complete'],
-    withdrawn: ['badge-danger', 'Withdrawn']
-  };
-  const [cls, label] = map[status] || ['badge-info', status];
-  return `<span class="badge ${cls}">${label}</span>`;
-}
-
 export function render(page) {
-  if (page === 'follow/note') return renderMyOrders();
   if (page === 'follow/team') return renderTeam();
-  return renderAnalystList();
+  return renderSignalHub();
 }
 
-// ---- AI QUANTITATIVE MODELS LIST ----
-function renderAnalystList() {
-  const aiModels = store.getAnalysts();
+// ---- SIGNAL COPY TRADING HUB ----
+function renderSignalHub() {
   const doublingData = store.get('assetDoubling3Signals') || [];
 
   return `
   <div>
     <div class="page-header">
-      <h1 class="page-title">RXDT AI Quantitative Trading</h1>
+      <h1 class="page-title">RXDT Signal Copy Trading</h1>
       <div class="follow-sub-nav">
-        <button class="sub-nav-btn active" onclick="window.location.hash='#/follow'">AI Models</button>
-        <button class="sub-nav-btn" onclick="window.location.hash='#/follow/note'">My AI Orders</button>
+        <button class="sub-nav-btn active" onclick="window.location.hash='#/follow'">Signal Strategy & Doubling</button>
+        <button class="sub-nav-btn" onclick="window.location.hash='#/contract'">Signal Trade History</button>
         <button class="sub-nav-btn" onclick="window.location.hash='#/follow/team'">VIP Team Dividends</button>
       </div>
     </div>
 
+    <!-- Signal Schedule Card -->
+    <div class="card" style="border:1px solid rgba(0,242,254,0.3);background:linear-gradient(135deg, rgba(13,18,29,0.9), rgba(9,13,22,0.9));margin-bottom:20px;">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap;">
+        <img src="assets/images/rxdt_logo.png" alt="RXDT" style="width:40px;height:40px;filter:drop-shadow(0 0 10px #00f2fe);"/>
+        <div>
+          <h3 style="margin:0;font-size:18px;color:#00f2fe;">📡 Daily AI Signal Windows</h3>
+          <div style="font-size:12px;color:var(--text-sub);">3 Automated Sessions Daily: <strong>5:00 PM, 6:00 PM, and 7:00 PM EAT</strong></div>
+        </div>
+      </div>
+      <p style="font-size:14px;color:var(--text-sub);line-height:1.6;margin-bottom:16px;">
+        Join live AI signal copy trading during active windows to earn 1.4% – 3.1% daily returns. Signals execute automatically when Auto-Execute is enabled, or you can confirm execution manually.
+      </p>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;">
+        <button class="btn-primary" style="padding:10px 24px;font-size:14px;" onclick="navigateTo('contract')">
+          ⚡ Join Signal Copy Trading Now
+        </button>
+      </div>
+    </div>
+
     <!-- Signal Entry -->
-    <div class="card" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;border:1px solid rgba(0,242,254,0.3);">
+    <div class="card" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;border:1px solid rgba(0,242,254,0.2);margin-bottom:24px;">
       <div style="flex:1;min-width:200px;">
-        <div style="font-weight:700;font-size:16px;color:var(--el-color-primary);margin-bottom:4px;">🔐 RXDT AI Signal Tracking</div>
-        <div style="font-size:13px;color:var(--text-sub);">Enter exclusive AI quantitative signal codes to execute institutional algorithmic trades.</div>
+        <div style="font-weight:700;font-size:16px;color:var(--el-color-primary);margin-bottom:4px;">🔐 Direct AI Signal Code Tracking</div>
+        <div style="font-size:13px;color:var(--text-sub);">Have an exclusive signal verification code? Enter it below to join the algorithmic trade pool.</div>
       </div>
       <div style="display:flex;gap:8px;flex:1;min-width:240px;">
         <input type="text" id="signal-code" class="form-control" placeholder="Enter AI signal code..."/>
-        <button class="btn-primary" onclick="trackSignal()">Track Signal</button>
+        <button class="btn-primary" onclick="trackSignal()">Verify Signal</button>
       </div>
     </div>
 
-    <!-- AI Models Grid -->
-    <div class="analysts-grid">
-      ${aiModels.map(a => renderAnalystCard(a)).join('')}
-    </div>
-
     <!-- Asset Doubling Schedule Table & AI Graphic -->
-    <div class="card" style="margin-top:24px;background:linear-gradient(180deg, #131926 0%, #0d121d 100%);border:1px solid rgba(0,242,254,0.2);">
+    <div class="card" style="background:linear-gradient(180deg, #131926 0%, #0d121d 100%);border:1px solid rgba(0,242,254,0.2);">
       <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px;">
         <div style="display:flex;align-items:center;gap:10px;">
           <img src="assets/images/rxdt_logo.png" alt="RXDT Logo" style="width:36px;height:36px;filter:drop-shadow(0 0 8px #00f2fe);"/>
           <div>
             <div class="card-title" style="margin:0;font-size:18px;">📈 Asset Doubling Growth Projection Table</div>
-            <div style="font-size:12px;color:#00f2fe;letter-spacing:1px;font-weight:600;">3 SIGNALS DAILY · AI QUANTITATIVE compounding</div>
+            <div style="font-size:12px;color:#00f2fe;letter-spacing:1px;font-weight:600;">3 SIGNALS DAILY · AI QUANTITATIVE COMPOUNDING</div>
           </div>
         </div>
         <div style="background:rgba(0,242,254,0.1);border:1px solid #00f2fe;padding:6px 12px;border-radius:20px;font-size:12px;color:#00f2fe;font-weight:600;">
@@ -122,106 +123,10 @@ function renderAnalystList() {
         </table>
       </div>
     </div>
-
-    <!-- Follow Order Modal -->
-    <div class="modal-overlay" id="follow-modal">
-      <div class="modal-content" id="follow-modal-content"></div>
-    </div>
   </div>`;
 }
 
-function renderAnalystCard(a) {
-  return `
-  <div class="analyst-card" style="border:1px solid var(--border-color);background:var(--bg-card);">
-    <div class="analyst-card-header">
-      <div class="analyst-avatar-lg" style="background:rgba(0,242,254,0.1);">${a.avatar}</div>
-      <div class="analyst-card-info">
-        <div class="analyst-card-name" style="color:var(--el-color-primary);">${a.name}</div>
-        <div class="analyst-card-meta">
-          Win Rate: <strong style="color:var(--color-up);">${a.winRate}%</strong> &nbsp;|&nbsp;
-          ${a.totalFollowers.toLocaleString()} Active Investors
-        </div>
-        <div class="analyst-card-meta" style="margin-top:4px;color:var(--text-sub);">
-          ${a.intro}
-        </div>
-      </div>
-    </div>
-
-    <div class="returns-grid">
-      <div class="return-cell">
-        <span class="rc-label">1D Profit</span>
-        <span class="rc-val price-up">+${a.oneDayReturnRate.toFixed(2)}%</span>
-      </div>
-      <div class="return-cell">
-        <span class="rc-label">7D Return</span>
-        <span class="rc-val price-up">+${a.sevenDayReturnRate.toFixed(2)}%</span>
-      </div>
-      <div class="return-cell">
-        <span class="rc-label">15D Return</span>
-        <span class="rc-val price-up">+${a.fifteenDayReturnRate.toFixed(2)}%</span>
-      </div>
-      <div class="return-cell">
-        <span class="rc-label">30D Return</span>
-        <span class="rc-val price-up">+${a.thirtyDayReturnRate.toFixed(2)}%</span>
-      </div>
-    </div>
-
-    <div class="analyst-products">
-      ${a.products.map(p => `
-        <div class="product-item" style="background:rgba(255,255,255,0.03);border:1px solid var(--border-color);">
-          <div style="display:flex;justify-content:space-between;align-items:center;">
-            <div>
-              <span class="product-name" style="font-size:16px;">${p.name}</span>
-              <span class="badge badge-info" style="margin-left:6px;">${p.period} Days Cycle</span>
-            </div>
-            <button class="btn-primary" style="padding:7px 20px;font-size:13px;" onclick="openFollowModal('${a.id}','${p.id}')">
-              Allocate AI Capital
-            </button>
-          </div>
-          <div style="font-size:13px;color:var(--text-sub);margin-top:6px;">
-            Min: $${fmt(p.minAmount)} · Max: $${fmt(p.maxAmount)} · Avg Daily AI Rate: <strong>${p.dailyRate}%</strong>
-          </div>
-        </div>
-      `).join('')}
-    </div>
-  </div>`;
-}
-
-// ---- MY ORDERS ----
-function renderMyOrders() {
-  const orders = store.getFollowOrders();
-  return `
-  <div>
-    <div class="page-header">
-      <h1 class="page-title">My AI Trading Orders</h1>
-      <div class="follow-sub-nav">
-        <button class="sub-nav-btn" onclick="window.location.hash='#/follow'">AI Models</button>
-        <button class="sub-nav-btn active" onclick="window.location.hash='#/follow/note'">My AI Orders</button>
-        <button class="sub-nav-btn" onclick="window.location.hash='#/follow/team'">VIP Team Dividends</button>
-      </div>
-    </div>
-
-    ${orders.map(o => `
-      <div class="order-card" style="background:var(--bg-card);border:1px solid var(--border-color);">
-        <div class="order-card-header">
-          <div>
-            <div class="order-product-name" style="color:var(--el-color-primary);">${o.productName}</div>
-            <div style="font-size:12px;color:var(--text-muted);">AI Model: ${o.analystName} · Order#: ${o.orderNumber}</div>
-          </div>
-          <div>${statusBadge(o.status)}</div>
-        </div>
-        <div class="order-stats">
-          <div class="os-item"><span class="os-label">Invested Balance</span><span class="os-val">$${fmt(o.amount)}</span></div>
-          <div class="os-item"><span class="os-label">Total AI P&L</span><span class="os-val price-up">+$${fmt(o.totalProfitLoss)}</span></div>
-          <div class="os-item"><span class="os-label">Cycle Period</span><span class="os-val">${o.period} Days</span></div>
-          <div class="os-item"><span class="os-label">Auto-Renew</span><span class="os-val">${o.autoRenew ? 'Enabled' : 'Disabled'}</span></div>
-        </div>
-      </div>
-    `).join('')}
-  </div>`;
-}
-
-// ---- VIP TEAM DIVIDENDS (PDF Page 10) ----
+// ---- VIP TEAM DIVIDENDS ----
 function renderTeam() {
   const vipTiers = store.get('teamVipTiers') || [];
   const team = store.getTeam();
@@ -231,8 +136,8 @@ function renderTeam() {
     <div class="page-header">
       <h1 class="page-title">VIP Team Rewards & Dividends</h1>
       <div class="follow-sub-nav">
-        <button class="sub-nav-btn" onclick="window.location.hash='#/follow'">AI Models</button>
-        <button class="sub-nav-btn" onclick="window.location.hash='#/follow/note'">My AI Orders</button>
+        <button class="sub-nav-btn" onclick="window.location.hash='#/follow'">Signal Strategy & Doubling</button>
+        <button class="sub-nav-btn" onclick="window.location.hash='#/contract'">Signal Trade History</button>
         <button class="sub-nav-btn active" onclick="window.location.hash='#/follow/team'">VIP Team Dividends</button>
       </div>
     </div>
@@ -269,62 +174,5 @@ export function init(page) {
     const code = document.getElementById('signal-code')?.value.trim();
     if (!code) { toast('Please enter an AI signal code', 'error'); return; }
     toast(`AI Signal "${code}" verified! Joining high-frequency execution pool.`, 'success');
-  };
-
-  window.openFollowModal = function(analystId, productId) {
-    const analyst = store.getAnalystById(analystId);
-    const product = analyst?.products.find(p => p.id === productId);
-    if (!analyst || !product) return;
-    const user = store.getUser();
-    const available = user ? user.availableBalance : 0;
-
-    const content = document.getElementById('follow-modal-content');
-    if (!content) return;
-    content.innerHTML = `
-      <div class="modal-header">
-        <div class="modal-title">Allocate AI Capital</div>
-        <button class="modal-close" onclick="closeModal('follow-modal')">✕</button>
-      </div>
-      <div style="margin-bottom:16px;">
-        <div style="font-weight:700;font-size:18px;color:var(--el-color-primary);">${product.name}</div>
-        <div style="font-size:13px;color:var(--text-sub);">${analyst.name} · ${product.period}-Day Cycle · Daily Rate: ${product.dailyRate}%</div>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Capital Allocation Amount (USDT)</label>
-        <input type="number" id="follow-amount" class="form-control" placeholder="Min: $${fmt(product.minAmount)}" value="${product.minAmount}"/>
-        <div style="font-size:12px;color:var(--text-muted);margin-top:4px;">Available Balance: $${fmt(available)}</div>
-      </div>
-      <div class="form-group" style="display:flex;align-items:center;gap:8px;">
-        <input type="checkbox" id="follow-auto-renew" checked/>
-        <label for="follow-auto-renew">Auto-Renew AI capital allocation upon cycle completion</label>
-      </div>
-      <button class="btn-dark" style="width:100%;height:48px;font-size:16px;" onclick="submitFollowOrder('${analystId}','${productId}')">
-        Confirm AI Allocation
-      </button>`;
-
-    document.getElementById('follow-modal').classList.add('active');
-  };
-
-  window.submitFollowOrder = function(analystId, productId) {
-    const amount = parseFloat(document.getElementById('follow-amount')?.value || 0);
-    const analyst = store.getAnalystById(analystId);
-    const product = analyst?.products.find(p => p.id === productId);
-    if (!amount || amount < product.minAmount) { toast(`Minimum allocation is $${fmt(product.minAmount)}`, 'error'); return; }
-
-    store.addFollowOrder({
-      analystId, analystName: analyst.name,
-      productId, productName: product.name,
-      amount, autoRenew: true, period: product.period,
-      status: 'buying', totalProfitLoss: amount * (product.dailyRate / 100)
-    });
-
-    closeModal('follow-modal');
-    toast('AI Capital allocated successfully!', 'success');
-    setTimeout(() => { window.location.hash = '#/follow/note'; }, 600);
-  };
-
-  window.closeModal = function(id) {
-    const el = document.getElementById(id);
-    if (el) el.classList.remove('active');
   };
 }

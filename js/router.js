@@ -17,7 +17,7 @@ const routes = {
   'home': homePage,
   'market': marketPage,
   'follow': followPage,
-  'follow/note': followPage,
+  'follow/note': contractPage,
   'follow/team': followPage,
   'assets': assetsPage,
   'recharge': assetsPage,

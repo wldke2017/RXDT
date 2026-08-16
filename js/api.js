@@ -55,12 +55,6 @@ export const api = {
   bindPhone: (phone, otp) => request('/api/auth/bind-phone', { method: 'POST', body: { phone, otp } }),
   getPhoneStatus: () => request('/api/auth/phone-status'),
 
-  // Trading / AI Models
-  getAiModels: () => request('/api/ai-models'),
-  getOrders: () => request('/api/orders'),
-  createOrder: (orderData) => request('/api/orders/create', { method: 'POST', body: orderData }),
-  toggleAutoRenew: (orderId) => request('/api/orders/toggle-autorenew', { method: 'POST', body: { orderId } }),
-
   // Wallet
   getDeposits: () => request('/api/wallet/deposits'),
   createDeposit: (depositData) => request('/api/wallet/deposits', { method: 'POST', body: depositData }),

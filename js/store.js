@@ -12,11 +12,9 @@ const state = {
   isLoggedIn: hasToken,
   currentPage: 'home',
   marketData: [...(MOCK_DATA.marketData || [])],
-  analysts: [...(MOCK_DATA.aiModels || [])],
   depositPromotions: [...(MOCK_DATA.depositPromotions || [])],
   teamVipTiers: [...(MOCK_DATA.teamVipTiers || [])],
   assetDoubling3Signals: [...(MOCK_DATA.assetDoubling3Signals || [])],
-  followOrders: [...(MOCK_DATA.followOrders || [])],
   deposits: [...(MOCK_DATA.deposits || [])],
   withdrawals: [...(MOCK_DATA.withdrawals || [])],
   accountChanges: [...(MOCK_DATA.accountChanges || [])],
@@ -113,23 +111,13 @@ const store = {
   async syncAllUserData() {
     if (!state.isLoggedIn) return;
     try {
-      const [aiRes, ordersRes, depRes, witRes, accRes, addrRes] = await Promise.allSettled([
-        api.getAiModels(),
-        api.getOrders(),
+      const [depRes, witRes, accRes, addrRes] = await Promise.allSettled([
         api.getDeposits(),
         api.getWithdrawals(),
         api.getAccountChanges(),
         api.getBindAddresses()
       ]);
 
-      if (aiRes.status === 'fulfilled' && aiRes.value?.aiModels) {
-        state.analysts = aiRes.value.aiModels;
-        emit('analysts', state.analysts);
-      }
-      if (ordersRes.status === 'fulfilled' && ordersRes.value?.orders) {
-        state.followOrders = ordersRes.value.orders;
-        emit('orders', state.followOrders);
-      }
       if (depRes.status === 'fulfilled' && depRes.value?.deposits) {
         state.deposits = depRes.value.deposits;
         emit('deposits', state.deposits);
@@ -170,22 +158,6 @@ const store = {
 
   isLoggedIn() {
     return state.isLoggedIn;
-  },
-
-  getAnalysts() {
-    return state.analysts;
-  },
-
-  getAnalystById(id) {
-    return state.analysts.find(a => a.id === id);
-  },
-
-  getFollowOrders() {
-    return state.followOrders;
-  },
-
-  getActiveOrders() {
-    return state.followOrders.filter(o => o.status === 'buying' || o.status === 'pending');
   },
 
   getMarketData() {
@@ -229,35 +201,6 @@ const store = {
   },
 
   // ---- Actions ----
-  async addFollowOrder(orderData) {
-    // No local fallback — server validation errors must propagate to the caller.
-    const res = await api.createOrder(orderData);
-    state.followOrders.unshift(res.order);
-    if (state.user && res.updatedBalance) {
-      state.user.availableBalance = res.updatedBalance.availableBalance;
-      state.user.frozenBalance = res.updatedBalance.frozenBalance;
-    }
-    emit('orders', state.followOrders);
-    emit('user', state.user);
-    return res.order;
-  },
-
-  async toggleAutoRenew(orderId) {
-    try {
-      const res = await api.toggleAutoRenew(orderId);
-      const order = state.followOrders.find(o => o.id === orderId);
-      if (order) order.autoRenew = res.autoRenew;
-      emit('orders', state.followOrders);
-      return order;
-    } catch (err) {
-      const order = state.followOrders.find(o => o.id === orderId);
-      if (order) {
-        order.autoRenew = !order.autoRenew;
-        emit('orders', state.followOrders);
-      }
-      return order;
-    }
-  },
 
   async addDeposit(deposit) {
     // No local fallback — server validation errors must propagate to the caller.
@@ -322,28 +265,12 @@ const store = {
       emit('luckyWheel', state.luckyWheel);
       return won;
     } catch (err) {
-      const prizes = state.luckyWheel.prizes;
-      let rand = Math.random();
-      let cumulative = 0;
-      let won = prizes[prizes.length - 1];
-      for (const prize of prizes) {
-        cumulative += prize.probability;
-        if (rand <= cumulative) { won = prize; break; }
-      }
-      state.luckyWheel.winLog.unshift({
-        prize: won.name,
-        user: state.user?.name || 'You',
-        time: new Date().toISOString().replace('T', ' ').slice(0, 19)
-      });
-      if (won.value > 0 && state.user) {
-        state.user.availableBalance += won.value;
-      }
-      if (state.user) {
-        localStorage.setItem('rxdt_user', JSON.stringify(state.user));
-        emit('user', state.user);
-      }
-      emit('luckyWheel', state.luckyWheel);
-      return won;
+      // IMPORTANT: Do NOT fall back to client-side prize calculation.
+      // The server is the single source of truth for winnings. Crediting
+      // locally on failure would let a user block the API and still get
+      // credited winnings, or worse, exploit the client to grant themselves
+      // arbitrary balances. Re-throw so the caller can show the error.
+      throw err;
     }
   },
 

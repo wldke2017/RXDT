@@ -31,8 +31,6 @@ export function render(page) {
 // ---- ASSETS OVERVIEW ----
 function renderAssets() {
   const user = store.getUser();
-  const orders = store.getActiveOrders();
-  const earnings = orders.reduce((s, o) => s + o.totalProfitLoss, 0);
 
   return `
   <div>
@@ -95,28 +93,6 @@ function renderAssets() {
         <div class="amenu-arrow">›</div>
       </div>
     </div>
-
-    <!-- Active Follow Orders Summary -->
-    ${orders.length ? `
-    <div class="card">
-      <div class="card-title">Active Follow Orders</div>
-      ${orders.map(o => `
-        <div class="order-mini-card">
-          <div>
-            <div style="font-weight:600;">${o.productName}</div>
-            <div style="font-size:12px;color:var(--text-muted);">${o.analystName}</div>
-          </div>
-          <div>
-            <div style="font-weight:600;">$${fmt(o.amount)}</div>
-            <div class="${o.totalProfitLoss >= 0 ? 'price-up' : 'price-down'}" style="font-size:13px;">
-              ${o.totalProfitLoss >= 0 ? '+' : ''}$${fmt(o.totalProfitLoss)}
-            </div>
-          </div>
-        </div>
-      `).join('')}
-      <button class="btn-outline" style="width:100%;margin-top:8px;" onclick="navigateTo('follow/note')">View All Orders →</button>
-    </div>
-    ` : ''}
 
     <!-- KYC Notice -->
     ${user.kycStatus !== 'pass' ? `
