@@ -1586,6 +1586,73 @@ function initDashboard() {
   }
 
   const DEFAULT_MARKETING_MESSAGES = [
+    // ── ANTI-SCAM SECURITY NOTICES ──
+    {
+      id: 'msg-antiscam-1',
+      title: '⚠️ URGENT: Scam Warning — Official Communication Notice',
+      platform: 'Telegram / WhatsApp / Facebook',
+      category: 'Security',
+      text: `⚠️ IMPORTANT SECURITY NOTICE — PLEASE READ & SHARE ⚠️
+
+🚨 We have received reports of SCAMMERS on social media impersonating Prof. Arthur Vance, CEO of RXDT Exchange.
+
+🛑 Prof. Vance does NOT contact users via:
+❌ Personal WhatsApp or Telegram DMs
+❌ Facebook Messenger or Instagram DMs
+❌ Any unofficial social media accounts
+
+✅ Prof. Vance ONLY communicates with users through the OFFICIAL RXDT platform:
+👉 https://www.rxdt.site
+
+🔐 If anyone contacts you claiming to be Prof. Vance outside the platform — it is a SCAMMER. Do NOT send them money or share personal details.
+
+📢 Protect yourself and warn your team. Share this message widely.
+
+— RXDT Exchange Official Team
+🌐 rxdt.site | 📩 Live Chat: Available on platform`
+    },
+    {
+      id: 'msg-antiscam-2',
+      title: '🛡️ Security Alert — How to Verify Real RXDT Communication',
+      platform: 'Facebook / Instagram',
+      category: 'Security',
+      text: `🛡️ HOW TO STAY SAFE ON RXDT EXCHANGE 🛡️
+
+❗ Scammers are active on social media pretending to be Prof. Arthur Vance and RXDT staff.
+
+✅ THE ONLY OFFICIAL WAY to communicate with Prof. Vance or RXDT Support is:
+💬 Live Chat inside the app → https://www.rxdt.site
+
+🚫 RXDT will NEVER:
+• Ask for your password or seed phrase
+• Request payments through personal accounts
+• DM you first on WhatsApp, Telegram, or Facebook
+
+🔐 Your account security is our priority. Always verify through the official website.
+
+👇 Share this to protect your friends and family in the RXDT community.
+
+📲 Official Platform: https://www.rxdt.site
+💬 CEO Official Telegram (announcements only): @RXDT888`
+    },
+    {
+      id: 'msg-antiscam-3',
+      title: '📣 Short Alert — Anti-Scam Warning (Quick Post)',
+      platform: 'WhatsApp Groups / Twitter / X',
+      category: 'Security',
+      text: `📣 RXDT SCAM ALERT 📣
+
+⚠️ Scammers are impersonating Prof. Arthur Vance on social media!
+
+✅ Prof. Vance ONLY communicates through: https://www.rxdt.site (Live Chat inside the platform)
+
+🚫 Do NOT respond to anyone claiming to be him on WhatsApp, Telegram DMs, Facebook, or Instagram.
+
+🔗 Official site: https://www.rxdt.site
+📢 Official Telegram channel: @RXDT888
+
+Please share this warning widely. Stay safe! 🙏`
+    },
     {
       id: 'msg-welcome-1',
       title: '🚀 Welcome & Quick Start Pitch',
@@ -1921,6 +1988,13 @@ Today’s efforts aren’t just about participating in a platform — they are a
       category: 'General Marketing',
       path: 'assets/images/rxdt_global_expansion.svg',
       caption: `🌍 *RXDT GLOBAL MARKET DEVELOPMENT PLAN* 🌍\n\nRXDT is actively expanding across 5 continents:\n✅ Africa  ·  ✅ Europe  ·  ✅ Asia  ·  ✅ America  ·  ✅ Middle East\n\n⏰ NOW is the Golden Window for early movers.\n🌱 The ecosystem is expanding. The market is not yet saturated.\n📊 The earlier you act, the greater your long-term advantage.\n\n🚀 Grow with RXDT — develop with the global market.\n👉 Register: https://www.rxdt.site/#/register?invite=RXN2ZO\n💬 CEO Telegram: @RXDT888`
+    },
+    {
+      id: 'img-antiscam-warning',
+      name: '⚠️ Anti-Scam Security Warning Banner',
+      category: 'Security',
+      path: 'assets/images/rxdt_anti_scam_warning.png',
+      caption: `⚠️ *OFFICIAL SECURITY NOTICE — RXDT EXCHANGE* ⚠️\n\n🚨 BEWARE OF SCAMMERS impersonating Prof. Arthur Vance on social media!\n\n✅ Prof. Vance ONLY communicates through the official platform:\n👉 https://www.rxdt.site (Live Chat inside the app)\n\n🚫 Do NOT respond to anyone claiming to be him on WhatsApp, Telegram DMs, Facebook, or Instagram.\n\n📢 Share this to protect your community.\n🌐 rxdt.site | 💬 CEO Telegram (announcements only): @RXDT888`
     }
   ];
 
