@@ -40,13 +40,18 @@ app.use((req, res, next) => {
   next();
 });
 
-// Global Auto-Settlement Middleware:
-// Every API request triggers a background check to:
-// 1. Settle any past-due signal positions
-// 2. Auto-liquidate contract positions past their liquidation price
+// Global Auto-Settlement Middleware (Throttled):
+// Triggers background checks at most once every 15 seconds to prevent DB connection congestion
+let lastAutoSettleTime = 0;
+const AUTO_SETTLE_INTERVAL_MS = 15 * 1000;
+
 app.use('/api', (req, res, next) => {
-  settleAllDueSignalTrades().catch(e => console.warn('[auto-settle middleware]', e.message));
-  autoLiquidatePositions().catch(e => console.warn('[auto-liquidation middleware]', e.message));
+  const now = Date.now();
+  if (now - lastAutoSettleTime > AUTO_SETTLE_INTERVAL_MS) {
+    lastAutoSettleTime = now;
+    settleAllDueSignalTrades().catch(e => console.warn('[auto-settle middleware]', e.message));
+    autoLiquidatePositions().catch(e => console.warn('[auto-liquidation middleware]', e.message));
+  }
   next();
 });
 
