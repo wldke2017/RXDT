@@ -651,22 +651,21 @@ export async function processDueSignalTrades(userId) {
           ).catch(() => { });
 
           // 4. Referral Commissions — halving chain model.
-          //    Level 1 (direct referrer): 7.5% of profit
-          //    Level 2: 3.75% (half of L1)
-          //    Level 3: 1.875% (half of L2)
-          //    ... continues halving up the chain until the commission rounds to 0.
           try {
             if (profit > 0) {
               let currentUserId = userId;
               let commissionRate = 0.075; // Level 1 starts at 7.5%
               let level = 1;
 
-              // Walk up the referral chain, halving the rate each level.
-              // Stop when the rate becomes negligible (rounds to 0) or no more referrers.
               while (commissionRate > 0.0001) {
                 const refRes = await tx(`SELECT referred_by FROM users WHERE id = $1`, [currentUserId]);
-                const referrerId = refRes.rows[0]?.referred_by;
-                if (!referrerId) break; // top of chain reached
+                const rawReferrerId = refRes.rows[0]?.referred_by;
+                if (!rawReferrerId) break; // top of chain reached
+
+                // Verify referrer actually exists in users table (by ID or invite code)
+                const refUserCheck = await tx(`SELECT id FROM users WHERE id = $1 OR invite_code = $1`, [rawReferrerId]);
+                if (!refUserCheck.rows.length) break; // Referrer user no longer exists — terminate chain
+                const referrerId = refUserCheck.rows[0].id;
 
                 const commission = parseFloat((profit * commissionRate).toFixed(4));
                 if (commission <= 0) break;
@@ -701,7 +700,7 @@ export async function processDueSignalTrades(userId) {
               }
             }
           } catch (commErr) {
-            console.error('Referral commission error (non-fatal):', commErr);
+            console.warn('Referral commission payout skipped:', commErr.message);
           }
 
         });
@@ -804,8 +803,14 @@ export async function settleAllDueSignalTrades() {
               let level = 1;
               while (commissionRate > 0.0001) {
                 const refRes = await tx(`SELECT referred_by FROM users WHERE id = $1`, [currentUserId]);
-                const referrerId = refRes.rows[0]?.referred_by;
-                if (!referrerId) break;
+                const rawReferrerId = refRes.rows[0]?.referred_by;
+                if (!rawReferrerId) break;
+
+                // Verify referrer actually exists in users table (by ID or invite code)
+                const refUserCheck = await tx(`SELECT id FROM users WHERE id = $1 OR invite_code = $1`, [rawReferrerId]);
+                if (!refUserCheck.rows.length) break; // Referrer user no longer exists — terminate chain
+                const referrerId = refUserCheck.rows[0].id;
+
                 const commission = parseFloat((profit * commissionRate).toFixed(4));
                 if (commission <= 0) break;
                 const rcId = 'RC' + Date.now() + 'GL' + level;
@@ -835,7 +840,7 @@ export async function settleAllDueSignalTrades() {
               }
             }
           } catch (commErr) {
-            console.error('Global settle referral commission error:', commErr);
+            console.warn('Global settle referral commission payout skipped:', commErr.message);
           }
 
         });

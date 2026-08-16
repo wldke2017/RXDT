@@ -16,6 +16,7 @@ const loginLimiter = rateLimit({
   max: 20, // max 20 login attempts per 15 min per IP
   standardHeaders: true,
   legacyHeaders: false,
+  validate: { xForwardedForHeader: false },
   message: { error: 'Too many login attempts. Please try again after 15 minutes.' }
 });
 
@@ -24,6 +25,7 @@ const registerLimiter = rateLimit({
   max: 10, // max 10 registrations per hour per IP
   standardHeaders: true,
   legacyHeaders: false,
+  validate: { xForwardedForHeader: false },
   message: { error: 'Too many registration attempts. Please try again later.' }
 });
 const JWT_SECRET = process.env.JWT_SECRET || 'rxdt_jwt_secret_key_2026_production';
