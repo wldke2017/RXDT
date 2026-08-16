@@ -1995,6 +1995,27 @@ Today’s efforts aren’t just about participating in a platform — they are a
       category: 'Security',
       path: 'assets/images/rxdt_anti_scam_warning.png',
       caption: `⚠️ *OFFICIAL SECURITY NOTICE — RXDT EXCHANGE* ⚠️\n\n🚨 BEWARE OF SCAMMERS impersonating Prof. Arthur Vance on social media!\n\n✅ Prof. Vance ONLY communicates through the official platform:\n👉 https://www.rxdt.site (Live Chat inside the app)\n\n🚫 Do NOT respond to anyone claiming to be him on WhatsApp, Telegram DMs, Facebook, or Instagram.\n\n📢 Share this to protect your community.\n🌐 rxdt.site | 💬 CEO Telegram (announcements only): @RXDT888`
+    },
+    {
+      id: 'img-notif-deposit',
+      name: '💳 Deposit Confirmed Notification Banner',
+      category: 'Notifications',
+      path: 'assets/images/rxdt_deposit_notification.png',
+      caption: `✅ *DEPOSIT CONFIRMED & CREDITED* 💳\n\nYour deposit has been successfully processed and credited to your RXDT Exchange balance. You can now participate in active Signal Copy Trading!`
+    },
+    {
+      id: 'img-notif-withdrawal',
+      name: '💸 Withdrawal Processed Notification Banner',
+      category: 'Notifications',
+      path: 'assets/images/rxdt_withdrawal_notification.png',
+      caption: `🚀 *WITHDRAWAL PROCESSED & DISPATCHED* 💸\n\nYour withdrawal request has been approved and dispatched to your external blockchain wallet address.`
+    },
+    {
+      id: 'img-notif-welcome',
+      name: '🎉 New User Welcome Notification Banner',
+      category: 'Notifications',
+      path: 'assets/images/rxdt_welcome_notification.png',
+      caption: `🚀 *WELCOME TO RXDT EXCHANGE!* 🎉\n\nYour account is now activated. Explore Tier 1, Tier 2, and Tier 3 AI Quantitative signals and start building your financial future today!`
     }
   ];
 
