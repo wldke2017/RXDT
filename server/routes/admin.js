@@ -123,6 +123,42 @@ router.post('/users/balance', requireAdminSecret, async (req, res) => {
       ['AC' + Date.now(), userId, 'admin_adjustment', amt, u.available_balance, remark || 'Admin balance adjustment']
     );
     res.json({ message: `Balance updated for ${u.name}. New balance: $${parseFloat(u.available_balance).toFixed(2)}`, user: u });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to update balance' });
+  }
+});
+
+// ----------------------------------------------------
+// RESET INDIVIDUAL USER BALANCE TO ZERO
+// ----------------------------------------------------
+router.post('/users/reset-balance', requireAdminSecret, async (req, res) => {
+  try {
+    const { userId } = req.body;
+    if (!userId) return res.status(400).json({ error: 'userId required' });
+
+    const userRes = await query(
+      `UPDATE users 
+       SET available_balance = 0, frozen_balance = 0, total_assets = 0, total_earnings = 0
+       WHERE id = $1 RETURNING id, name, phone, email`,
+      [userId]
+    );
+
+    if (!userRes.rows.length) return res.status(404).json({ error: 'User not found' });
+    const u = userRes.rows[0];
+
+    await query(
+      `INSERT INTO account_changes (id, user_id, type, amount, balance_after, remark)
+       VALUES ($1, $2, 'admin_reset', 0, 0, $3)`,
+      ['AC' + Date.now(), userId, 'Admin reset user balance to $0.00']
+    ).catch(() => {});
+
+    res.json({ message: `Balance for user ${u.name || u.phone || u.id} reset to $0.00`, user: u });
+  } catch (err) {
+    console.error('Reset user balance error:', err);
+    res.status(500).json({ error: err.message || 'Failed to reset balance' });
+  }
+});
+
 // ----------------------------------------------------
 // SAFE DELETE USER
 // ----------------------------------------------------
