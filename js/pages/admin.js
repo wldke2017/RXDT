@@ -2120,16 +2120,16 @@ Today’s efforts aren’t just about participating in a platform — they are a
     },
     {
       id: 'img-notif-deposit',
-      name: '💳 Deposit Confirmed Notification Banner',
+      name: '💳 Deposit Confirmed Notification Banner (No Amounts)',
       category: 'Notifications',
-      path: 'assets/images/rxdt_deposit_notification.png',
+      path: 'assets/images/rxdt_deposit_notification_clean.svg',
       caption: `✅ *DEPOSIT CONFIRMED & CREDITED* 💳\n\nYour deposit has been successfully processed and credited to your RXDT Exchange balance. You can now participate in active Signal Copy Trading!`
     },
     {
       id: 'img-notif-withdrawal',
-      name: '💸 Withdrawal Processed Notification Banner',
+      name: '💸 Withdrawal Processed Notification Banner (No Amounts)',
       category: 'Notifications',
-      path: 'assets/images/rxdt_withdrawal_notification.png',
+      path: 'assets/images/rxdt_withdrawal_notification_clean.svg',
       caption: `🚀 *WITHDRAWAL PROCESSED & DISPATCHED* 💸\n\nYour withdrawal request has been approved and dispatched to your external blockchain wallet address.`
     },
     {

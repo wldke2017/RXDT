@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720" width="1280" height="720">
+    <defs>
+      <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stop-color="#060b19"/>
+        <stop offset="50%" stop-color="#0b1329"/>
+        <stop offset="100%" stop-color="#050811"/>
+      </linearGradient>
+      <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+        <stop offset="0%" stop-color="#10b981" stop-opacity="0.25"/>
+        <stop offset="100%" stop-color="#10b981" stop-opacity="0"/>
+      </radialGradient>
+      <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+        <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(0, 242, 254, 0.05)" stroke-width="1"/>
+      </pattern>
+    </defs>
+
+    <rect width="1280" height="720" fill="url(#bg)"/>
+    <rect width="1280" height="720" fill="url(#grid)"/>
+    <rect width="1280" height="720" fill="url(#glow)"/>
+
+    <rect x="30" y="30" width="1220" height="660" fill="none" stroke="#10b981" stroke-width="3" rx="16"/>
+    
+    <path d="M 20 50 L 20 20 L 50 20" fill="none" stroke="#10b981" stroke-width="6"/>
+    <path d="M 1230 20 L 1260 20 L 1260 50" fill="none" stroke="#10b981" stroke-width="6"/>
+    <path d="M 20 670 L 20 700 L 50 700" fill="none" stroke="#10b981" stroke-width="6"/>
+    <path d="M 1230 700 L 1260 700 L 1260 670" fill="none" stroke="#10b981" stroke-width="6"/>
+
+    <g transform="translate(640, 140)">
+      <rect x="-220" y="-30" width="440" height="50" fill="rgba(0, 242, 254, 0.08)" stroke="#00f2fe" stroke-width="1.5" rx="25"/>
+      <text text-anchor="middle" y="4" fill="#00f2fe" font-family="'Segoe UI', Roboto, sans-serif" font-weight="bold" font-size="22" letter-spacing="3">⚡ RXDT EXCHANGE OFFICIAL</text>
+    </g>
+
+    <circle cx="640" cy="290" r="75" fill="#091024" stroke="#10b981" stroke-width="4"/>
+    <circle cx="640" cy="290" r="85" fill="none" stroke="#10b981" stroke-width="1" stroke-dasharray="8 6"/>
+    <text x="640" y="312" text-anchor="middle" font-size="65">💳</text>
+
+    <text x="640" y="450" text-anchor="middle" fill="#ffffff" font-family="'Segoe UI', Roboto, sans-serif" font-weight="900" font-size="52" letter-spacing="2">DEPOSIT CONFIRMED</text>
+    
+    <text x="640" y="505" text-anchor="middle" fill="#94a3b8" font-family="'Segoe UI', Roboto, sans-serif" font-weight="600" font-size="22">Account Balance Credited & Ready for Copy Trading</text>
+
+    <g transform="translate(640, 580)">
+      <rect x="-200" y="-22" width="400" height="44" fill="rgba(0,0,0,0.4)" stroke="rgba(0, 242, 254, 0.3)" stroke-width="1" rx="10"/>
+      <text text-anchor="middle" y="6" fill="#00f2fe" font-family="'Segoe UI', Roboto, sans-serif" font-weight="bold" font-size="16">🔒 Official Platform Notice · rxdt.site</text>
+    </g>
+  </svg>
