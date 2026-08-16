@@ -819,12 +819,26 @@ function initDashboard() {
             <td>
               <button class="btn-outline" style="padding:4px 10px;font-size:12px;" onclick="openBalanceModal('${u.id}','${(u.name || '').replace(/'/g, "\\'")}','${fmt(u.available_balance)}')">💰 Balance</button>
               <button class="btn-outline" style="padding:4px 10px;font-size:12px;color:#f59e0b;border-color:#f59e0b;margin-left:6px;" onclick="reconcileSignalTrades('${u.id}')">🔧 Reconcile</button>
+              <button class="btn-outline" style="padding:4px 10px;font-size:12px;color:#ef4444;border-color:#ef4444;margin-left:6px;" onclick="deleteUserAdmin('${u.id}', '${(u.name || u.phone || u.id).replace(/'/g, "\\'")}')">🗑️ Delete</button>
             </td>
           </tr>`).join('')}
         </tbody>
       </table>
     </div>`;
   }
+
+  window.deleteUserAdmin = async function (userId, userName) {
+    if (!confirm(`⚠️ ARE YOU SURE YOU WANT TO DELETE USER "${userName}" (${userId})?\n\nThis will permanently delete the user account and clean up their records safely.`)) return;
+    try {
+      const res = await adminFetch(`/users/${userId}`, 'DELETE');
+      window.toast('✅ ' + (res.message || 'User deleted successfully'), 'success');
+      allUsersCache = allUsersCache.filter(u => u.id !== userId);
+      renderUsers(allUsersCache);
+      if (window.loadAdminStats) await window.loadAdminStats();
+    } catch (err) {
+      window.toast('Error deleting user: ' + err.message, 'error');
+    }
+  };
 
   window.filterUsers = function (q) {
     const lq = q.toLowerCase();

@@ -123,8 +123,37 @@ router.post('/users/balance', requireAdminSecret, async (req, res) => {
       ['AC' + Date.now(), userId, 'admin_adjustment', amt, u.available_balance, remark || 'Admin balance adjustment']
     );
     res.json({ message: `Balance updated for ${u.name}. New balance: $${parseFloat(u.available_balance).toFixed(2)}`, user: u });
+// ----------------------------------------------------
+// SAFE DELETE USER
+// ----------------------------------------------------
+router.delete('/users/:id', requireAdminSecret, async (req, res) => {
+  try {
+    const userId = req.params.id;
+    if (!userId) return res.status(400).json({ error: 'User ID is required' });
+
+    await withTransaction(async (tx) => {
+      // Clean up dependent child records safely first
+      await tx(`DELETE FROM signal_trades WHERE user_id = $1`, [userId]).catch(() => {});
+      await tx(`DELETE FROM contract_orders WHERE user_id = $1`, [userId]).catch(() => {});
+      await tx(`DELETE FROM deposits WHERE user_id = $1`, [userId]).catch(() => {});
+      await tx(`DELETE FROM withdrawals WHERE user_id = $1`, [userId]).catch(() => {});
+      await tx(`DELETE FROM account_changes WHERE user_id = $1`, [userId]).catch(() => {});
+      await tx(`DELETE FROM user_bind_addresses WHERE user_id = $1`, [userId]).catch(() => {});
+      await tx(`DELETE FROM kyc_records WHERE user_id = $1`, [userId]).catch(() => {});
+      await tx(`DELETE FROM referral_commissions WHERE referrer_id = $1 OR referred_user_id = $1`, [userId]).catch(() => {});
+      await tx(`DELETE FROM admin_notifications WHERE user_id = $1`, [userId]).catch(() => {});
+      
+      // Finally delete the user row
+      const deleteRes = await tx(`DELETE FROM users WHERE id = $1 RETURNING id, name, phone, email`, [userId]);
+      if (deleteRes.rows.length === 0) {
+        throw new Error('User not found');
+      }
+    });
+
+    res.json({ message: `User ${userId} deleted successfully` });
   } catch (err) {
-    res.status(500).json({ error: 'Failed to update balance' });
+    console.error('Delete user error:', err);
+    res.status(500).json({ error: err.message || 'Failed to delete user' });
   }
 });
 
