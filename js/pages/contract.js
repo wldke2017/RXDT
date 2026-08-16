@@ -1089,8 +1089,8 @@ export async function init() {
   loadHistory();
   loadConsumeRecord(); // load consume record by default
 
-  // Auto-refresh positions every 5s for live P&L
-  positionsInterval = setInterval(() => loadPositions(), 5000);
+  // Auto-refresh positions every 12s for live P&L
+  positionsInterval = setInterval(() => loadPositions(), 12000);
 
   // Cleanup on navigate away
   window.addEventListener('hashchange', () => {

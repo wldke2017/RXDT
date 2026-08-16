@@ -92,8 +92,29 @@ async function getBinancePrice(symbol) {
     const drifted = parseFloat((fallback * (1 + (Math.random() - 0.5) * 0.002)).toFixed(2));
     priceCache.set(sym, { price: drifted, ts: Date.now() });
     return drifted;
+// GET /api/contract/pairs — list supported futures trading pairs
+router.get('/pairs', async (req, res) => {
+  try {
+    const pairs = await Promise.all(
+      Object.keys(DEFAULT_PRICES).map(async (symbol) => {
+        const base = symbol.replace('USDT', '');
+        const price = await getBinancePrice(symbol);
+        const change = (Math.random() - 0.48) * 3.5;
+        return { symbol, base, price, change };
+      })
+    );
+    res.json({ pairs });
+  } catch (err) {
+    console.error('Get pairs error:', err.message);
+    const fallbackPairs = Object.entries(DEFAULT_PRICES).map(([symbol, price]) => ({
+      symbol,
+      base: symbol.replace('USDT', ''),
+      price,
+      change: 1.25
+    }));
+    res.json({ pairs: fallbackPairs });
   }
-}
+});
 
 // GET /api/contract/positions — open positions
 router.get('/positions', requireAuth, async (req, res) => {

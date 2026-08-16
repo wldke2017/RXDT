@@ -66,7 +66,7 @@ function startSignalPoller() {
   signalPollTimer = setInterval(() => {
     if (!store.isLoggedIn()) return;
     checkSignalWindow();
-  }, 8 * 1000); // check every 8 seconds
+  }, 30 * 1000); // check every 30 seconds
 }
 
 // Public heartbeat to keep signal auto-execution alive even when no user
@@ -77,7 +77,7 @@ function startSignalHeartbeat() {
   if (signalHeartbeatTimer) return;
   signalHeartbeatTimer = setInterval(() => {
     fetch('/api/signals/poll', { method: 'GET', cache: 'no-store' }).catch(() => { });
-  }, 8 * 1000);
+  }, 45 * 1000);
 }
 
 function renderShell() {
