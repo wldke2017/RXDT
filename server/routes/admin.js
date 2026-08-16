@@ -129,30 +129,35 @@ router.post('/users/balance', requireAdminSecret, async (req, res) => {
 });
 
 // ----------------------------------------------------
-// RESET INDIVIDUAL USER BALANCE TO ZERO
+// RESET INDIVIDUAL USER BALANCE TO ZERO + WIPE HISTORY
 // ----------------------------------------------------
 router.post('/users/reset-balance', requireAdminSecret, async (req, res) => {
   try {
     const { userId } = req.body;
     if (!userId) return res.status(400).json({ error: 'userId required' });
 
-    const userRes = await query(
-      `UPDATE users 
-       SET available_balance = 0, frozen_balance = 0, total_assets = 0, total_earnings = 0
-       WHERE id = $1 RETURNING id, name, phone, email`,
-      [userId]
-    );
+    let u = null;
+    await withTransaction(async (tx) => {
+      // 1. Reset user balances to $0.00
+      const userRes = await tx(
+        `UPDATE users 
+         SET available_balance = 0, frozen_balance = 0, total_assets = 0, total_earnings = 0
+         WHERE id = $1 RETURNING id, name, phone, email`,
+        [userId]
+      );
+      if (!userRes.rows.length) throw new Error('User not found');
+      u = userRes.rows[0];
 
-    if (!userRes.rows.length) return res.status(404).json({ error: 'User not found' });
-    const u = userRes.rows[0];
+      // 2. Wipe all transaction & history records for this user
+      await tx(`DELETE FROM signal_trades WHERE user_id = $1`, [userId]).catch(() => {});
+      await tx(`DELETE FROM contract_orders WHERE user_id = $1`, [userId]).catch(() => {});
+      await tx(`DELETE FROM deposits WHERE user_id = $1`, [userId]).catch(() => {});
+      await tx(`DELETE FROM withdrawals WHERE user_id = $1`, [userId]).catch(() => {});
+      await tx(`DELETE FROM account_changes WHERE user_id = $1`, [userId]).catch(() => {});
+      await tx(`DELETE FROM referral_commissions WHERE referrer_id = $1 OR referred_user_id = $1`, [userId]).catch(() => {});
+    });
 
-    await query(
-      `INSERT INTO account_changes (id, user_id, type, amount, balance_after, remark)
-       VALUES ($1, $2, 'admin_reset', 0, 0, $3)`,
-      ['AC' + Date.now(), userId, 'Admin reset user balance to $0.00']
-    ).catch(() => {});
-
-    res.json({ message: `Balance for user ${u.name || u.phone || u.id} reset to $0.00`, user: u });
+    res.json({ message: `Balance and all transaction history for user ${u.name || u.phone || u.id} reset to $0.00`, user: u });
   } catch (err) {
     console.error('Reset user balance error:', err);
     res.status(500).json({ error: err.message || 'Failed to reset balance' });

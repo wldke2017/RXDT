@@ -829,7 +829,7 @@ function initDashboard() {
   }
 
   window.resetUserBalanceAdmin = async function (userId, userName) {
-    if (!confirm(`⚠️ ARE YOU SURE YOU WANT TO RESET BALANCE OF USER "${userName}" (${userId}) TO $0.00?`)) return;
+    if (!confirm(`⚠️ RESET BALANCE & WIPE ALL HISTORY FOR "${userName}" (${userId})?\n\nThis will reset their balance to $0.00 AND permanently erase all their deposit, withdrawal, copy-trade, and transaction history records.`)) return;
     try {
       const res = await adminFetch('/users/reset-balance', 'POST', { userId });
       window.toast('✅ ' + (res.message || 'Balance reset to $0.00'), 'success');
