@@ -2202,13 +2202,13 @@ Today’s efforts aren’t just about participating in a platform — they are a
 
       <!-- Sub Navigation Buttons -->
       <div style="display:flex;gap:10px;margin-bottom:20px;border-bottom:1px solid rgba(255,255,255,0.1);padding-bottom:12px;flex-wrap:wrap;">
-        <button class="btn-outline active-subtab" id="subtab-btn-messages" onclick="switchMarketingSubTab('messages')" style="font-size:13px;padding:8px 16px;background:rgba(0,242,254,0.15);border-color:#00f2fe;color:#00f2fe;">📋 Copy-Paste Messages</button>
-        <button class="btn-outline" id="subtab-btn-vip" onclick="switchMarketingSubTab('vip')" style="font-size:13px;padding:8px 16px;border-color:rgba(255,255,255,0.2);color:var(--text-sub);">🏆 VIP Congratulation Cards (VIP 1–9)</button>
-        <button class="btn-outline" id="subtab-btn-images" onclick="switchMarketingSubTab('images')" style="font-size:13px;padding:8px 16px;border-color:rgba(255,255,255,0.2);color:var(--text-sub);">🖼️ Brand & Image Library</button>
+        <button class="btn-outline active-subtab" id="subtab-btn-images" onclick="switchMarketingSubTab('images')" style="font-size:13px;padding:8px 16px;background:rgba(0,242,254,0.15);border-color:#00f2fe;color:#00f2fe;">🖼️ Brand & Image Library (${images.length})</button>
+        <button class="btn-outline" id="subtab-btn-messages" onclick="switchMarketingSubTab('messages')" style="font-size:13px;padding:8px 16px;border-color:rgba(255,255,255,0.2);color:var(--text-sub);">📋 Copy-Paste Messages (${messages.length})</button>
+        <button class="btn-outline" id="subtab-btn-vip" onclick="switchMarketingSubTab('vip')" style="font-size:13px;padding:8px 16px;border-color:rgba(255,255,255,0.2);color:var(--text-sub);">🏆 VIP Congratulation Cards (${VIP_TIER_DATA.length})</button>
       </div>
 
       <!-- SUB-SECTION 1: Copy-Paste Messages -->
-      <div id="mkt-subtab-messages">
+      <div id="mkt-subtab-messages" style="display:none;">
         <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(320px, 1fr));gap:16px;">
           ${messages.map(msg => `
             <div style="background:#090d16;border:1px solid rgba(0,242,254,0.2);border-radius:14px;padding:16px;display:flex;flex-direction:column;justify-content:space-between;">
@@ -2258,7 +2258,7 @@ Today’s efforts aren’t just about participating in a platform — they are a
       </div>
 
       <!-- SUB-SECTION 3: Brand & Image Library -->
-      <div id="mkt-subtab-images" style="display:none;">
+      <div id="mkt-subtab-images">
         <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(280px, 1fr));gap:16px;">
           ${images.map(img => {
       const captionText = img.caption || `🚀 *${img.name}*\n\nOfficial RXDT Exchange AI Quantitative Trading Asset.\n👉 Join live signal copy trading on RXDT Exchange!\n💬 Telegram: @RXDT888`;
