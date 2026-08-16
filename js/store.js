@@ -94,14 +94,8 @@ const store = {
         this.syncAllUserData();
         return true;
       } catch (err) {
-        // Token invalid or backend unreachable - clear stale token
         console.warn('Auth check failed:', err.message);
-        localStorage.removeItem('rxdt_token');
-        localStorage.removeItem('rxdt_user');
-        state.user = null;
-        state.isLoggedIn = false;
-        emit('auth', { isLoggedIn: false });
-        emit('user', null);
+        this.logout();
         return false;
       }
     }

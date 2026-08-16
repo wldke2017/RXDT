@@ -198,16 +198,15 @@ router.get('/me', async (req, res) => {
     const token = authHeader.split(' ')[1];
     const decoded = jwt.verify(token, JWT_SECRET);
 
-    // Release any signal trades whose release_at has passed so the
-    // frozen ("In Orders") balance is credited back to available balance.
-    await processDueSignalTrades(decoded.id);
-
     const userRes = await query(`SELECT * FROM users WHERE id = $1`, [decoded.id]);
     if (userRes.rows.length === 0) {
       return res.status(404).json({ error: 'User not found' });
     }
 
     res.json({ user: formatUser(userRes.rows[0]) });
+
+    // Release any due signal trades in non-blocking background
+    processDueSignalTrades(decoded.id).catch(e => console.warn('[me] processDueSignalTrades error:', e.message));
   } catch (err) {
     res.status(401).json({ error: 'Invalid or expired token' });
   }
