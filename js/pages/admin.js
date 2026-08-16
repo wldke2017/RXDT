@@ -1586,6 +1586,128 @@ function initDashboard() {
   }
 
   const DEFAULT_MARKETING_MESSAGES = [
+    // ── KYC VERIFICATION NOTICE ──
+    {
+      id: 'msg-kyc-notice',
+      title: '🪪 Identity Verification (KYC) Reminder',
+      platform: 'Telegram / WhatsApp / Facebook',
+      category: 'KYC',
+      text: `🪪 *IMPORTANT: COMPLETE YOUR KYC VERIFICATION* 🪪
+
+Dear RXDT Traders,
+
+To ensure maximum security and seamless withdrawal processing, please complete your **Identity Verification (KYC)** on your profile:
+
+✅ Tier 1: Real-name & Document ID Verification
+✅ Tier 2: Enhanced Verification for Priority Withdrawals
+
+🔐 *Why verify your account?*
+• Unlocks higher daily withdrawal limits
+• Protects your funds against unauthorized access
+• Fast-tracks approval for VIP Salary rewards
+
+👉 Complete KYC now: https://www.rxdt.site/#/kyc
+🌐 Platform: https://www.rxdt.site`
+    },
+    // ── DAILY LUCKY WHEEL PROMOTION ──
+    {
+      id: 'msg-lucky-wheel',
+      title: '🎡 Daily Lucky Wheel & Rewards Announcement',
+      platform: 'Telegram / WhatsApp / Facebook',
+      category: 'Gamification',
+      text: `🎡 *SPIN & WIN DAILY ON RXDT EXCHANGE!* 🎡
+
+Did you know you can claim daily spin rewards on RXDT?
+
+🎁 *Daily Lucky Wheel Perks:*
+✨ Earn free spin tickets every day you log in
+✨ Win instant USDT bonus rewards credited directly to your balance
+✨ Bonus tickets awarded for active trading & inviting team members!
+
+👉 Spin the wheel now: https://www.rxdt.site/#/lucky-wheel
+🌐 Official Site: https://www.rxdt.site`
+    },
+    // ── REFERRAL PROGRAM PITCH ──
+    {
+      id: 'msg-referral-pitch',
+      title: '👥 Invite Friends & Build Team Commission Stream',
+      platform: 'WhatsApp / Facebook / Instagram',
+      category: 'Referral',
+      text: `👥 *SHARE & EARN WITH THE RXDT REFERRAL PROGRAM* 🚀
+
+Turn your network into a continuous stream of profit commissions!
+
+💰 *How it works:*
+1️⃣ Copy your unique invitation link from your Dashboard
+2️⃣ Share with friends, trading groups, and social networks
+3️⃣ Earn up to **7.5% referral profit share** on every trade executed by your team!
+
+📈 *No limits on referral earnings — build your team today!*
+
+👉 Get your link: https://www.rxdt.site/#/invite-friends
+🌐 Platform: https://www.rxdt.site`
+    },
+    // ── VIP LEADERSHIP & SALARY ANNOUNCEMENT ──
+    {
+      id: 'msg-vip-upgrade-announcement',
+      title: '🏆 VIP Leadership Rank Advancement & 10-Day Salary',
+      platform: 'Telegram / Facebook / WhatsApp',
+      category: 'VIP',
+      text: `🏆 *ELEVATE YOUR RANK — RXDT VIP LEADERSHIP SALARY PROGRAM* 🏆
+
+Congratulations to all team leaders advancing through VIP Ranks this week!
+
+💼 *VIP Leadership Rewards:*
+• Recurring 10-Day Salary payments (distributed 3x per month!)
+• One-time Rank Advancement USDT Bonuses
+• Dedicated VIP Support Channel & Community Recognition
+
+👑 *Rank up from VIP 1 all the way to VIP 9!*
+
+👉 Check your VIP progress: https://www.rxdt.site/#/profile
+🌐 Official Site: https://www.rxdt.site`
+    },
+    // ── SCHEDULED MAINTENANCE NOTICE ──
+    {
+      id: 'msg-maintenance-notice',
+      title: '🛠️ Scheduled System Maintenance & Upgrade Notice',
+      platform: 'Telegram / WhatsApp / Twitter',
+      category: 'System',
+      text: `🛠️ *SCHEDULED PLATFORM UPGRADE NOTICE* 🛠️
+
+Dear RXDT Community,
+
+To ensure optimal performance and security, our technical team will perform a scheduled platform upgrade.
+
+⏰ *Details:*
+• System upgrades & server enhancements
+• Signal Copy-Trading and account balances remain 100% secure
+• Services will resume immediately after optimization
+
+Thank you for your patience as we build the next generation of AI quantitative trading!
+
+🌐 Official Site: https://www.rxdt.site
+📢 Official Telegram Channel: @RXDT888`
+    },
+    // ── ACCOUNT SECURITY ENHANCEMENT REMINDER ──
+    {
+      id: 'msg-security-setup',
+      title: '🔒 Essential Account Security & Fund Password Setup',
+      platform: 'Telegram / WhatsApp',
+      category: 'Security',
+      text: `🔒 *SECURITY CHECKLIST: PROTECT YOUR ASSETS* 🔒
+
+Security is our top priority at RXDT Exchange. Please take 2 minutes to secure your account:
+
+✅ Set a strong Fund Password for withdrawals
+✅ Bind your secure phone number / email address
+✅ Always log in directly via the official domain: https://www.rxdt.site
+
+🚫 Never share your password or security verification codes with anyone.
+
+👉 Update security settings: https://www.rxdt.site/#/security-settings
+🌐 Platform: https://www.rxdt.site`
+    },
     // ── ANTI-SCAM SECURITY NOTICES ──
     {
       id: 'msg-antiscam-1',
