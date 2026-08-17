@@ -108,6 +108,34 @@ router.get('/admin/messages/:userId', requireAdminSecret, async (req, res) => {
     }
 });
 
+// ---- USER: Get unread admin replies ----
+router.get('/unread-replies', requireAuth, async (req, res) => {
+    try {
+        const result = await query(
+            `SELECT id, message, created_at FROM chat_messages WHERE user_id = $1 AND sender = 'admin' AND is_read = FALSE ORDER BY created_at ASC`,
+            [req.userId]
+        );
+        res.json({ unreadCount: result.rows.length, messages: result.rows });
+    } catch (err) {
+        console.error('Unread replies error:', err);
+        res.status(500).json({ error: 'Failed to load unread replies' });
+    }
+});
+
+// ---- USER: Mark admin replies as read ----
+router.post('/mark-read', requireAuth, async (req, res) => {
+    try {
+        await query(
+            `UPDATE chat_messages SET is_read = TRUE WHERE user_id = $1 AND sender = 'admin' AND is_read = FALSE`,
+            [req.userId]
+        );
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Mark read error:', err);
+        res.status(500).json({ error: 'Failed to mark messages read' });
+    }
+});
+
 // ---- ADMIN: Reply to a user ----
 router.post('/admin/reply', requireAdminSecret, async (req, res) => {
     try {
@@ -118,7 +146,7 @@ router.post('/admin/reply', requireAdminSecret, async (req, res) => {
 
         const id = 'CHAT' + Date.now() + 'A';
         await query(
-            `INSERT INTO chat_messages (id, user_id, message, sender, is_read) VALUES ($1, $2, $3, 'admin', TRUE)`,
+            `INSERT INTO chat_messages (id, user_id, message, sender, is_read) VALUES ($1, $2, $3, 'admin', FALSE)`,
             [id, userId, message.trim()]
         );
 

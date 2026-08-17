@@ -42,6 +42,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   // moment the signal window opens — no manual refresh required.
   startSignalPoller();
 
+  // ---- Admin Live Chat Reply Listener ----
+  // Polls every 6 seconds while logged in for unread replies from Prof. Vance
+  // Triggers native mobile/OS push notification, toast, and unread badges
+  startAdminReplyListener();
+
   // ---- Signal Auto-Execute Heartbeat ----
   // Polls a public endpoint every 8 seconds from EVERY page (logged in or
   // not) so the backend auto-executes eligible signal trades during active
@@ -290,10 +295,27 @@ window.dismissVanceBubble = function (e) {
   if (bubble) bubble.style.display = 'none';
 };
 
-window.openChat = function () {
+window.openChat = async function () {
   const modal = document.getElementById('vance-chat-modal');
   if (modal) modal.classList.add('active');
   loadChatMessages();
+  
+  // Clear unread badge
+  const badge = document.getElementById('chat-unread-badge');
+  if (badge) badge.style.display = 'none';
+  const floatBadge = document.getElementById('vance-float-badge');
+  if (floatBadge) floatBadge.style.display = 'none';
+
+  const token = localStorage.getItem('rxdt_token');
+  if (token) {
+    try {
+      await fetch('/api/chat/mark-read', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+    } catch (e) { }
+  }
+
   setTimeout(() => {
     const input = document.getElementById('vance-chat-input');
     if (input) input.focus();
@@ -315,6 +337,99 @@ async function loadChatMessages() {
     const data = await res.json();
     renderChatMessages(data.messages || []);
   } catch (e) { console.warn('Load chat messages error:', e); }
+}
+
+// Track seen unread message IDs to prevent repeating push notifications for the same message
+let seenAdminReplyIds = new Set();
+
+function startAdminReplyListener() {
+  setInterval(async () => {
+    if (!store.isLoggedIn()) return;
+    const token = localStorage.getItem('rxdt_token');
+    if (!token) return;
+
+    try {
+      const res = await fetch('/api/chat/unread-replies', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      const unreadCount = data.unreadCount || 0;
+      const messages = data.messages || [];
+
+      if (unreadCount > 0) {
+        // Check for new unread messages
+        let hasNew = false;
+        let newestMsg = '';
+        messages.forEach(m => {
+          if (!seenAdminReplyIds.has(m.id)) {
+            seenAdminReplyIds.add(m.id);
+            hasNew = true;
+            newestMsg = m.message;
+          }
+        });
+
+        // Update badge counters
+        const headerBtn = document.querySelector('.header-chat-btn');
+        if (headerBtn) {
+          let badge = document.getElementById('chat-unread-badge');
+          if (!badge) {
+            badge = document.createElement('span');
+            badge.id = 'chat-unread-badge';
+            badge.className = 'chat-unread-badge';
+            headerBtn.appendChild(badge);
+          }
+          badge.textContent = unreadCount;
+          badge.style.display = 'inline-block';
+        }
+
+        const trigger = document.querySelector('.vance-avatar-trigger');
+        if (trigger) {
+          let floatBadge = document.getElementById('vance-float-badge');
+          if (!floatBadge) {
+            floatBadge = document.createElement('span');
+            floatBadge.id = 'vance-float-badge';
+            floatBadge.className = 'chat-unread-badge';
+            floatBadge.style.cssText = 'position:absolute;top:-4px;right:-4px;';
+            trigger.style.position = 'relative';
+            trigger.appendChild(floatBadge);
+          }
+          floatBadge.textContent = unreadCount;
+          floatBadge.style.display = 'inline-block';
+        }
+
+        // Trigger push notification & sound if new unread message arrived
+        if (hasNew && newestMsg) {
+          // Native System / Mobile Push Notification
+          if ('Notification' in window && Notification.permission === 'granted') {
+            try {
+              new Notification('💬 Message from Prof. Vance', {
+                body: newestMsg.length > 90 ? newestMsg.substring(0, 90) + '...' : newestMsg,
+                icon: 'assets/images/warren_pennington.png',
+                tag: 'rxdt-admin-reply'
+              });
+            } catch (err) { }
+          }
+
+          // In-App Toast Alert
+          if (window.toast) {
+            window.toast('💬 Prof. Vance sent you a message!', 'info');
+          }
+
+          // If chat modal is currently open, refresh stream live
+          const modal = document.getElementById('vance-chat-modal');
+          if (modal && modal.classList.contains('active')) {
+            loadChatMessages();
+          }
+        }
+      } else {
+        const badge = document.getElementById('chat-unread-badge');
+        if (badge) badge.style.display = 'none';
+        const floatBadge = document.getElementById('vance-float-badge');
+        if (floatBadge) floatBadge.style.display = 'none';
+      }
+    } catch (e) { }
+  }, 6000);
 }
 
 async function checkAutoOpenChatForNewUsers() {
