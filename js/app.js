@@ -26,11 +26,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (store.isLoggedIn()) {
     setTimeout(() => checkSignalWindow(), 1500); // slight delay after page load
     requestNotificationPermission();
+    checkAutoOpenChatForNewUsers();
   }
   store.subscribe('auth', () => {
     if (store.isLoggedIn()) {
       setTimeout(() => checkSignalWindow(), 1000);
       requestNotificationPermission();
+      checkAutoOpenChatForNewUsers();
     }
   });
 
@@ -203,7 +205,12 @@ function renderShell() {
             <img src="assets/images/warren_pennington.png" style="width:32px;height:32px;border-radius:50%;object-fit:cover;border:1px solid #00f2fe;" />
             <div>
               <div class="chat-bubble" style="background:#1e293b;color:#e2e8f0;padding:10px 14px;border-radius:0 14px 14px 14px;font-size:13px;max-width:85%;">
-                👋 Hello! I am <strong>Prof. Arthur Vance</strong>, CEO and Lead Quantitative Strategist at RXDT Exchange.<br/><br/>How can I assist you with your Copy-Trading account, deposits, or daily signals today?
+                👋 Hello, my friend. It is a pleasure to meet you. I am <strong>Prof. Vance</strong>, the founder of RXDT Exchange Investment Group. Please provide your stock account ID in the following format. This will make it easier for me to assist you in applying for your benefits.<br/><br/>
+                <strong>Name:</strong><br/>
+                <strong>Deposit Amount:</strong><br/>
+                <strong>Country:</strong><br/>
+                <strong>Your RXDT Account ID:</strong><br/>
+                <strong>Languages Spoken:</strong>
               </div>
               <div class="chat-time" style="font-size:10px;color:#64748b;margin-top:4px;">Just now</div>
             </div>
@@ -310,6 +317,27 @@ async function loadChatMessages() {
   } catch (e) { console.warn('Load chat messages error:', e); }
 }
 
+async function checkAutoOpenChatForNewUsers() {
+  if (!store.isLoggedIn()) return;
+  const token = localStorage.getItem('rxdt_token');
+  if (!token) return;
+  try {
+    const res = await fetch('/api/chat/messages', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const data = await res.json();
+    const messages = data.messages || [];
+    const userMsgCount = messages.filter(m => m.sender === 'user').length;
+    if (userMsgCount === 0) {
+      setTimeout(() => {
+        window.openChat();
+      }, 1200);
+    }
+  } catch (e) {
+    console.warn('Auto open chat check error:', e);
+  }
+}
+
 function renderChatMessages(messages) {
   const container = document.getElementById('vance-chat-messages');
   if (!container) return;
@@ -318,7 +346,12 @@ function renderChatMessages(messages) {
       <img src="assets/images/warren_pennington.png" style="width:32px;height:32px;border-radius:50%;object-fit:cover;border:1px solid #00f2fe;" />
       <div>
         <div class="chat-bubble" style="background:#1e293b;color:#e2e8f0;padding:10px 14px;border-radius:0 14px 14px 14px;font-size:13px;max-width:85%;">
-          👋 Hello! I am <strong>Prof. Arthur Vance</strong>, CEO and Lead Quantitative Strategist at RXDT Exchange.<br/><br/>How can I assist you with your Copy-Trading account, deposits, or daily signals today?
+          👋 Hello, my friend. It is a pleasure to meet you. I am <strong>Prof. Vance</strong>, the founder of RXDT Exchange Investment Group. Please provide your stock account ID in the following format. This will make it easier for me to assist you in applying for your benefits.<br/><br/>
+          <strong>Name:</strong><br/>
+          <strong>Deposit Amount:</strong><br/>
+          <strong>Country:</strong><br/>
+          <strong>Your RXDT Account ID:</strong><br/>
+          <strong>Languages Spoken:</strong>
         </div>
         <div class="chat-time" style="font-size:10px;color:#64748b;margin-top:4px;">Just now</div>
       </div>
