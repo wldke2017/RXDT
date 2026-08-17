@@ -1586,6 +1586,35 @@ function initDashboard() {
   }
 
   const DEFAULT_MARKETING_MESSAGES = [
+    // ── ADMIN SUPPORT REPLY: HOW DAILY SIGNAL TRADES WORK ──
+    {
+      id: 'msg-reply-daily-signals-explain',
+      title: '📡 Support Reply: How Daily Signal Copy Trading Works',
+      platform: 'Live Chat / Support Reply',
+      category: 'Support',
+      text: `📡 *HOW DAILY SIGNAL TRADES WORK ON RXDT EXCHANGE* 📈
+
+Hello! Here is a simple step-by-step breakdown of how our Daily AI Signal Copy-Trading works:
+
+1️⃣ *Daily Signal Execution Windows (EAT - East Africa Time):*
+   • 🥉 *Tier 1 ($100+ Balance):* Signal runs daily at **5:00 PM EAT** (~1.4% Return)
+   • 🥈 *Tier 2 ($300+ Balance):* Signal runs daily at **6:00 PM EAT** (~2.4% Return)
+   • 🥇 *Tier 3 ($1,000+ Balance):* Signal runs daily at **7:00 PM EAT** (~3.1% Return)
+
+2️⃣ *How Trade Execution Works:*
+   • **Auto Mode (Default & Recommended):** If Auto-Execution is toggled ON in your settings, our AI Quantitative system executes your signal trade automatically at signal time! You don't need to manually click anything.
+   • **Manual Mode:** If Auto-Execution is OFF, a pop-up prompt appears when the signal opens allowing you to click "Join Copy Trading" manually.
+
+3️⃣ *Trade Duration & Profit Settlement:*
+   • Each signal trade runs for exactly **60 seconds**.
+   • As soon as the 60-second window completes, your principal capital PLUS your earned trading profits are automatically settled and credited back to your balance!
+
+4️⃣ *Growth Strategy:*
+   • Signal trades execute 7 days a week. Your profits compound daily, allowing your balance to double every 26–34 days!
+
+If you need any assistance getting started or setting up your deposit, please let me know!
+— Prof. Arthur Vance, CEO & Quantitative Director`
+    },
     // ── KYC VERIFICATION NOTICE ──
     {
       id: 'msg-kyc-notice',
