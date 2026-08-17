@@ -1227,10 +1227,14 @@ function initDashboard() {
         <div id="admin-chat-msgs" style="background:rgba(0,0,0,0.2);border-radius:12px;padding:16px;min-height:200px;max-height:400px;overflow-y:auto;margin-bottom:12px;">
           ${msgsHtml}
         </div>
+        <div style="margin-bottom:10px;display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;">
+          <button class="btn-outline" style="font-size:11px;padding:4px 10px;border-color:#00f2fe;color:#00f2fe;white-space:nowrap;" onclick="insertAdminChatQuickReply('signals')">📡 How Signals Work</button>
+          <button class="btn-outline" style="font-size:11px;padding:4px 10px;border-color:#10b981;color:#10b981;white-space:nowrap;" onclick="insertAdminChatQuickReply('deposit')">💳 Deposit Guide</button>
+          <button class="btn-outline" style="font-size:11px;padding:4px 10px;border-color:#f59e0b;color:#f59e0b;white-space:nowrap;" onclick="insertAdminChatQuickReply('kyc')">🪪 KYC Instructions</button>
+        </div>
         <div style="display:flex;gap:8px;">
-          <input type="text" id="admin-chat-reply-input" class="form-control" placeholder="Type your reply..."
-            onkeydown="if(event.key==='Enter')adminSendChatReply('${userId}')"/>
-          <button class="btn-primary" onclick="adminSendChatReply('${userId}')">Send</button>
+          <textarea id="admin-chat-reply-input" class="form-control" placeholder="Type your reply..." style="height:60px;resize:vertical;font-size:12px;"></textarea>
+          <button class="btn-primary" onclick="adminSendChatReply('${userId}')" style="height:60px;">Send</button>
         </div>
       `;
       // Scroll to bottom
@@ -1255,6 +1259,62 @@ function initDashboard() {
     } catch (err) {
       window.toast('Error: ' + err.message, 'error');
     }
+  };
+
+  window.insertAdminChatQuickReply = function (type) {
+    const input = document.getElementById('admin-chat-reply-input');
+    if (!input) return;
+
+    if (type === 'signals') {
+      input.value = `📡 HOW DAILY SIGNAL TRADES WORK ON RXDT EXCHANGE 📈
+
+Hello! Here is a simple step-by-step breakdown of how our Daily AI Signal Copy-Trading works:
+
+1️⃣ Daily Signal Execution Windows (EAT - East Africa Time):
+   • 🥉 Tier 1 ($100+ Balance): Signal runs daily at 5:00 PM EAT (~1.4% Return)
+   • 🥈 Tier 2 ($300+ Balance): Signal runs daily at 6:00 PM EAT (~2.4% Return)
+   • 🥇 Tier 3 ($1,000+ Balance): Signal runs daily at 7:00 PM EAT (~3.1% Return)
+
+2️⃣ How Trade Execution Works:
+   • Auto Mode (Default & Recommended): If Auto-Execution is toggled ON in your settings, our AI Quantitative system executes your signal trade automatically at signal time! You don't need to manually click anything.
+   • Manual Mode: If Auto-Execution is OFF, a pop-up prompt appears when the signal opens allowing you to click "Join Copy Trading" manually.
+
+3️⃣ Trade Duration & Profit Settlement:
+   • Each signal trade runs for exactly 60 seconds.
+   • As soon as the 60-second window completes, your principal capital PLUS your earned trading profits are automatically settled and credited back to your balance!
+
+4️⃣ Growth Strategy:
+   • Signal trades execute 7 days a week. Your profits compound daily, allowing your balance to double every 26–34 days!
+
+If you need any assistance getting started or setting up your deposit, please let me know!
+— Prof. Arthur Vance, CEO & Quantitative Director`;
+    } else if (type === 'deposit') {
+      input.value = `💳 RXDT DEPOSIT & FUNDING INSTRUCTIONS 💳
+
+Hello! Here is how to fund your account to start trading:
+
+1. Click 'Deposit' on the top menu bar or navigation.
+2. Select your deposit asset (USDT TRC-20).
+3. Copy the official deposit address or scan the QR code.
+4. Transfer funds from your external crypto wallet or exchange (Binance, Bybit, Trust Wallet, etc.).
+5. Upload your transaction hash / proof of payment.
+
+Once confirmed by our system, your balance is updated immediately!
+— Prof. Arthur Vance, CEO & Quantitative Director`;
+    } else if (type === 'kyc') {
+      input.value = `🪪 RXDT KYC IDENTITY VERIFICATION GUIDE 🪪
+
+Hello! Completing your KYC verification unlocks higher daily withdrawal limits and priority support:
+
+1. Go to Profile -> KYC Verification.
+2. Enter your real name and official ID document number.
+3. Upload a clear photo of your ID front and back.
+4. Submit for instant automated verification!
+
+— Prof. Arthur Vance, CEO & Quantitative Director`;
+    }
+
+    input.focus();
   };
 
   // ---- INFOGRAPHICS: 30-Day Signal Earnings Cards Generator ----
