@@ -798,13 +798,18 @@ export function init(page) {
       const container = document.getElementById('email-bind-btn-container');
       if (data.emailBound) {
         if (sub) sub.textContent = `Bound: ${data.emailBound}`;
-        if (container) container.innerHTML = `<span class="badge badge-success">Bound</span>`;
+        if (container) container.innerHTML = `
+          <span class="badge badge-success" style="margin-right:6px;">✅ Bound</span>
+          <button class="btn-outline" style="padding:4px 10px;font-size:12px;" onclick="window.checkEmailStatus()">↺ Refresh</button>`;
       } else {
         if (sub) sub.textContent = 'No email address bound';
         if (container) container.innerHTML = `<button class="btn-outline" style="padding:7px 16px;font-size:13px;" onclick="openBindEmailModal()">Bind Email</button>`;
       }
     } catch (e) { }
   }
+
+  // Expose so inline onclick="window.checkEmailStatus()" in injected HTML can reach it
+  window.checkEmailStatus = checkEmailStatus;
 
   // Make open/close email modal available globally before any call
   window.openBindEmailModal = function () {
@@ -964,19 +969,28 @@ export function init(page) {
 
       // Show brief success inside modal, then auto-close
       showBindEmailMsg('✅ Email bound successfully!', 'success');
+
+      // Update local store immediately (use updateUser — store has no setUser)
+      store.updateUser({ emailBound: data.emailBound || email, email: data.emailBound || email });
+
+      // Convert confirm button into a manual close button in case auto-close is slow
       if (confirmBtn) {
-        confirmBtn.innerHTML = '✅ Verified!';
+        confirmBtn.disabled = false;
+        confirmBtn.innerHTML = '✅ Bound — Click to Close';
         confirmBtn.style.background = 'rgba(0,196,154,0.2)';
         confirmBtn.style.color = '#00c49a';
         confirmBtn.style.border = '1px solid rgba(0,196,154,0.4)';
-      }
-
-      // Update local store immediately
-      const currentUser = store.getUser();
-      if (currentUser) {
-        currentUser.emailBound = data.emailBound || email;
-        currentUser.email = data.emailBound || email;
-        store.setUser(currentUser);
+        confirmBtn.onclick = () => {
+          closeBindEmailModal();
+          checkEmailStatus();
+          // Reset button for future opens
+          confirmBtn.disabled = false;
+          confirmBtn.innerHTML = 'Confirm Email Binding';
+          confirmBtn.style.background = '';
+          confirmBtn.style.color = '';
+          confirmBtn.style.border = '';
+          confirmBtn.onclick = window.submitBindEmail;
+        };
       }
 
       // Auto-close after 1.2s and refresh status
@@ -991,6 +1005,7 @@ export function init(page) {
           confirmBtn.style.background = '';
           confirmBtn.style.color = '';
           confirmBtn.style.border = '';
+          confirmBtn.onclick = window.submitBindEmail;
         }
         clearBindEmailMsg();
         const inputEmail = document.getElementById('bind-email-input');
