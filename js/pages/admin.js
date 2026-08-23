@@ -264,6 +264,12 @@ function renderDashboard() {
         <input type="hidden" id="balance-modal-user-id"/>
         <label style="font-size:13px;color:var(--text-sub);margin-bottom:6px;display:block;">Amount (positive to credit, negative to debit)</label>
         <input type="number" id="balance-modal-amount" class="form-control" placeholder="e.g. 500 or -200" style="margin-bottom:10px;"/>
+        <div style="margin-bottom:10px;display:flex;align-items:center;gap:8px;">
+          <input type="checkbox" id="balance-modal-is-deposit" checked style="width:16px;height:16px;cursor:pointer;"/>
+          <label for="balance-modal-is-deposit" style="font-size:12px;color:#00f2fe;font-weight:600;cursor:pointer;">
+            💳 Tag as Approved Deposit (Increments total deposits, unlocks signal tiers & spin chances)
+          </label>
+        </div>
         <input type="text" id="balance-modal-remark" class="form-control" placeholder="Remark (e.g. Manual credit)" style="margin-bottom:16px;"/>
         <button class="btn-primary" style="width:100%;height:46px;font-size:15px;font-weight:700;" onclick="submitBalanceAdjust()">Apply Adjustment</button>
       </div>
@@ -1004,6 +1010,8 @@ function initDashboard() {
       <span>Current Balance: <strong style="color:#00f2fe;">$${balance}</strong></span>`;
     document.getElementById('balance-modal-amount').value = '';
     document.getElementById('balance-modal-remark').value = '';
+    const depCheck = document.getElementById('balance-modal-is-deposit');
+    if (depCheck) depCheck.checked = true;
     document.getElementById('balance-modal').classList.add('active');
   };
 
@@ -1015,9 +1023,10 @@ function initDashboard() {
     const userId = document.getElementById('balance-modal-user-id').value;
     const amount = parseFloat(document.getElementById('balance-modal-amount').value);
     const remark = document.getElementById('balance-modal-remark').value;
+    const isDeposit = document.getElementById('balance-modal-is-deposit')?.checked ?? true;
     if (!userId || isNaN(amount)) { window.toast('Please enter a valid amount', 'error'); return; }
     try {
-      const res = await adminFetch('/users/balance', 'POST', { userId, amount, remark });
+      const res = await adminFetch('/users/balance', 'POST', { userId, amount, remark, isDeposit });
       window.toast('✅ ' + res.message, 'success');
       closeBalanceModal();
       // Refresh users list

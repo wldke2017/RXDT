@@ -304,3 +304,47 @@ export async function runDatabaseHardReset() {
   }
 }
 
+/**
+ * Automated System-Wide Post-Signal Reconciliation.
+ * 
+ * Runs automatically whenever signal trades complete settlement across the platform:
+ * 1. Audits & restores any orphan frozen balances to available balance.
+ * 2. Reconciles total_deposits from approved deposit records.
+ * 3. Reconciles total_assets = available_balance + frozen_balance across all users.
+ */
+export async function autoReconcileAllUsers() {
+  try {
+    // Stage 1: Reconcile orphan frozen balance
+    const auditRes = await runPositionAndBalanceAudit();
+
+    // Stage 2: Reconcile total_deposits from approved deposits
+    const depositUsersRes = await query(`
+      SELECT user_id, COALESCE(SUM(amount), 0) as approved_total 
+      FROM deposits 
+      WHERE audit_status = 'approved' 
+      GROUP BY user_id
+    `).catch(() => ({ rows: [] }));
+    for (const dep of depositUsersRes.rows) {
+      await query(
+        `UPDATE users SET total_deposits = $1 WHERE id = $2 AND total_deposits < $1`,
+        [parseFloat(dep.approved_total), dep.user_id]
+      ).catch(() => { });
+    }
+
+    // Stage 3: Reconcile total_assets = available_balance + frozen_balance
+    const assetReconcileRes = await query(`
+      UPDATE users 
+      SET total_assets = available_balance + frozen_balance 
+      WHERE ABS(total_assets - (available_balance + frozen_balance)) > 0.001
+      RETURNING id
+    `).catch(() => ({ rows: [] }));
+
+    console.log(`⚡ [Auto-Reconcile] System reconciliation completed automatically. Repaired accounts: ${auditRes.repaired || 0}, Aligned assets: ${assetReconcileRes.rows.length}`);
+    return { ok: true, repaired: auditRes.repaired || 0, alignedAssets: assetReconcileRes.rows.length };
+  } catch (err) {
+    console.warn('⚡ [Auto-Reconcile] Post-signal reconciliation warning:', err.message);
+    return { ok: false, error: err.message };
+  }
+}
+
+

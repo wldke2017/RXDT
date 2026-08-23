@@ -108,23 +108,77 @@ router.get('/users', requireAdminSecret, async (req, res) => {
 
 router.post('/users/balance', requireAdminSecret, async (req, res) => {
   try {
-    const { userId, amount, remark } = req.body;
+    const { userId, amount, remark, isDeposit } = req.body;
     if (!userId || amount === undefined) return res.status(400).json({ error: 'userId and amount required' });
     const amt = parseFloat(amount);
-    const userRes = await query(
-      `UPDATE users SET available_balance = available_balance + $1, total_assets = total_assets + $1
-       WHERE id = $2 RETURNING id, name, available_balance, total_assets`,
-      [amt, userId]
-    );
-    if (!userRes.rows.length) return res.status(404).json({ error: 'User not found' });
-    const u = userRes.rows[0];
-    await query(
-      `INSERT INTO account_changes (id, user_id, type, amount, balance_after, remark) VALUES ($1,$2,$3,$4,$5,$6)`,
-      ['AC' + Date.now(), userId, 'admin_adjustment', amt, u.available_balance, remark || 'Admin balance adjustment']
-    );
-    res.json({ message: `Balance updated for ${u.name}. New balance: $${parseFloat(u.available_balance).toFixed(2)}`, user: u });
+    if (isNaN(amt)) return res.status(400).json({ error: 'Invalid amount' });
+
+    // Treat as deposit if explicitly set to true OR if isDeposit is not explicitly false and amt > 0
+    const shouldTagDeposit = isDeposit === true || (isDeposit !== false && amt > 0);
+
+    let u = null;
+    let awardedSpins = 0;
+
+    await withTransaction(async (tx) => {
+      if (shouldTagDeposit && amt > 0) {
+        if (amt >= 1000) {
+          awardedSpins = 3 + Math.floor((amt - 1000) / 500);
+        } else if (amt >= 500) {
+          awardedSpins = 2;
+        } else {
+          awardedSpins = 1;
+        }
+        awardedSpins = Math.min(awardedSpins, 10);
+
+        const userRes = await tx(
+          `UPDATE users SET 
+             available_balance = available_balance + $1, 
+             total_assets = total_assets + $1,
+             total_deposits = total_deposits + $1,
+             spin_chances = spin_chances + $2,
+             last_deposit_amount = $1,
+             spin_winnings_used = 0,
+             initial_deposit = CASE WHEN initial_deposit = 0 THEN $1 ELSE initial_deposit END
+           WHERE id = $3 RETURNING id, name, available_balance, total_assets, total_deposits, spin_chances`,
+          [amt, awardedSpins, userId]
+        );
+        if (!userRes.rows.length) throw new Error('User not found');
+        u = userRes.rows[0];
+
+        // Create official approved deposit record
+        const depId = 'DEP-ADM-' + Date.now() + '_' + Math.floor(Math.random() * 1000);
+        const orderNum = 'ADM' + Date.now();
+        await tx(
+          `INSERT INTO deposits (id, order_number, user_id, amount, coin, network, status, audit_status, created_at)
+           VALUES ($1, $2, $3, $4, 'USDT', 'TRC20', 'success', 'approved', NOW())`,
+          [depId, orderNum, userId, amt]
+        );
+
+        await tx(
+          `INSERT INTO account_changes (id, user_id, type, amount, balance_after, remark) VALUES ($1,$2,$3,$4,$5,$6)`,
+          ['AC' + Date.now(), userId, 'deposit', amt, u.available_balance, remark || `Admin deposit credit: ${orderNum} (+${awardedSpins} Lucky Spin Chances)`]
+        );
+      } else {
+        const userRes = await tx(
+          `UPDATE users SET available_balance = available_balance + $1, total_assets = total_assets + $1
+           WHERE id = $2 RETURNING id, name, available_balance, total_assets`,
+          [amt, userId]
+        );
+        if (!userRes.rows.length) throw new Error('User not found');
+        u = userRes.rows[0];
+
+        await tx(
+          `INSERT INTO account_changes (id, user_id, type, amount, balance_after, remark) VALUES ($1,$2,$3,$4,$5,$6)`,
+          ['AC' + Date.now(), userId, 'admin_adjustment', amt, u.available_balance, remark || 'Admin balance adjustment']
+        );
+      }
+    });
+
+    const depMsg = shouldTagDeposit && amt > 0 ? ` (Tagged as Approved Deposit: +$${amt.toFixed(2)} total deposits, +${awardedSpins} spins)` : '';
+    res.json({ message: `Balance updated for ${u.name}. New balance: $${parseFloat(u.available_balance).toFixed(2)}${depMsg}`, user: u });
   } catch (err) {
-    res.status(500).json({ error: 'Failed to update balance' });
+    console.error('Admin update balance error:', err);
+    res.status(500).json({ error: err.message || 'Failed to update balance' });
   }
 });
 

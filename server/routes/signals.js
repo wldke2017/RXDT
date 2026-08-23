@@ -1,6 +1,7 @@
 import express from 'express';
 import { query, withTransaction } from '../db.js';
 import { requireAuth } from '../middleware/auth.js';
+import { autoReconcileAllUsers } from '../utils/audit.js';
 
 // ---- Unique ID helper (collision-safe within the same millisecond) ----
 function uid(prefix) {
@@ -564,6 +565,7 @@ router.get('/poll', async (req, res) => {
 // same 'open' trade before any of them flipped it to 'completed', crediting
 // the user 2-3x for a single position.
 export async function processDueSignalTrades(userId) {
+  let settledCount = 0;
   try {
     // Recover any trades stuck in 'processing' by a prior attempt (crash/timeout)
     await recoverStaleProcessingTrades(userId);
@@ -586,24 +588,19 @@ export async function processDueSignalTrades(userId) {
       const claimed = claimRes.rows[0];
       if (!claimed) break; // no more due trades — done
 
-      // Capture the live settlement price for the history record (outside
-      // the transaction; the price helper caches for 10s so batch settlements
-      // of the same pair share one fetch). Never throws — falls back to cache.
+      // Capture the live settlement price for the history record
       const settlementPrice = await getMarketPrice(claimed.pair).catch(() => null);
 
       try {
         const trade = claimed;
-
         const tradeAmount = parseFloat(trade.trade_amount || 0);
         let profit = parseFloat(trade.profit || 0);
-        // Safety Guarantee: If profit stored on trade is 0 or invalid, calculate minimum 1.4% profit
         if (profit <= 0 && tradeAmount > 0) {
           profit = parseFloat((tradeAmount * 0.014).toFixed(4));
         }
         const returnTotal = tradeAmount + profit;
 
         await withTransaction(async (tx) => {
-          // 1. Release frozen balance and add profit to available_balance & total_assets & total_earnings
           const userRes = await tx(
             `UPDATE users 
            SET frozen_balance = GREATEST(0, frozen_balance - $1),
@@ -616,17 +613,11 @@ export async function processDueSignalTrades(userId) {
 
           const newBal = parseFloat(userRes.rows[0]?.available_balance || 0);
 
-          // 2. Mark completed (was atomically claimed as 'processing') and stamp
-          //    settlement price + time + clear processing_at for the history record.
           await tx(
             `UPDATE signal_trades SET status = 'completed', settlement_price = $2, settled_at = NOW(), processing_at = NULL WHERE id = $1`,
             [trade.id, settlementPrice]
           );
 
-
-          // 2b. Check if the user has now doubled their invested capital.
-          //     If total_earnings >= initial_deposit, mark doubled_capital = true
-          //     (this unlocks the lower 10% withdrawal fee).
           const capRes = await tx(
             `SELECT initial_deposit, total_earnings FROM users WHERE id = $1`,
             [userId]
@@ -640,8 +631,6 @@ export async function processDueSignalTrades(userId) {
             }
           }
 
-          // 3. Log Close Position in account_changes (includes the unique trade id
-          //    in the remark so any future duplicate settlement is easy to detect).
           const closeId = 'AC' + Date.now() + 'C';
           await tx(
             `INSERT INTO account_changes (id, user_id, type, amount, balance_after, remark)
@@ -650,21 +639,19 @@ export async function processDueSignalTrades(userId) {
               `Signal ${trade.signal_id} — Close Position (${trade.pair}) +${profit.toFixed(4)} USDT · trade ${trade.id}`]
           ).catch(() => { });
 
-          // 4. Referral Commissions — halving chain model.
           try {
             if (profit > 0) {
               let currentUserId = userId;
-              let commissionRate = 0.075; // Level 1 starts at 7.5%
+              let commissionRate = 0.075;
               let level = 1;
 
               while (commissionRate > 0.0001) {
                 const refRes = await tx(`SELECT referred_by FROM users WHERE id = $1`, [currentUserId]);
                 const rawReferrerId = refRes.rows[0]?.referred_by;
-                if (!rawReferrerId) break; // top of chain reached
+                if (!rawReferrerId) break;
 
-                // Verify referrer actually exists in users table (by ID or invite code)
                 const refUserCheck = await tx(`SELECT id FROM users WHERE id = $1 OR invite_code = $1`, [rawReferrerId]);
-                if (!refUserCheck.rows.length) break; // Referrer user no longer exists — terminate chain
+                if (!refUserCheck.rows.length) break;
                 const referrerId = refUserCheck.rows[0].id;
 
                 const commission = parseFloat((profit * commissionRate).toFixed(4));
@@ -693,7 +680,6 @@ export async function processDueSignalTrades(userId) {
                   `L${level} Referral Commission — ${trade.pair} trade by referred user +${commission.toFixed(4)} USDT`]
                 ).catch(() => { });
 
-                // Move up the chain and halve the rate
                 currentUserId = referrerId;
                 commissionRate = commissionRate / 2;
                 level++;
@@ -704,12 +690,15 @@ export async function processDueSignalTrades(userId) {
           }
 
         });
+        settledCount++;
       } catch (err) {
-        // withTransaction already rolled back; reset the claim so the trade
-        // can be retried on the next poll
         await query(`UPDATE signal_trades SET status = 'open', processing_at = NULL WHERE id = $1`, [claimed.id]).catch(() => { });
         throw err;
       }
+    }
+
+    if (settledCount > 0) {
+      await autoReconcileAllUsers().catch(() => {});
     }
   } catch (err) {
     console.error('Error settling due signal trades:', err);
@@ -852,7 +841,10 @@ export async function settleAllDueSignalTrades() {
         errors++;
       }
     }
-    if (settled > 0) console.log(`✅ Global settle: ${settled} trades settled, ${errors} errors`);
+    if (settled > 0) {
+      console.log(`✅ Global settle: ${settled} trades settled, ${errors} errors`);
+      await autoReconcileAllUsers().catch(() => {});
+    }
     return { settled, errors };
   } catch (err) {
     console.error('settleAllDueSignalTrades error:', err);
