@@ -1067,7 +1067,15 @@ export function init(page) {
       else store.updateUser({ hasTransactionPassword: true });
 
       closeSetTxnPasswordModal();
-      navigateTo('profile');
+      
+      // Force UI update to show 'Change' instead of 'Set'
+      const container = document.getElementById('page-content');
+      if (container) {
+        container.innerHTML = render('profile');
+        if (typeof init === 'function') init('profile');
+      } else {
+        navigateTo('profile');
+      }
     } catch (err) {
       toast(err.message || 'Failed to set transaction password', 'error');
       if (submitBtn) {
