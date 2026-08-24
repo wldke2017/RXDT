@@ -279,6 +279,26 @@ function updateUserNav() {
   if (area) area.innerHTML = renderUserActions();
 }
 
+window.toggleUserMenu = function () {
+  const dropdown = document.getElementById('user-dropdown');
+  if (!dropdown) return;
+  dropdown.classList.toggle('open');
+};
+
+window.closeUserMenu = function () {
+  const dropdown = document.getElementById('user-dropdown');
+  if (dropdown) dropdown.classList.remove('open');
+};
+
+// Close dropdown when clicking outside
+document.addEventListener('click', function (e) {
+  const dropdown = document.getElementById('user-dropdown');
+  if (!dropdown) return;
+  if (!e.target.closest('.user-avatar-btn') && !e.target.closest('.user-dropdown')) {
+    dropdown.classList.remove('open');
+  }
+});
+
 function escapeHtml(str) {
   if (!str) return '';
   return String(str)
