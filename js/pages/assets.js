@@ -346,7 +346,7 @@ function renderWithdraw() {
         <div style="display:flex;gap:8px;">
           <input type="number" id="withdraw-amount" class="form-control" placeholder="Enter amount"
             oninput="calcWithdrawFee(this.value)"/>
-          <button class="btn-outline" onclick="document.getElementById('withdraw-amount').value='${Math.floor(user.availableBalance)}'">Max</button>
+          <button class="btn-outline" onclick="setMaxWithdraw()">Max</button>
         </div>
       </div>
       <div id="withdraw-fee-calc" style="font-size:13px;color:var(--text-muted);margin-bottom:16px;"></div>
@@ -850,9 +850,21 @@ export function init(page) {
     const user = store.getUser();
     const hasDoubled = !!(user && user.doubledCapital);
     const feeRate = hasDoubled ? 0.10 : 0.25;
-    const fee = parseFloat((parseFloat(val) * feeRate).toFixed(2));
-    const actual = parseFloat(val) - fee;
-    el.innerHTML = `Fee (${(feeRate * 100).toFixed(0)}%): $${fmt(fee)} · You receive: <strong>$${fmt(actual)}</strong>`;
+    const amount = parseFloat(val);
+    const fee = parseFloat((amount * feeRate).toFixed(2));
+    const actual = amount - fee;
+    const totalDeducted = amount + fee;
+    el.innerHTML = `<span style="color:var(--text-muted);">Fee (${(feeRate * 100).toFixed(0)}%): <strong style="color:#f59e0b;">$${fmt(fee)}</strong> · Deducted from balance: <strong style="color:#ef4444;">$${fmt(totalDeducted)}</strong> · You receive: <strong style="color:#10b981;">$${fmt(actual)}</strong></span>`;
+  };
+
+  window.setMaxWithdraw = function () {
+    const user = store.getUser();
+    const hasDoubled = !!(user && user.doubledCapital);
+    const feeRate = hasDoubled ? 0.10 : 0.25;
+    // Max withdrawable: solve for X where X + X*feeRate <= availableBalance => X = availableBalance / (1 + feeRate)
+    const maxAmount = Math.floor((user.availableBalance / (1 + feeRate)) * 100) / 100;
+    const input = document.getElementById('withdraw-amount');
+    if (input) { input.value = maxAmount; calcWithdrawFee(maxAmount); }
   };
 
   window.fillWithdrawAddress = function (sel) {
@@ -879,14 +891,15 @@ export function init(page) {
       return;
     }
     if (!amount || amount < 10) { toast('Minimum withdrawal is $10 USDT', 'error'); return; }
-    if (amount > user.availableBalance) { toast('Insufficient balance', 'error'); return; }
-    if (!address) { toast('Please enter withdrawal address', 'error'); return; }
-    if (!transactionPassword) { toast('Please enter your transaction password', 'error'); return; }
-    if (!/^\d{6}$/.test(transactionPassword)) { toast('Transaction password must be exactly 6 digits', 'error'); return; }
     // Fee matches backend: 25% if not doubled, 10% if doubled
     const hasDoubled = !!(user && user.doubledCapital);
     const feeRate = hasDoubled ? 0.10 : 0.25;
     const fee = parseFloat((amount * feeRate).toFixed(2));
+    // Check balance including fee (server deducts amount + fee)
+    if (amount + fee > user.availableBalance) { toast(`Insufficient balance. $${amount} + $${fee} fee = $${(amount + fee).toFixed(2)} required`, 'error'); return; }
+    if (!address) { toast('Please enter withdrawal address', 'error'); return; }
+    if (!transactionPassword) { toast('Please enter your transaction password', 'error'); return; }
+    if (!/^\d{6}$/.test(transactionPassword)) { toast('Transaction password must be exactly 6 digits', 'error'); return; }
 
     if (submitBtn) {
       submitBtn.disabled = true;
