@@ -1062,20 +1062,23 @@ export function init(page) {
 
     try {
       const res = await api.setTransactionPassword({ transactionPassword: pwd });
-      toast('✅ Transaction password set successfully!', 'success');
       if (res.user) store.updateUser(res.user);
       else store.updateUser({ hasTransactionPassword: true });
 
+      // Close the modal first so the toast is visible over the existing page
       closeSetTxnPasswordModal();
-      
-      // Force UI update to show 'Change' instead of 'Set'
-      const container = document.getElementById('page-content');
-      if (container) {
-        container.innerHTML = render('profile');
-        if (typeof init === 'function') init('profile');
-      } else {
-        navigateTo('profile');
-      }
+      toast('✅ Transaction password set successfully!', 'success');
+
+      // Delay re-render so the toast has time to appear before the page is rebuilt
+      setTimeout(() => {
+        const container = document.getElementById('page-content');
+        if (container) {
+          container.innerHTML = render('profile');
+          if (typeof init === 'function') init('profile');
+        } else {
+          navigateTo('profile');
+        }
+      }, 1500);
     } catch (err) {
       toast(err.message || 'Failed to set transaction password', 'error');
       if (submitBtn) {
