@@ -853,16 +853,14 @@ export function init(page) {
     const amount = parseFloat(val);
     const fee = parseFloat((amount * feeRate).toFixed(2));
     const actual = amount - fee;
-    const totalDeducted = amount + fee;
-    el.innerHTML = `<span style="color:var(--text-muted);">Fee (${(feeRate * 100).toFixed(0)}%): <strong style="color:#f59e0b;">$${fmt(fee)}</strong> · Deducted from balance: <strong style="color:#ef4444;">$${fmt(totalDeducted)}</strong> · You receive: <strong style="color:#10b981;">$${fmt(actual)}</strong></span>`;
+    // Balance deducted = amount only (fee comes out of what user receives)
+    el.innerHTML = `<span style="color:var(--text-muted);">Deducted from balance: <strong style="color:#ef4444;">$${fmt(amount)}</strong> · Fee (${(feeRate * 100).toFixed(0)}%): <strong style="color:#f59e0b;">$${fmt(fee)}</strong> · You receive: <strong style="color:#10b981;">$${fmt(actual)}</strong></span>`;
   };
 
   window.setMaxWithdraw = function () {
     const user = store.getUser();
-    const hasDoubled = !!(user && user.doubledCapital);
-    const feeRate = hasDoubled ? 0.10 : 0.25;
-    // Max withdrawable: solve for X where X + X*feeRate <= availableBalance => X = availableBalance / (1 + feeRate)
-    const maxAmount = Math.floor((user.availableBalance / (1 + feeRate)) * 100) / 100;
+    // Fee is deducted from the withdrawal, not added on top, so max = full available balance
+    const maxAmount = Math.floor(user.availableBalance * 100) / 100;
     const input = document.getElementById('withdraw-amount');
     if (input) { input.value = maxAmount; calcWithdrawFee(maxAmount); }
   };
@@ -895,8 +893,9 @@ export function init(page) {
     const hasDoubled = !!(user && user.doubledCapital);
     const feeRate = hasDoubled ? 0.10 : 0.25;
     const fee = parseFloat((amount * feeRate).toFixed(2));
-    // Check balance including fee (server deducts amount + fee)
-    if (amount + fee > user.availableBalance) { toast(`Insufficient balance. $${amount} + $${fee} fee = $${(amount + fee).toFixed(2)} required`, 'error'); return; }
+    const actualReceived = parseFloat((amount - fee).toFixed(2));
+    // Balance check: only withdrawal amount is deducted (fee comes from what user receives)
+    if (amount > user.availableBalance) { toast(`Insufficient balance. You need $${amount} available.`, 'error'); return; }
     if (!address) { toast('Please enter withdrawal address', 'error'); return; }
     if (!transactionPassword) { toast('Please enter your transaction password', 'error'); return; }
     if (!/^\d{6}$/.test(transactionPassword)) { toast('Transaction password must be exactly 6 digits', 'error'); return; }

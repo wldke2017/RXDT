@@ -166,18 +166,22 @@ router.post('/withdrawals', requireAuth, async (req, res) => {
       // Withdrawal transaction fee:
       // - Users who have NOT yet doubled their invested capital: 25% fee
       // - Users who HAVE doubled their invested capital: 10% fee
+      // Fee is taken FROM the withdrawal amount (not added on top).
+      // e.g. withdraw $100, fee=$25 → user receives $75, balance deducted $100.
       const hasDoubled = !!user.doubled_capital;
       const feeRate = hasDoubled ? 0.10 : 0.25;
       const fee = parseFloat((numAmount * feeRate).toFixed(2));
+      const actualReceived = parseFloat((numAmount - fee).toFixed(2));
 
-      if (available < numAmount + fee) {
-        return { error: `Insufficient available balance. Minimum required including ${(feeRate * 100).toFixed(0)}% fee: $${(numAmount + fee).toFixed(2)}`, status: 400 };
+      if (available < numAmount) {
+        return { error: `Insufficient available balance. You need $${numAmount.toFixed(2)} (fee of $${fee.toFixed(2)} is deducted from withdrawal).`, status: 400 };
       }
 
       const id = 'W' + Date.now();
       const orderNumber = 'WIT' + Date.now();
-      const newAvailable = available - numAmount - fee;
-      const newTotal = totalAssets - numAmount - fee;
+      // Only deduct the withdrawal amount — fee comes out of what user receives
+      const newAvailable = available - numAmount;
+      const newTotal = totalAssets - numAmount;
 
       await tx(`UPDATE users SET available_balance = $1, total_assets = $2 WHERE id = $3;`, [newAvailable, newTotal, req.userId]);
 
@@ -190,9 +194,9 @@ router.post('/withdrawals', requireAuth, async (req, res) => {
       await tx(`
         INSERT INTO account_changes (id, user_id, type, amount, balance_after, remark)
         VALUES ($1, $2, 'Crypto Withdrawal', $3, $4, $5);
-      `, ['AC' + Date.now(), req.userId, -(numAmount + fee), newAvailable, `Withdrawal to ${address.slice(0, 8)}... (incl. ${(feeRate * 100).toFixed(0)}% fee $${fee.toFixed(2)})`]);
+      `, ['AC' + Date.now(), req.userId, -numAmount, newAvailable, `Withdrawal $${numAmount.toFixed(2)} to ${address.slice(0, 8)}... · Fee: $${fee.toFixed(2)} (${(feeRate * 100).toFixed(0)}%) · You receive: $${actualReceived.toFixed(2)}`]);
 
-      return { withdrawal: insertRes.rows[0], newAvailable };
+      return { withdrawal: insertRes.rows[0], newAvailable, actualReceived };
     });
 
     if (result.error) {
