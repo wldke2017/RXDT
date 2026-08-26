@@ -298,7 +298,11 @@ function renderShell() {
                 <strong>Deposit Amount:</strong><br/>
                 <strong>Country:</strong><br/>
                 <strong>Your RXDT Account ID:</strong><br/>
-                <strong>Languages Spoken:</strong>
+                <strong>Languages Spoken:</strong><br/><br/>
+                <strong>Join our communities:</strong><br/>
+                • <a href="https://t.me/RXDT888" target="_blank" style="color:#00f2fe;text-decoration:underline;">Telegram Chat (@RXDT888)</a><br/>
+                • <a href="https://chat.whatsapp.com/Kz2pCcbcn4mFnENiXpRzzA?s=cl&p=a&ilr=1" target="_blank" style="color:#00f2fe;text-decoration:underline;">WhatsApp Group</a><br/>
+                • <a href="https://t.me/+iIx0d1qCg3syYzE0" target="_blank" style="color:#00f2fe;text-decoration:underline;">Telegram Group</a>
               </div>
               <div class="chat-time" style="font-size:10px;color:#64748b;margin-top:4px;">Just now</div>
             </div>
@@ -589,7 +593,11 @@ function renderChatMessages(messages) {
           <strong>Deposit Amount:</strong><br/>
           <strong>Country:</strong><br/>
           <strong>Your RXDT Account ID:</strong><br/>
-          <strong>Languages Spoken:</strong>
+          <strong>Languages Spoken:</strong><br/><br/>
+          <strong>Join our communities:</strong><br/>
+          • <a href="https://t.me/RXDT888" target="_blank" style="color:#00f2fe;text-decoration:underline;">Telegram Chat (@RXDT888)</a><br/>
+          • <a href="https://chat.whatsapp.com/Kz2pCcbcn4mFnENiXpRzzA?s=cl&p=a&ilr=1" target="_blank" style="color:#00f2fe;text-decoration:underline;">WhatsApp Group</a><br/>
+          • <a href="https://t.me/+iIx0d1qCg3syYzE0" target="_blank" style="color:#00f2fe;text-decoration:underline;">Telegram Group</a>
         </div>
         <div class="chat-time" style="font-size:10px;color:#64748b;margin-top:4px;">Just now</div>
       </div>
