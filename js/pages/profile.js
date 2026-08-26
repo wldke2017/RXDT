@@ -1344,24 +1344,7 @@ export function init(page) {
     navigateTo('login');
   };
 
-  // PWA Install Logic
-  let deferredPrompt;
-  window.addEventListener('beforeinstallprompt', (e) => {
-    e.preventDefault();
-    deferredPrompt = e;
-  });
-
-  window.installPWA = async function () {
-    if (deferredPrompt) {
-      deferredPrompt.prompt();
-      const { outcome } = await deferredPrompt.userChoice;
-      if (outcome === 'accepted') {
-        deferredPrompt = null;
-      }
-    } else {
-      toast('To install: tap Share (iOS) or Menu (Android) and select "Add to Home Screen"', 'info');
-    }
-  };
+  // PWA Install Logic moved to app.js
 
   function escapeHtml(str) {
     const div = document.createElement('div');

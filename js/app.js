@@ -22,6 +22,89 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   startMarketUpdates();
 
+  // ---- PWA Install Banner Logic ----
+  let deferredPrompt;
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    
+    // Only show the custom banner if they haven't dismissed it this session
+    if (!sessionStorage.getItem('rxdt_pwa_dismissed')) {
+      showCustomInstallBanner();
+    }
+  });
+
+  window.installPWA = async function () {
+    const banner = document.getElementById('custom-pwa-banner');
+    if (banner) banner.style.transform = 'translateY(150%)';
+
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'accepted') {
+        deferredPrompt = null;
+      }
+    } else {
+      // Fallback for iOS Safari or if event hasn't fired yet
+      const container = document.getElementById('toast-container');
+      if (container) {
+        const el = document.createElement('div');
+        el.className = 'toast info';
+        el.textContent = 'To install: tap Share (iOS) or Menu (Android) and select "Add to Home Screen"';
+        container.appendChild(el);
+        setTimeout(() => el.remove(), 4000);
+      }
+    }
+  };
+
+  window.dismissPWA = function(e) {
+    e.stopPropagation();
+    sessionStorage.setItem('rxdt_pwa_dismissed', 'true');
+    const banner = document.getElementById('custom-pwa-banner');
+    if (banner) banner.style.transform = 'translateY(150%)';
+  };
+
+  function showCustomInstallBanner() {
+    if (document.getElementById('custom-pwa-banner')) return;
+    
+    const banner = document.createElement('div');
+    banner.id = 'custom-pwa-banner';
+    banner.innerHTML = `
+      <div style="display:flex;align-items:center;gap:12px;">
+        <img src="assets/images/rxdt_logo.png" style="width:40px;height:40px;border-radius:8px;" />
+        <div style="flex:1;">
+          <div style="font-weight:700;font-size:14px;color:#fff;margin-bottom:2px;">Install RXDT App</div>
+          <div style="font-size:12px;color:var(--text-sub);">Get push notifications & faster trading</div>
+        </div>
+        <button onclick="dismissPWA(event)" style="background:none;border:none;color:var(--text-muted);font-size:20px;padding:4px;">✕</button>
+      </div>
+      <button onclick="installPWA()" class="btn-primary" style="width:100%;margin-top:12px;font-size:13px;padding:8px;border-radius:8px;">Install Now</button>
+    `;
+    
+    // Style the banner
+    Object.assign(banner.style, {
+      position: 'fixed',
+      bottom: '80px', // above nav bar
+      left: '5%',
+      width: '90%',
+      background: '#1e293b',
+      border: '1px solid #00f2fe',
+      borderRadius: '12px',
+      padding: '16px',
+      boxShadow: '0 10px 25px rgba(0,0,0,0.5)',
+      zIndex: '9999',
+      transform: 'translateY(150%)',
+      transition: 'transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
+    });
+    
+    document.body.appendChild(banner);
+    
+    // Animate in after a short delay
+    setTimeout(() => {
+      banner.style.transform = 'translateY(0)';
+    }, 500);
+  }
+
   // Check and show signal pop-up if in active window
   if (store.isLoggedIn()) {
     setTimeout(() => checkSignalWindow(), 1500); // slight delay after page load
