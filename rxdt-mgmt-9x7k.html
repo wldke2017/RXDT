@@ -13,6 +13,8 @@
 
   <link rel="icon" href="assets/images/rxdt_logo.png" type="image/png" />
 
+  <link rel="manifest" href="/admin-manifest.json" />
+
   <!-- Reuse the same CSS as the main app -->
   <link rel="stylesheet" href="css/style.css" />
   <link rel="stylesheet" href="css/components.css" />
@@ -46,6 +48,11 @@
     import * as adminPage from './js/pages/admin.js';
 
     document.addEventListener('DOMContentLoaded', () => {
+      // Register service worker so the app can be installed as PWA and receive push
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/sw.js').catch(err => console.error('SW registration failed:', err));
+      }
+
       const container = document.getElementById('page-content');
       if (container && adminPage.render) {
         container.innerHTML = adminPage.render('admin');
