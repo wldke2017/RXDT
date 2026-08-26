@@ -342,6 +342,26 @@ window.openChat = async function () {
   }, 100);
 };
 
+window.doLogout = async function () {
+  try {
+    if ('serviceWorker' in navigator) {
+      const reg = await navigator.serviceWorker.ready;
+      const sub = await reg.pushManager.getSubscription();
+      if (sub) {
+        await fetch('/api/chat/push-unsubscribe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${store.token}` },
+          body: JSON.stringify({ endpoint: sub.endpoint })
+        });
+        await sub.unsubscribe();
+      }
+    }
+  } catch (e) {}
+
+  store.logout();
+  router.navigate('login');
+};
+
 window.closeChat = function () {
   const modal = document.getElementById('vance-chat-modal');
   if (modal) modal.classList.remove('active');
@@ -579,13 +599,56 @@ function startMarketUpdates() {
 let notifiedSignals = new Set();
 
 // Request notification permission when the user logs in
-function requestNotificationPermission() {
+// Utility to convert Base64 URL-safe string to Uint8Array (required for push manager)
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding)
+    .replace(/\-/g, '+')
+    .replace(/_/g, '/');
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray;
+}
+
+const PUBLIC_VAPID_KEY = 'BPnDiIRA2Hni2GwSCZLBW_2zbQjlfaBWAdxIdSXy3KYhxC6iTRP4yvCxeLVRuJX_A5w1SlauHRZeEBpcx55zseY';
+
+async function requestNotificationPermission() {
   try {
-    if (!('Notification' in window)) return;
+    if (!('Notification' in window) || !('serviceWorker' in navigator)) return;
     if (Notification.permission === 'default') {
-      Notification.requestPermission();
+      await Notification.requestPermission();
     }
-  } catch (e) { /* notifications not supported */ }
+    
+    if (Notification.permission === 'granted') {
+      const registration = await navigator.serviceWorker.ready;
+      let subscription = await registration.pushManager.getSubscription();
+      
+      if (!subscription) {
+        subscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(PUBLIC_VAPID_KEY)
+        });
+      }
+      
+      // Save subscription to backend
+      const token = localStorage.getItem('rxdt_token');
+      if (token && subscription) {
+        await fetch('/api/chat/push-subscribe', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ subscription })
+        });
+      }
+    }
+  } catch (e) {
+    console.warn('Push registration failed:', e);
+  }
 }
 
 // Send a browser notification for an active signal

@@ -38,6 +38,17 @@ export async function initDatabase() {
     );
   `);
 
+  // Create Push Subscriptions Table
+  await query(`
+    CREATE TABLE IF NOT EXISTS push_subscriptions (
+      id TEXT PRIMARY KEY,
+      user_id VARCHAR(50) REFERENCES users(id) ON DELETE CASCADE,
+      subscription JSONB NOT NULL,
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+
+
   // Ensure missing columns exist on existing database instances and allow null phone (email registration)
   await query(`
     ALTER TABLE users ADD COLUMN IF NOT EXISTS email_bound VARCHAR(100);

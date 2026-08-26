@@ -2,8 +2,19 @@ import express from 'express';
 import { query } from '../db.js';
 import { requireAuth } from '../middleware/auth.js';
 import { requireAdminSecret } from './admin.js';
+import webpush from 'web-push';
+
+// Configure VAPID (keys stored in .env)
+if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
+  webpush.setVapidDetails(
+    'mailto:' + (process.env.ADMIN_EMAIL || 'admin@rxdt.site'),
+    process.env.VAPID_PUBLIC_KEY,
+    process.env.VAPID_PRIVATE_KEY
+  );
+}
 
 const router = express.Router();
+
 
 // ---- USER: Send a message ----
 router.post('/send', requireAuth, async (req, res) => {
@@ -136,6 +147,58 @@ router.post('/mark-read', requireAuth, async (req, res) => {
     }
 });
 
+// ---- USER: Save push subscription ----
+router.post('/push-subscribe', requireAuth, async (req, res) => {
+    try {
+        const { subscription } = req.body;
+        if (!subscription || !subscription.endpoint) {
+            return res.status(400).json({ error: 'Invalid subscription object' });
+        }
+
+        // Upsert: replace existing subscription for same endpoint
+        const existing = await query(
+            `SELECT id FROM push_subscriptions WHERE user_id = $1 AND subscription->>'endpoint' = $2`,
+            [req.userId, subscription.endpoint]
+        );
+
+        if (existing.rows.length > 0) {
+            await query(
+                `UPDATE push_subscriptions SET subscription = $1 WHERE user_id = $2 AND subscription->>'endpoint' = $3`,
+                [JSON.stringify(subscription), req.userId, subscription.endpoint]
+            );
+        } else {
+            const id = 'PUSH' + Date.now();
+            await query(
+                `INSERT INTO push_subscriptions (id, user_id, subscription) VALUES ($1, $2, $3)`,
+                [id, req.userId, JSON.stringify(subscription)]
+            );
+        }
+
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Push subscribe error:', err);
+        res.status(500).json({ error: 'Failed to save push subscription' });
+    }
+});
+
+// ---- USER: Remove push subscription (logout) ----
+router.post('/push-unsubscribe', requireAuth, async (req, res) => {
+    try {
+        const { endpoint } = req.body;
+        if (endpoint) {
+            await query(
+                `DELETE FROM push_subscriptions WHERE user_id = $1 AND subscription->>'endpoint' = $2`,
+                [req.userId, endpoint]
+            );
+        } else {
+            await query(`DELETE FROM push_subscriptions WHERE user_id = $1`, [req.userId]);
+        }
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to remove push subscription' });
+    }
+});
+
 // ---- ADMIN: Reply to a user ----
 router.post('/admin/reply', requireAdminSecret, async (req, res) => {
     try {
@@ -149,6 +212,38 @@ router.post('/admin/reply', requireAdminSecret, async (req, res) => {
             `INSERT INTO chat_messages (id, user_id, message, sender, is_read) VALUES ($1, $2, $3, 'admin', FALSE)`,
             [id, userId, message.trim()]
         );
+
+        // Send Web Push notification to all of user's subscribed devices
+        if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
+            try {
+                const subsRes = await query(
+                    `SELECT subscription FROM push_subscriptions WHERE user_id = $1`,
+                    [userId]
+                );
+                const payload = JSON.stringify({
+                    title: '💬 RXDT Support',
+                    body: message.trim().length > 100 ? message.trim().slice(0, 97) + '...' : message.trim(),
+                    tag: 'rxdt-chat-reply',
+                    url: '/#/home'
+                });
+                for (const row of subsRes.rows) {
+                    const sub = typeof row.subscription === 'string'
+                        ? JSON.parse(row.subscription)
+                        : row.subscription;
+                    webpush.sendNotification(sub, payload).catch(async (err) => {
+                        // 410 Gone = subscription expired, clean it up
+                        if (err.statusCode === 410) {
+                            await query(
+                                `DELETE FROM push_subscriptions WHERE user_id = $1 AND subscription->>'endpoint' = $2`,
+                                [userId, sub.endpoint]
+                            ).catch(() => {});
+                        }
+                    });
+                }
+            } catch (pushErr) {
+                console.warn('Push notification error (non-fatal):', pushErr.message);
+            }
+        }
 
         res.json({ success: true, message: 'Reply sent!', id });
     } catch (err) {

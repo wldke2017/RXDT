@@ -147,7 +147,7 @@ function renderProfileMain() {
         <div class="pmi-label">Theme Mode</div>
         <div class="pmi-arrow">›</div>
       </div>
-      <div class="profile-menu-item" onclick="toast('App download link copied!', 'success')">
+      <div class="profile-menu-item" onclick="installPWA()">
         <div class="pmi-icon">📥</div>
         <div class="pmi-label">Download App</div>
         <div class="pmi-arrow">›</div>
@@ -1323,10 +1323,44 @@ export function init(page) {
     }
   };
 
-  window.doLogoutProfile = function () {
+  window.doLogoutProfile = async function () {
+    try {
+      if ('serviceWorker' in navigator) {
+        const reg = await navigator.serviceWorker.ready;
+        const sub = await reg.pushManager.getSubscription();
+        if (sub) {
+          await fetch('/api/chat/push-unsubscribe', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${store.token}` },
+            body: JSON.stringify({ endpoint: sub.endpoint })
+          });
+          await sub.unsubscribe();
+        }
+      }
+    } catch (e) {}
+
     store.logout();
     toast('Logged out successfully', 'info');
     navigateTo('login');
+  };
+
+  // PWA Install Logic
+  let deferredPrompt;
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+  });
+
+  window.installPWA = async function () {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'accepted') {
+        deferredPrompt = null;
+      }
+    } else {
+      toast('To install: tap Share (iOS) or Menu (Android) and select "Add to Home Screen"', 'info');
+    }
   };
 
   function escapeHtml(str) {

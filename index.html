@@ -32,6 +32,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="application-name" content="RXDT Exchange" />
+  <link rel="manifest" href="/manifest.json" />
 
   <!-- Open Graph (Facebook, WhatsApp, Telegram, LinkedIn) -->
   <meta property="og:type" content="website" />
@@ -245,6 +246,11 @@
           setTimeout(() => ls.remove(), 500);
         }
       }, 1400);
+
+      // Register Service Worker (enables push notifications + PWA install)
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/sw.js').catch(() => {});
+      }
     });
   </script>
 </body>
