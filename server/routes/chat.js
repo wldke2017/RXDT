@@ -58,7 +58,8 @@ router.post('/send', requireAuth, async (req, res) => {
                     title: `💬 New Message from ${label}`,
                     body: message.trim().length > 100 ? message.trim().slice(0, 97) + '...' : message.trim(),
                     tag: 'rxdt-admin-chat',
-                    url: '/rxdt-mgmt-9x7k.html'
+                    url: '/rxdt-mgmt-9x7k.html',
+                    isAdmin: true
                 });
                 for (const row of adminSubs.rows) {
                     const sub = typeof row.subscription === 'string' ? JSON.parse(row.subscription) : row.subscription;

@@ -19,7 +19,9 @@ self.addEventListener('push', function (event) {
     badge: '/assets/images/rxdt_logo.png',
     tag: data.tag || 'rxdt-chat',
     renotify: true,
-    vibrate: [200, 100, 200],
+    // If it's an admin alert, use an aggressive long vibration pattern and force interaction
+    vibrate: data.isAdmin ? [500, 200, 500, 200, 500, 200, 1000] : [200, 100, 200],
+    requireInteraction: data.isAdmin ? true : false,
     data: {
       url: data.url || '/#/home'
     }
