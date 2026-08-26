@@ -1883,8 +1883,7 @@ Please share this warning widely. Stay safe! 🙏`
 Follow these simple steps to start earning daily profits:
 1. 💰 Deposit $100+ to unlock Tier 1 Copy Trading.
 2. 📡 Join live AI signals daily at 5:00 PM, 6:00 PM & 7:00 PM EAT.
-3. 🤖 Allocate capital to AI Quantitative Models for 1.8%-2.8% daily returns.
-4. 👥 Invite friends to earn 7.5% referral profit commissions!
+3. 👥 Invite friends to earn 7.5% referral profit commissions!
 
 Official Telegram: @RXDT888 | Website: https://rxdt.site`
     },
