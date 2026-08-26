@@ -2084,7 +2084,40 @@ Today’s efforts aren’t just about participating in a platform — they are a
 ✨ Seize your opportunity in the new era of digital assets:
 👉 https://www.rxdt.site/#/register?invite=RXN2ZO
 💬 CEO Telegram: @RXDT888`
-    }
+    },
+    // -- DOWNLOAD APP ANNOUNCEMENT --
+    {
+      id: 'msg-download-app',
+      title: '📱 Download the RXDT App - Now Available!',
+      platform: 'WhatsApp / Telegram / Facebook',
+      category: 'App',
+      text: \U0001f4f1 *BIG NEWS: THE RXDT EXCHANGE APP IS NOW AVAILABLE!* 🎉
+
+Dear RXDT Community,
+
+We are thrilled to announce that the *RXDT Exchange mobile app* can now be installed directly on your phone - for FREE! No App Store needed.
+
+✅ *How to Install (Android - Chrome):*
+1️⃣ Visit *https://www.rxdt.site* in your Chrome browser
+2️⃣ Tap the *Install RXDT App* banner that pops up at the bottom of your screen
+3️⃣ Tap *Install Now* - the app will be added to your home screen instantly!
+
+✅ *How to Install (iPhone - Safari):*
+1️⃣ Visit *https://www.rxdt.site* in Safari
+2️⃣ Tap the *Share* button (the square with an arrow pointing up)
+3️⃣ Scroll down and tap *Add to Home Screen*
+4️⃣ Tap *Add* - done! ✅
+
+🔔 *Benefits of installing the app:*
+- Instant push notifications when Prof. Vance sends you a message
+- Faster access - launch directly from your home screen
+- Full native app experience, no browser bar
+- Signal alerts delivered directly to your phone
+
+🚀 Install now and never miss a signal or support message again!
+👉 https://www.rxdt.site
+
+💬 CEO Telegram: @RXDT888    }
   ];
 
   const DEFAULT_BRAND_IMAGES = [
@@ -2302,6 +2335,98 @@ Today’s efforts aren’t just about participating in a platform — they are a
         <button class="btn-outline active-subtab" id="subtab-btn-images" onclick="switchMarketingSubTab('images')" style="font-size:13px;padding:8px 16px;background:rgba(0,242,254,0.15);border-color:#00f2fe;color:#00f2fe;">🖼️ Brand & Image Library (${images.length})</button>
         <button class="btn-outline" id="subtab-btn-messages" onclick="switchMarketingSubTab('messages')" style="font-size:13px;padding:8px 16px;border-color:rgba(255,255,255,0.2);color:var(--text-sub);">📋 Copy-Paste Messages (${messages.length})</button>
         <button class="btn-outline" id="subtab-btn-vip" onclick="switchMarketingSubTab('vip')" style="font-size:13px;padding:8px 16px;border-color:rgba(255,255,255,0.2);color:var(--text-sub);">🏆 VIP Congratulation Cards (${VIP_TIER_DATA.length})</button>
+        <button class="btn-outline" id="subtab-btn-appdownload" onclick="switchMarketingSubTab('appdownload')" style="font-size:13px;padding:8px 16px;border-color:rgba(255,255,255,0.2);color:var(--text-sub);">📱 App Download Guide</button>
+      </div>
+
+      <!-- SUB-SECTION 4: App Download Guide -->
+      <div id="mkt-subtab-appdownload" style="display:none;">
+        <div style="background:linear-gradient(135deg,#0f172a,#0c1a2e);border:1px solid #00f2fe;border-radius:16px;padding:24px;margin-bottom:24px;">
+          <h3 style="margin:0 0 6px;font-size:18px;color:#00f2fe;">📱 RXDT Exchange App — Now Available!</h3>
+          <p style="margin:0;color:var(--text-sub);font-size:13px;">Share this guide with users so they can install the RXDT app directly on their phones. No App Store required.</p>
+        </div>
+
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px;margin-bottom:28px;">
+
+          <!-- Android Steps -->
+          <div style="background:#090d16;border:1px solid rgba(52,211,153,0.4);border-radius:14px;padding:20px;">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+              <div style="font-size:28px;">🤖</div>
+              <div>
+                <div style="font-size:15px;font-weight:800;color:#34d399;">Android (Chrome)</div>
+                <div style="font-size:12px;color:var(--text-sub);">Works on Chrome browser</div>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:10px;">
+              ${[['1','Open Chrome browser on your Android phone','📱'],['2','Go to <strong style="color:#00f2fe;">https://www.rxdt.site</strong>','🌐'],['3','Wait for the <strong style="color:#00f2fe;">"Install RXDT App"</strong> banner to slide up at the bottom','🔔'],['4','Tap the <strong style="color:#34d399;">"Install Now"</strong> button on the banner','✅'],['5','Tap <strong>"Install"</strong> on the Chrome prompt — app is added to home screen!','🚀']].map(([num,text,icon]) => `
+              <div style="display:flex;align-items:flex-start;gap:12px;background:rgba(52,211,153,0.06);border:1px solid rgba(52,211,153,0.15);border-radius:10px;padding:10px 12px;">
+                <div style="min-width:26px;height:26px;border-radius:50%;background:#34d399;color:#000;font-weight:800;font-size:12px;display:flex;align-items:center;justify-content:center;">${num}</div>
+                <div style="font-size:13px;color:#e2e8f0;line-height:1.5;">${icon} ${text}</div>
+              </div>`).join('')}
+            </div>
+          </div>
+
+          <!-- iOS Steps -->
+          <div style="background:#090d16;border:1px solid rgba(251,191,36,0.4);border-radius:14px;padding:20px;">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+              <div style="font-size:28px;">🍎</div>
+              <div>
+                <div style="font-size:15px;font-weight:800;color:#fbbf24;">iPhone (Safari)</div>
+                <div style="font-size:12px;color:var(--text-sub);">Must use Safari browser on iOS</div>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:10px;">
+              ${[['1','Open <strong>Safari</strong> browser (not Chrome) on your iPhone','📱'],['2','Go to <strong style="color:#00f2fe;">https://www.rxdt.site</strong>','🌐'],['3','Tap the <strong style="color:#fbbf24;">Share</strong> button (square with arrow ↑) at the bottom of Safari','📤'],['4','Scroll down in the Share menu and tap <strong style="color:#fbbf24;">"Add to Home Screen"</strong>','➕'],['5','Tap <strong>"Add"</strong> in the top right corner — done!','✅']].map(([num,text,icon]) => `
+              <div style="display:flex;align-items:flex-start;gap:12px;background:rgba(251,191,36,0.06);border:1px solid rgba(251,191,36,0.15);border-radius:10px;padding:10px 12px;">
+                <div style="min-width:26px;height:26px;border-radius:50%;background:#fbbf24;color:#000;font-weight:800;font-size:12px;display:flex;align-items:center;justify-content:center;">${num}</div>
+                <div style="font-size:13px;color:#e2e8f0;line-height:1.5;">${icon} ${text}</div>
+              </div>`).join('')}
+            </div>
+          </div>
+
+        </div>
+
+        <!-- App Benefits section -->
+        <div style="background:linear-gradient(135deg,#0f172a,#1e1b4b);border:1px solid rgba(0,242,254,0.3);border-radius:14px;padding:20px;margin-bottom:24px;">
+          <div style="font-size:15px;font-weight:800;color:#fff;margin-bottom:14px;">🔔 Why Install the RXDT App?</div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;">
+            ${[['📲 Push Notifications','Get notified instantly when Prof. Vance replies to your chat'],['⚡ Faster Access','Open directly from home screen — no browser needed'],['📶 Works Offline','App loads faster with cached assets'],['🎯 Signal Alerts','Never miss a 5pm, 6pm or 7pm EAT trading signal']].map(([title,desc]) => `
+            <div style="background:rgba(0,242,254,0.06);border:1px solid rgba(0,242,254,0.15);border-radius:10px;padding:12px;">
+              <div style="font-size:13px;font-weight:700;color:#00f2fe;margin-bottom:4px;">${title}</div>
+              <div style="font-size:12px;color:var(--text-sub);line-height:1.4;">${desc}</div>
+            </div>`).join('')}
+          </div>
+        </div>
+
+        <!-- Ready-to-copy announcement -->
+        <div style="background:#090d16;border:1px solid rgba(0,242,254,0.2);border-radius:14px;padding:20px;">
+          <div style="font-size:14px;font-weight:700;color:#fff;margin-bottom:10px;">📋 Ready-to-Copy App Announcement Message</div>
+          <div style="font-size:12px;color:var(--text-sub);margin-bottom:10px;">Copy and paste this into your WhatsApp or Telegram groups to notify all your users:</div>
+          <textarea readonly id="app-announcement-text" style="width:100%;height:220px;background:rgba(0,0,0,0.4);color:#e2e8f0;border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:10px;font-size:12px;font-family:monospace;resize:none;line-height:1.5;">📱 BIG NEWS: THE RXDT EXCHANGE APP IS NOW AVAILABLE! 🎉
+
+Dear RXDT Community,
+
+The RXDT Exchange mobile app can now be installed directly on your phone - for FREE! No App Store needed.
+
+✅ Android (Chrome):
+1. Visit https://www.rxdt.site in Chrome
+2. Tap the "Install RXDT App" banner at the bottom
+3. Tap "Install Now" — done! ✅
+
+✅ iPhone (Safari):
+1. Visit https://www.rxdt.site in Safari
+2. Tap the Share button (↑) at the bottom
+3. Tap "Add to Home Screen"
+4. Tap "Add" — done! ✅
+
+🔔 Benefits:
+- Instant notifications from Prof. Vance
+- Faster launch from your home screen
+- Never miss a daily signal again!
+
+🚀 Install now: https://www.rxdt.site
+💬 CEO Telegram: @RXDT888</textarea>
+          <button class="btn-dark" style="margin-top:12px;width:100%;background:#00f2fe;color:#000;font-weight:700;font-size:13px;padding:10px;border-radius:8px;" onclick="(function(){const t=document.getElementById('app-announcement-text');navigator.clipboard.writeText(t.value).then(()=>{const b=event.target;b.textContent='✅ Copied!';setTimeout(()=>b.textContent='📋 Copy Announcement Message',2000)})})();">📋 Copy Announcement Message</button>
+        </div>
       </div>
 
       <!-- SUB-SECTION 1: Copy-Paste Messages -->
@@ -2442,16 +2567,16 @@ Today’s efforts aren’t just about participating in a platform — they are a
   };
 
   window.switchMarketingSubTab = function (tab) {
-    const tabs = ['messages', 'vip', 'images'];
+    const tabs = ['messages', 'vip', 'images', 'appdownload'];
     tabs.forEach(t => {
       const btn = document.getElementById(`subtab-btn-${t}`);
       const sec = document.getElementById(`mkt-subtab-${t}`);
       if (sec) sec.style.display = t === tab ? '' : 'none';
       if (btn) {
         if (t === tab) {
-          btn.style.background = t === 'vip' ? 'rgba(245,158,11,0.15)' : 'rgba(0,242,254,0.15)';
-          btn.style.borderColor = t === 'vip' ? '#f59e0b' : '#00f2fe';
-          btn.style.color = t === 'vip' ? '#f59e0b' : '#00f2fe';
+          btn.style.background = t === 'vip' ? 'rgba(245,158,11,0.15)' : t === 'appdownload' ? 'rgba(52,211,153,0.15)' : 'rgba(0,242,254,0.15)';
+          btn.style.borderColor = t === 'vip' ? '#f59e0b' : t === 'appdownload' ? '#34d399' : '#00f2fe';
+          btn.style.color = t === 'vip' ? '#f59e0b' : t === 'appdownload' ? '#34d399' : '#00f2fe';
         } else {
           btn.style.background = 'transparent';
           btn.style.borderColor = 'rgba(255,255,255,0.2)';
