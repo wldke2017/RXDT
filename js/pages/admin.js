@@ -2088,36 +2088,34 @@ Today’s efforts aren’t just about participating in a platform — they are a
     // -- DOWNLOAD APP ANNOUNCEMENT --
     {
       id: 'msg-download-app',
-      title: '📱 Download the RXDT App - Now Available!',
+      title: 'Download the RXDT App - Now Available!',
       platform: 'WhatsApp / Telegram / Facebook',
       category: 'App',
-      text: \U0001f4f1 *BIG NEWS: THE RXDT EXCHANGE APP IS NOW AVAILABLE!* 🎉
+      text: `BIG NEWS: THE RXDT EXCHANGE APP IS NOW AVAILABLE!
 
 Dear RXDT Community,
 
-We are thrilled to announce that the *RXDT Exchange mobile app* can now be installed directly on your phone - for FREE! No App Store needed.
+The RXDT Exchange mobile app can now be installed directly on your phone - for FREE! No App Store needed.
 
-✅ *How to Install (Android - Chrome):*
-1️⃣ Visit *https://www.rxdt.site* in your Chrome browser
-2️⃣ Tap the *Install RXDT App* banner that pops up at the bottom of your screen
-3️⃣ Tap *Install Now* - the app will be added to your home screen instantly!
+How to Install (Android - Chrome):
+1. Visit https://www.rxdt.site in Chrome
+2. Tap the Install RXDT App banner at the bottom
+3. Tap Install Now - added to your home screen!
 
-✅ *How to Install (iPhone - Safari):*
-1️⃣ Visit *https://www.rxdt.site* in Safari
-2️⃣ Tap the *Share* button (the square with an arrow pointing up)
-3️⃣ Scroll down and tap *Add to Home Screen*
-4️⃣ Tap *Add* - done! ✅
+How to Install (iPhone - Safari):
+1. Visit https://www.rxdt.site in Safari
+2. Tap the Share button at the bottom of Safari
+3. Scroll down and tap Add to Home Screen
+4. Tap Add - done!
 
-🔔 *Benefits of installing the app:*
-- Instant push notifications when Prof. Vance sends you a message
-- Faster access - launch directly from your home screen
-- Full native app experience, no browser bar
-- Signal alerts delivered directly to your phone
+Benefits:
+- Instant push notifications when Prof. Vance replies
+- Faster access from your home screen
+- Never miss a daily signal again!
 
-🚀 Install now and never miss a signal or support message again!
-👉 https://www.rxdt.site
-
-💬 CEO Telegram: @RXDT888    }
+Install now: https://www.rxdt.site
+CEO Telegram: @RXDT888`
+    }
   ];
 
   const DEFAULT_BRAND_IMAGES = [
