@@ -662,8 +662,10 @@ export function init(page) {
         const codeEl = document.getElementById('ref-invite-code');
         const linkEl = document.getElementById('ref-invite-link');
 
-        if (totEl) totEl.textContent = data.total3LevelMembers || data.totalMembers || 0;
-        if (dirEl) dirEl.textContent = data.directMembers || 0;
+        if (totEl) totEl.textContent = data.allLevel2Members !== undefined
+          ? (data.allDirectMembers || 0) + (data.allLevel2Members || 0) + (data.allLevel3Members || 0)
+          : data.total3LevelMembers || data.totalMembers || 0;
+        if (dirEl) dirEl.textContent = data.allDirectMembers !== undefined ? data.allDirectMembers : (data.directMembers || 0);
         if (commEl) commEl.textContent = `$${(data.totalCommission || 0).toFixed(2)}`;
         if (codeEl && data.inviteCode) codeEl.textContent = data.inviteCode;
         if (linkEl && data.inviteCode) linkEl.textContent = `${window.location.origin}/#/register?invite=${data.inviteCode}`;
@@ -725,14 +727,18 @@ export function init(page) {
               <div class="table-container">
                 <table class="data-table">
                   <thead>
-                    <tr><th>User</th><th>Joined Date</th><th>Assets</th><th>Level</th></tr>
+                    <tr><th>User</th><th>Joined Date</th><th>Assets</th><th>Status</th><th>Level</th></tr>
                   </thead>
                   <tbody>
                     ${data.members.map(m => `
                       <tr>
                         <td><strong>${m.name}</strong> <span style="font-size:12px;color:var(--text-muted);">${m.phone || m.email}</span></td>
                         <td>${new Date(m.joinedAt).toLocaleDateString()}</td>
-                        <td class="price-up">$${m.totalAssets.toFixed(2)}</td>
+                        <td class="${m.status === 'active' ? 'price-up' : ''}">$${m.totalAssets.toFixed(2)}</td>
+                        <td>${m.status === 'active'
+                          ? '<span class="badge badge-success" style="font-size:11px;">✅ Active</span>'
+                          : '<span class="badge" style="font-size:11px;background:rgba(245,158,11,0.15);color:#f59e0b;border:1px solid rgba(245,158,11,0.3);">⏳ Pending Deposit</span>'
+                        }</td>
                         <td><span class="badge badge-info">Level ${m.level}</span></td>
                       </tr>
                     `).join('')}

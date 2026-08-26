@@ -93,7 +93,7 @@ function filterQualifiedMembers(members, qualifiedSet) {
 // signal AND traded successfully count toward the VIP team. Members who merely
 // registered/joined are excluded.
 export async function calculate3LevelTeam(userId, inviteCode) {
-  // Level 1 (Direct)
+  // Level 1 (Direct) — ALL registered referrals
   const directRes = await query(
     `SELECT id, name, phone, email, created_at, available_balance, total_assets 
      FROM users 
@@ -129,7 +129,7 @@ export async function calculate3LevelTeam(userId, inviteCode) {
     level3Members = l3Res.rows;
   }
 
-  // Determine which of the 3-level members are "qualified" for VIP counting.
+  // Determine which members are "qualified" for VIP counting purposes only.
   const allMemberIds = [
     ...directMembers.map(m => m.id),
     ...level2Members.map(m => m.id),
@@ -137,7 +137,7 @@ export async function calculate3LevelTeam(userId, inviteCode) {
   ];
   const qualifiedSet = await getQualifiedMemberIds(allMemberIds);
 
-  // Filter each level down to qualified members only.
+  // VIP counting still uses only qualified members
   const qualifiedDirect = filterQualifiedMembers(directMembers, qualifiedSet);
   const qualifiedLevel2 = filterQualifiedMembers(level2Members, qualifiedSet);
   const qualifiedLevel3 = filterQualifiedMembers(level3Members, qualifiedSet);
@@ -145,13 +145,16 @@ export async function calculate3LevelTeam(userId, inviteCode) {
   const total3LevelCount = qualifiedDirect.length + qualifiedLevel2.length + qualifiedLevel3.length;
 
   return {
+    // VIP counts (qualified only)
     directCount: qualifiedDirect.length,
     level2Count: qualifiedLevel2.length,
     level3Count: qualifiedLevel3.length,
     total3LevelCount,
-    directMembers: qualifiedDirect,
-    level2Members: qualifiedLevel2,
-    level3Members: qualifiedLevel3
+    // Full member lists (all registered, with qualified flag)
+    directMembers,
+    level2Members,
+    level3Members,
+    qualifiedSet
   };
 }
 
@@ -192,7 +195,7 @@ router.get('/stats', requireAuth, async (req, res) => {
       [req.userId]
     );
 
-    // Format direct member list
+    // Format direct member list — ALL registered, with status indicating qualification
     const membersList = teamStats.directMembers.map(m => ({
       id: m.id,
       name: m.name || 'Trader',
@@ -200,17 +203,24 @@ router.get('/stats', requireAuth, async (req, res) => {
       email: m.email ? m.email.slice(0, 2) + '***@' + m.email.split('@')[1] : '',
       joinedAt: m.created_at,
       totalAssets: parseFloat(m.total_assets || 0),
-      level: 1
+      level: 1,
+      // Active = deposited + traded; Pending = just registered
+      status: teamStats.qualifiedSet.has(m.id) ? 'active' : 'pending'
     }));
 
     res.json({
       success: true,
       inviteCode,
+      // VIP-qualified counts (for salary/promotion eligibility)
       directMembers: teamStats.directCount,
       level2Members: teamStats.level2Count,
       level3Members: teamStats.level3Count,
       total3LevelMembers: teamStats.total3LevelCount,
       totalMembers: teamStats.total3LevelCount,
+      // Total registered counts (all, including pending)
+      allDirectMembers: teamStats.directMembers.length,
+      allLevel2Members: teamStats.level2Members.length,
+      allLevel3Members: teamStats.level3Members.length,
       totalCommission,
       vipInfo,
       nextSalaryDate: getNextSalaryDate(),
