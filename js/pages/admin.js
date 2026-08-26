@@ -452,10 +452,62 @@ async function pollPendingItems() {
   } catch (e) { /* poll errors are non-fatal */ }
 }
 
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding)
+    .replace(/\-/g, '+')
+    .replace(/_/g, '/');
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray;
+}
+
+const PUBLIC_VAPID_KEY = 'BPnDiIRA2Hni2GwSCZLBW_2zbQjlfaBWAdxIdSXy3KYhxC6iTRP4yvCxeLVRuJX_A5w1SlauHRZeEBpcx55zseY';
+
 function initDashboard() {
   window.toast = window.toast || ((m, t) => alert(m));
 
-  window.adminLogout = function () {
+  // Request push notification permissions and subscribe admin device
+  async function enableAdminPushNotifications() {
+    try {
+      if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+      
+      const perm = await Notification.requestPermission();
+      if (perm !== 'granted') return;
+      
+      const registration = await navigator.serviceWorker.ready;
+      let subscription = await registration.pushManager.getSubscription();
+      if (!subscription) {
+        subscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(PUBLIC_VAPID_KEY)
+        });
+      }
+      
+      if (subscription) {
+        await chatFetch('/push-subscribe', 'POST', { subscription }).catch(() => {});
+      }
+    } catch(e) {
+      console.error('Admin push error:', e);
+    }
+  }
+
+  // Trigger it silently on login
+  enableAdminPushNotifications();
+
+  window.adminLogout = async function () {
+    try {
+      if ('serviceWorker' in navigator && 'PushManager' in window) {
+        const registration = await navigator.serviceWorker.ready;
+        const subscription = await registration.pushManager.getSubscription();
+        if (subscription) {
+          await chatFetch('/push-unsubscribe', 'POST', { endpoint: subscription.endpoint }).catch(()=>{});
+        }
+      }
+    } catch(e) {}
     sessionStorage.removeItem(ADMIN_SESSION_KEY);
     sessionStorage.removeItem(ADMIN_SECRET_KEY);
     window.location.reload();

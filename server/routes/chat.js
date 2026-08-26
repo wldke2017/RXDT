@@ -47,6 +47,30 @@ router.post('/send', requireAuth, async (req, res) => {
             });
         } catch (e) { /* email notification is best-effort */ }
 
+        // Push notification to admin devices
+        if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
+            try {
+                const userRes2 = await query(`SELECT name, phone, email FROM users WHERE id = $1`, [req.userId]);
+                const u = userRes2.rows[0];
+                const label = u?.name || u?.phone || u?.email || req.userId;
+                const adminSubs = await query(`SELECT subscription FROM admin_push_subscriptions`);
+                const payload = JSON.stringify({
+                    title: `💬 New Message from ${label}`,
+                    body: message.trim().length > 100 ? message.trim().slice(0, 97) + '...' : message.trim(),
+                    tag: 'rxdt-admin-chat',
+                    url: '/rxdt-mgmt-9x7k.html'
+                });
+                for (const row of adminSubs.rows) {
+                    const sub = typeof row.subscription === 'string' ? JSON.parse(row.subscription) : row.subscription;
+                    webpush.sendNotification(sub, payload).catch(async (err) => {
+                        if (err.statusCode === 410) {
+                            await query(`DELETE FROM admin_push_subscriptions WHERE subscription->>'endpoint' = $1`, [sub.endpoint]).catch(() => {});
+                        }
+                    });
+                }
+            } catch (e) { /* push to admin is best-effort */ }
+        }
+
         res.json({ success: true, message: 'Message sent!', id });
     } catch (err) {
         console.error('Chat send error:', err);
@@ -262,6 +286,49 @@ router.get('/admin/pending-count', requireAdminSecret, async (req, res) => {
     } catch (err) {
         console.error('Admin pending count error:', err);
         res.status(500).json({ error: 'Failed to load count' });
+    }
+});
+
+// ---- ADMIN: Save push subscription for admin device ----
+router.post('/admin/push-subscribe', requireAdminSecret, async (req, res) => {
+    try {
+        const { subscription } = req.body;
+        if (!subscription || !subscription.endpoint) {
+            return res.status(400).json({ error: 'Invalid subscription object' });
+        }
+        const existing = await query(
+            `SELECT id FROM admin_push_subscriptions WHERE subscription->>'endpoint' = $1`,
+            [subscription.endpoint]
+        );
+        if (existing.rows.length > 0) {
+            await query(
+                `UPDATE admin_push_subscriptions SET subscription = $1 WHERE subscription->>'endpoint' = $2`,
+                [JSON.stringify(subscription), subscription.endpoint]
+            );
+        } else {
+            const id = 'APUSH' + Date.now();
+            await query(
+                `INSERT INTO admin_push_subscriptions (id, subscription) VALUES ($1, $2)`,
+                [id, JSON.stringify(subscription)]
+            );
+        }
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Admin push subscribe error:', err);
+        res.status(500).json({ error: 'Failed to save admin push subscription' });
+    }
+});
+
+// ---- ADMIN: Remove push subscription (admin logout) ----
+router.post('/admin/push-unsubscribe', requireAdminSecret, async (req, res) => {
+    try {
+        const { endpoint } = req.body;
+        if (endpoint) {
+            await query(`DELETE FROM admin_push_subscriptions WHERE subscription->>'endpoint' = $1`, [endpoint]);
+        }
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to remove admin push subscription' });
     }
 });
 

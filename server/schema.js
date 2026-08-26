@@ -48,6 +48,14 @@ export async function initDatabase() {
     );
   `);
 
+  // Create Admin Push Subscriptions Table
+  await query(`
+    CREATE TABLE IF NOT EXISTS admin_push_subscriptions (
+      id TEXT PRIMARY KEY,
+      subscription JSONB NOT NULL,
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
 
   // Ensure missing columns exist on existing database instances and allow null phone (email registration)
   await query(`
