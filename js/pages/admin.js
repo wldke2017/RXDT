@@ -80,74 +80,82 @@ export function render() {
 
 function renderDashboard() {
   return `
-  <div style="max-width:960px;margin:0 auto;padding:16px;">
+  <div style="max-width:1200px;margin:0 auto;padding:16px;font-family:'Inter', sans-serif;">
 
-      <!-- Header -->
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px;">
-      <div>
-        <h1 style="font-size:22px;font-weight:800;margin:0;">🛡️ Admin Dashboard</h1>
-        <div style="font-size:13px;color:var(--text-sub);margin-top:4px;">RXDT Exchange — Management Panel</div>
-        <div id="admin-live-status" style="font-size:11px;color:#00c49a;margin-top:4px;">🟢 Live alerts: ON</div>
+    <!-- Premium Header -->
+    <div style="background:linear-gradient(135deg, rgba(15,23,42,0.8), rgba(30,27,75,0.8)); backdrop-filter:blur(10px); border:1px solid rgba(0,242,254,0.3); border-radius:20px; padding:24px; margin-bottom:24px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:20px; box-shadow:0 8px 32px rgba(0,0,0,0.4);">
+      <div style="display:flex; align-items:center; gap:16px;">
+        <div style="width:56px; height:56px; background:linear-gradient(135deg, #00f2fe, #4facfe); border-radius:16px; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 16px rgba(0,242,254,0.4);">
+          <span style="font-size:28px;">🛡️</span>
+        </div>
+        <div>
+          <h1 style="font-size:26px; font-weight:800; margin:0; color:#fff; letter-spacing:-0.5px;">RXDT Console</h1>
+          <div style="font-size:14px; color:var(--text-sub); margin-top:4px; display:flex; align-items:center; gap:8px;">
+            <span id="admin-live-status" style="display:inline-flex; align-items:center; gap:6px; color:#10b981; font-weight:600; background:rgba(16,185,129,0.1); padding:4px 10px; border-radius:20px; font-size:12px;">
+              <span style="width:8px; height:8px; background:#10b981; border-radius:50%; box-shadow:0 0 8px #10b981;"></span> Live alerts: ON
+            </span>
+            <span>Management Panel</span>
+          </div>
+        </div>
       </div>
-      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-        <button class="btn-primary" onclick="runMasterSystemRepairAdmin()" style="padding:8px 18px;font-size:13px;font-weight:800;background:linear-gradient(135deg,#f59e0b,#d97706);border:none;border-radius:8px;color:#fff;box-shadow:0 0 12px rgba(245,158,11,0.4);">🛠️ FIX ALL USER BALANCES & TRANSACTIONS</button>
-        <button class="btn-outline" onclick="runDatabaseHardResetAdmin()" style="padding:8px 16px;font-size:13px;color:#ef4444;border-color:#ef4444;">💣 Reset All Balances to $0.00</button>
-        <button class="btn-outline" onclick="sendSignalReminderEmailsBroadcast()" style="padding:8px 16px;font-size:13px;color:#00d4ff;border-color:#00d4ff;">📧 Send Reminders</button>
-        <button class="btn-outline" onclick="settleStuckTrades()" style="padding:8px 16px;font-size:13px;color:#10b981;border-color:#10b981;">🔄 Settle Stuck Trades</button>
-        <button class="btn-outline" onclick="releaseFrozenFunds()" style="padding:8px 16px;font-size:13px;color:#f59e0b;border-color:#f59e0b;">🔓 Release In-Orders</button>
-        <button class="btn-outline" id="admin-sound-btn" onclick="toggleAdminSound()" style="padding:8px 16px;font-size:13px;">🔔 Sound: On</button>
-        <button class="btn-outline" onclick="loadAdminStats()" id="admin-refresh-btn" style="padding:8px 16px;font-size:13px;">🔄 Refresh</button>
-        <button class="btn-outline" onclick="adminLogout()" style="padding:8px 16px;font-size:13px;color:#ef4444;border-color:#ef4444;">Logout</button>
+      
+      <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+        <button class="btn-primary" onclick="runMasterSystemRepairAdmin()" style="padding:10px 18px; font-size:13px; font-weight:800; background:linear-gradient(135deg,#f59e0b,#d97706); border:none; border-radius:12px; color:#fff; box-shadow:0 4px 16px rgba(245,158,11,0.3); transition:all 0.2s;"><span style="margin-right:6px;">🛠️</span> SYSTEM REPAIR</button>
+        <button class="btn-outline" onclick="settleStuckTrades()" style="padding:10px 16px; font-size:13px; color:#10b981; border-color:rgba(16,185,129,0.5); border-radius:12px; background:rgba(16,185,129,0.05);"><span style="margin-right:6px;">🔄</span> Settle Trades</button>
+        <button class="btn-outline" onclick="releaseFrozenFunds()" style="padding:10px 16px; font-size:13px; color:#f59e0b; border-color:rgba(245,158,11,0.5); border-radius:12px; background:rgba(245,158,11,0.05);"><span style="margin-right:6px;">🔓</span> Release Funds</button>
+        <button class="btn-outline" onclick="sendSignalReminderEmailsBroadcast()" style="padding:10px 16px; font-size:13px; color:#00f2fe; border-color:rgba(0,242,254,0.5); border-radius:12px; background:rgba(0,242,254,0.05);"><span style="margin-right:6px;">📧</span> Reminders</button>
+        
+        <div style="width:1px; height:30px; background:rgba(255,255,255,0.1); margin:0 4px;"></div>
+        
+        <button class="btn-outline" id="admin-sound-btn" onclick="toggleAdminSound()" style="padding:10px 16px; font-size:13px; border-radius:12px; border-color:rgba(255,255,255,0.2);">🔔 On</button>
+        <button class="btn-outline" onclick="loadAdminStats()" id="admin-refresh-btn" style="padding:10px 16px; font-size:13px; border-radius:12px; border-color:rgba(255,255,255,0.2);">🔄 Refresh</button>
+        <button class="btn-outline" onclick="adminLogout()" style="padding:10px 16px; font-size:13px; color:#ef4444; border-color:rgba(239,68,68,0.3); border-radius:12px; background:rgba(239,68,68,0.05);">Logout</button>
       </div>
     </div>
 
     <!-- Stats Bar -->
-    <div id="admin-stats-bar" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:20px;">
-      <div class="admin-stat-card" id="stat-users"><div class="asc-val">—</div><div class="asc-label">Total Users</div></div>
-      <div class="admin-stat-card" id="stat-balance"><div class="asc-val">—</div><div class="asc-label">Total Balance</div></div>
-      <div class="admin-stat-card asc-warn" id="stat-dep"><div class="asc-val">—</div><div class="asc-label">Pending Deposits</div></div>
-      <div class="admin-stat-card asc-warn" id="stat-wit"><div class="asc-val">—</div><div class="asc-label">Pending Withdrawals</div></div>
-      <div class="admin-stat-card asc-warn" id="stat-kyc"><div class="asc-val">—</div><div class="asc-label">Pending KYC</div></div>
-      <div class="admin-stat-card asc-green" id="stat-sig"><div class="asc-val">—</div><div class="asc-label">Signal Trades</div></div>
+    <div id="admin-stats-bar" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:16px; margin-bottom:28px;">
+      <div class="admin-stat-card" id="stat-users" style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:16px; padding:20px; text-align:center; transition:transform 0.2s;"><div class="asc-val" style="font-size:28px; font-weight:800; color:#fff; margin-bottom:4px;">—</div><div class="asc-label" style="font-size:13px; color:var(--text-sub); font-weight:600; text-transform:uppercase; letter-spacing:1px;">👥 Users</div></div>
+      <div class="admin-stat-card" id="stat-balance" style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:16px; padding:20px; text-align:center; transition:transform 0.2s;"><div class="asc-val" style="font-size:28px; font-weight:800; color:#fff; margin-bottom:4px;">—</div><div class="asc-label" style="font-size:13px; color:var(--text-sub); font-weight:600; text-transform:uppercase; letter-spacing:1px;">💰 Total Balance</div></div>
+      <div class="admin-stat-card asc-warn" id="stat-dep" style="background:linear-gradient(180deg, rgba(245,158,11,0.05), transparent); border:1px solid rgba(245,158,11,0.3); border-radius:16px; padding:20px; text-align:center; transition:transform 0.2s;"><div class="asc-val" style="font-size:28px; font-weight:800; color:#f59e0b; margin-bottom:4px;">—</div><div class="asc-label" style="font-size:13px; color:#f59e0b; font-weight:600; text-transform:uppercase; letter-spacing:1px;">📥 Deposits</div></div>
+      <div class="admin-stat-card asc-warn" id="stat-wit" style="background:linear-gradient(180deg, rgba(239,68,68,0.05), transparent); border:1px solid rgba(239,68,68,0.3); border-radius:16px; padding:20px; text-align:center; transition:transform 0.2s;"><div class="asc-val" style="font-size:28px; font-weight:800; color:#ef4444; margin-bottom:4px;">—</div><div class="asc-label" style="font-size:13px; color:#ef4444; font-weight:600; text-transform:uppercase; letter-spacing:1px;">📤 Withdrawals</div></div>
+      <div class="admin-stat-card asc-warn" id="stat-kyc" style="background:linear-gradient(180deg, rgba(168,85,247,0.05), transparent); border:1px solid rgba(168,85,247,0.3); border-radius:16px; padding:20px; text-align:center; transition:transform 0.2s;"><div class="asc-val" style="font-size:28px; font-weight:800; color:#a855f7; margin-bottom:4px;">—</div><div class="asc-label" style="font-size:13px; color:#a855f7; font-weight:600; text-transform:uppercase; letter-spacing:1px;">🪪 KYC</div></div>
+      <div class="admin-stat-card asc-green" id="stat-sig" style="background:linear-gradient(180deg, rgba(16,185,129,0.05), transparent); border:1px solid rgba(16,185,129,0.3); border-radius:16px; padding:20px; text-align:center; transition:transform 0.2s;"><div class="asc-val" style="font-size:28px; font-weight:800; color:#10b981; margin-bottom:4px;">—</div><div class="asc-label" style="font-size:13px; color:#10b981; font-weight:600; text-transform:uppercase; letter-spacing:1px;">📡 Signals</div></div>
     </div>
 
-    <!-- Brand Assets (Arthur Vance & Logo) -->
-    <div style="background:linear-gradient(135deg, #0f172a, #1e1b4b);border:1px solid #00f2fe;border-radius:14px;padding:16px 20px;margin-bottom:20px;">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
-        <div>
-          <h3 style="margin:0;font-size:15px;font-weight:800;color:#fff;">🖼️ Brand & Marketing Assets</h3>
-          <div style="font-size:12px;color:var(--text-sub);margin-top:2px;">Official founder image, logo, copy-paste messages & VIP congratulation cards.</div>
-        </div>
-        <button class="btn-outline" style="font-size:12px;padding:6px 14px;border-color:#00f2fe;color:#00f2fe;" onclick="switchAdminTab('marketing', document.querySelectorAll('.tabs-header .tab-btn')[8]);renderMarketingHubTab();">📢 Open Marketing & VIP Storage Hub →</button>
+    <!-- Tabs Navigation (Sleek horizontal scroll) -->
+    <div style="margin-bottom:24px; position:relative;">
+      <div class="tabs-header" style="display:flex; overflow-x:auto; gap:12px; padding-bottom:12px; scrollbar-width:none; -ms-overflow-style:none; align-items:center;">
+        <!-- Hide scrollbar for Chrome/Safari -->
+        <style>
+          .tabs-header::-webkit-scrollbar { display: none; }
+          .admin-nav-btn {
+            white-space: nowrap; padding: 12px 20px; font-size: 14px; font-weight: 600; border-radius: 100px;
+            background: rgba(255,255,255,0.03); color: var(--text-sub); border: 1px solid rgba(255,255,255,0.05);
+            transition: all 0.2s; cursor: pointer; flex-shrink: 0; display:flex; align-items:center; gap:8px;
+          }
+          .admin-nav-btn:hover { background: rgba(255,255,255,0.08); color: #fff; }
+          .admin-nav-btn.active { background: linear-gradient(135deg, rgba(0,242,254,0.1), rgba(79,172,254,0.1)); color: #00f2fe; border-color: rgba(0,242,254,0.4); box-shadow: 0 4px 16px rgba(0,242,254,0.15); }
+        </style>
+        
+        <button class="admin-nav-btn active tab-btn" onclick="switchAdminTab('deposits',this)"><span>💰</span> Deposits</button>
+        <button class="admin-nav-btn tab-btn" onclick="switchAdminTab('withdrawals',this)"><span>📤</span> Withdrawals</button>
+        <button class="admin-nav-btn tab-btn" onclick="switchAdminTab('kyc',this)"><span>🪪</span> KYC</button>
+        <button class="admin-nav-btn tab-btn" onclick="switchAdminTab('users',this)"><span>👥</span> Users</button>
+        <button class="admin-nav-btn tab-btn" onclick="switchAdminTab('chat',this);loadChatConversations()"><span>💬</span> Support Chat</button>
+        <button class="admin-nav-btn tab-btn" onclick="switchAdminTab('signals',this)"><span>📡</span> Signals</button>
+        <button class="admin-nav-btn tab-btn" onclick="switchAdminTab('vip',this);loadVipRewardsView()"><span>🎁</span> VIP Rewards</button>
+        <button class="admin-nav-btn tab-btn" onclick="switchAdminTab('earnings',this);loadEarningsView()"><span>📊</span> Earnings</button>
+        <button class="admin-nav-btn tab-btn" onclick="switchAdminTab('marketing',this);renderMarketingHubTab()"><span>📢</span> Marketing Assets</button>
+        <button class="admin-nav-btn tab-btn" onclick="switchAdminTab('infographics',this);renderInfographicsTab()"><span>🖼️</span> Profit Cards</button>
+        <button class="admin-nav-btn tab-btn" onclick="switchAdminTab('notifications',this);renderAdminNotificationsTab()"><span>🔔</span> Announcements</button>
       </div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;">
-        <div style="text-align:center;background:rgba(255,255,255,0.03);padding:12px;border-radius:10px;border:1px solid rgba(0,242,254,0.2);">
-          <div style="font-size:12px;font-weight:700;color:#00f2fe;margin-bottom:8px;">👤 Arthur Vance — Founder & CEO</div>
-          <img src="assets/images/warren_pennington.png" alt="Arthur Vance" style="width:100%;max-width:160px;height:auto;border-radius:10px;border:2px solid #00f2fe;margin-bottom:8px;object-fit:cover;" />
-          <a href="assets/images/warren_pennington.png" download="Arthur_Vance.png" class="btn-outline" style="font-size:12px;padding:6px 14px;display:inline-block;border-color:#00f2fe;color:#00f2fe;">📥 Download Image</a>
-        </div>
-        <div style="text-align:center;background:rgba(255,255,255,0.03);padding:12px;border-radius:10px;border:1px solid rgba(0,242,254,0.2);">
-          <div style="font-size:12px;font-weight:700;color:#00f2fe;margin-bottom:8px;">🚀 RXDT Exchange Logo</div>
-          <img src="assets/images/rxdt_logo.png" alt="RXDT Logo" style="width:100%;max-width:160px;height:auto;border-radius:10px;border:2px solid #00f2fe;margin-bottom:8px;object-fit:contain;background:rgba(255,255,255,0.05);" />
-          <a href="assets/images/rxdt_logo.png" download="RXDT_Logo.png" class="btn-outline" style="font-size:12px;padding:6px 14px;display:inline-block;border-color:#00f2fe;color:#00f2fe;">📥 Download Logo</a>
-        </div>
-      </div>
+      <!-- Subtle fade edge for scroll hint -->
+      <div style="position:absolute; right:0; top:0; bottom:12px; width:40px; background:linear-gradient(to right, transparent, var(--bg-primary)); pointer-events:none;"></div>
     </div>
 
-    <!-- Tabs -->
-    <div class="tabs-header" style="margin-bottom:20px;">
-      <button class="tab-btn active" onclick="switchAdminTab('deposits',this)">💰 Deposits</button>
-      <button class="tab-btn" onclick="switchAdminTab('withdrawals',this)">📤 Withdrawals</button>
-      <button class="tab-btn" onclick="switchAdminTab('kyc',this)">🪪 KYC</button>
-      <button class="tab-btn" onclick="switchAdminTab('users',this)">👥 Users</button>
-      <button class="tab-btn" onclick="switchAdminTab('signals',this)">📡 Signals</button>
-      <button class="tab-btn" onclick="switchAdminTab('vip',this);loadVipRewardsView()">🎁 VIP Rewards</button>
-      <button class="tab-btn" onclick="switchAdminTab('earnings',this);loadEarningsView()">📊 Earnings</button>
-      <button class="tab-btn" onclick="switchAdminTab('infographics',this);renderInfographicsTab()">🖼️ Profit Cards</button>
-      <button class="tab-btn" onclick="switchAdminTab('marketing',this);renderMarketingHubTab()">📢 Marketing & VIP Assets</button>
-      <button class="tab-btn" onclick="switchAdminTab('notifications',this);renderAdminNotificationsTab()">🔔 Notifications</button>
-      <button class="tab-btn" onclick="switchAdminTab('chat',this);loadChatConversations()">💬 Chat</button>
-    </div>
+    <!-- Main Content Panels Container with sleek card background -->
+    <div style="background:rgba(15,23,42,0.6); backdrop-filter:blur(10px); border:1px solid rgba(255,255,255,0.05); border-radius:20px; padding:24px; min-height:500px; box-shadow:0 10px 40px rgba(0,0,0,0.2);">
 
     <!-- Deposits Panel -->
     <div id="admin-tab-deposits">
@@ -274,6 +282,8 @@ function renderDashboard() {
         <button class="btn-primary" style="width:100%;height:46px;font-size:15px;font-weight:700;" onclick="submitBalanceAdjust()">Apply Adjustment</button>
       </div>
     </div>
+
+  </div><!-- End of main content panels container -->
 
   </div>`;
 }
