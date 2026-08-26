@@ -10,7 +10,6 @@ import * as authPage from './pages/auth.js';
 import * as luckyWheelPage from './pages/luckyWheel.js';
 import * as profilePage from './pages/profile.js';
 import * as aboutPage from './pages/about.js';
-import * as adminPage from './pages/admin.js';
 import * as contractPage from './pages/contract.js';
 
 const routes = {
@@ -38,7 +37,6 @@ const routes = {
   'about': aboutPage,
   'agreement': aboutPage,
   'investment-agreement': aboutPage,
-  'admin': adminPage,
   'contract': contractPage,
 };
 

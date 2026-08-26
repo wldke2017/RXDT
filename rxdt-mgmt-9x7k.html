@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
+
+  <!-- NO indexing — keep this page invisible to search engines -->
+  <meta name="robots" content="noindex, nofollow, noarchive, nosnippet" />
+  <meta name="googlebot" content="noindex, nofollow" />
+
+  <title>RXDT Management Console</title>
+
+  <link rel="icon" href="assets/images/rxdt_logo.png" type="image/png" />
+
+  <!-- Reuse the same CSS as the main app -->
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="css/components.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@700;800;900&display=swap" rel="stylesheet" />
+
+  <style>
+    /* Minimal shell — no nav bar, no footer, just the admin content */
+    *, *::before, *::after { box-sizing: border-box; }
+    body { margin: 0; padding: 0; background: var(--bg-primary, #090d16); color: var(--text-primary, #e2e8f0); font-family: 'Inter', sans-serif; }
+    #admin-shell { min-height: 100vh; }
+    #page-content { padding: 0; }
+    /* Hide the toast container if not injected */
+    #toast-container { position: fixed; bottom: 24px; right: 16px; display: flex; flex-direction: column; gap: 8px; z-index: 9999; pointer-events: none; }
+    .toast { background: #1e293b; color: #fff; padding: 12px 18px; border-radius: 10px; font-size: 13px; font-weight: 600; border-left: 3px solid #00f2fe; box-shadow: 0 4px 16px rgba(0,0,0,0.4); pointer-events: auto; animation: slideInToast 0.3s ease; }
+    .toast.success { border-color: #10b981; }
+    .toast.error { border-color: #ef4444; }
+    .toast.info { border-color: #00f2fe; }
+    @keyframes slideInToast { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+  </style>
+</head>
+<body>
+  <div id="admin-shell">
+    <div id="page-content"></div>
+  </div>
+  <div id="toast-container"></div>
+
+  <script type="module">
+    // Only load admin.js — no app.js, no router, no user store
+    import * as adminPage from './js/pages/admin.js';
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const container = document.getElementById('page-content');
+      if (container && adminPage.render) {
+        container.innerHTML = adminPage.render('admin');
+        if (adminPage.init) adminPage.init('admin');
+      }
+    });
+  </script>
+</body>
+</html>
