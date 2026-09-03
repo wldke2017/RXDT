@@ -226,10 +226,11 @@ export async function autoExecuteEligibleSignals() {
 
     // Find all eligible users
     const usersRes = await query(`
-      SELECT id, available_balance, total_deposits, free_signal_credits 
-      FROM users 
-      WHERE available_balance > 0
-    `);
+      SELECT u.id, u.available_balance, u.total_deposits, u.free_signal_credits, u.auto_signal_exec,
+             (SELECT id FROM signal_trades WHERE user_id = u.id AND signal_id = $1 AND DATE(created_at) = $2 LIMIT 1) as executed_today
+      FROM users u
+      WHERE u.available_balance > 0
+    `, [signal.signalId, today]);
 
     let executed = 0;
     let skipped = 0;
@@ -254,18 +255,10 @@ export async function autoExecuteEligibleSignals() {
       if (balance <= 0) { skipped++; continue; }
 
       // Check if already executed today
-      const execCheck = await query(
-        `SELECT id FROM signal_trades WHERE user_id = $1 AND signal_id = $2 AND DATE(created_at) = $3`,
-        [user.id, signal.signalId, today]
-      ).catch(() => ({ rows: [] }));
-      if (execCheck.rows.length > 0) { skipped++; continue; }
+      if (user.executed_today) { skipped++; continue; }
 
       // Check auto-trade preference (default: enabled)
-      const prefRes = await query(
-        `SELECT auto_signal_exec FROM users WHERE id = $1`,
-        [user.id]
-      ).catch(() => ({ rows: [{ auto_signal_exec: true }] }));
-      const autoExec = prefRes.rows[0]?.auto_signal_exec !== false;
+      const autoExec = user.auto_signal_exec !== false;
       if (!autoExec) { skipped++; continue; }
 
       // Execute the trade
