@@ -86,10 +86,23 @@ router.post('/send', requireAuth, async (req, res) => {
 // ---- USER: Get their messages ----
 router.get('/messages', requireAuth, async (req, res) => {
     try {
-        const result = await query(
-            `SELECT id, message, sender, is_read, is_auto_reply, created_at FROM chat_messages WHERE user_id = $1 ORDER BY created_at ASC`,
-            [req.userId]
-        );
+        let result;
+        try {
+            result = await query(
+                `SELECT id, message, sender, is_read, is_auto_reply, created_at FROM chat_messages WHERE user_id = $1 ORDER BY created_at ASC`,
+                [req.userId]
+            );
+        } catch (dbErr) {
+            if (dbErr.message.includes('is_auto_reply')) {
+                await query(`ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS is_auto_reply BOOLEAN DEFAULT FALSE;`).catch(() => {});
+                result = await query(
+                    `SELECT id, message, sender, is_read, is_auto_reply, created_at FROM chat_messages WHERE user_id = $1 ORDER BY created_at ASC`,
+                    [req.userId]
+                );
+            } else {
+                throw dbErr;
+            }
+        }
         res.json({ messages: result.rows });
     } catch (err) {
         console.error('Chat messages error:', err);
@@ -123,10 +136,24 @@ router.get('/admin/conversations', requireAdminSecret, async (req, res) => {
 // ---- ADMIN: Get messages for a specific user conversation ----
 router.get('/admin/messages/:userId', requireAdminSecret, async (req, res) => {
     try {
-        const result = await query(
-            `SELECT id, message, sender, is_read, is_auto_reply, created_at FROM chat_messages WHERE user_id = $1 ORDER BY created_at ASC`,
-            [req.params.userId]
-        );
+        let result;
+        try {
+            result = await query(
+                `SELECT id, message, sender, is_read, is_auto_reply, created_at FROM chat_messages WHERE user_id = $1 ORDER BY created_at ASC`,
+                [req.params.userId]
+            );
+        } catch (dbErr) {
+            // Fallback: If is_auto_reply column doesn't exist yet (migration pending)
+            if (dbErr.message.includes('is_auto_reply')) {
+                await query(`ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS is_auto_reply BOOLEAN DEFAULT FALSE;`).catch(() => {});
+                result = await query(
+                    `SELECT id, message, sender, is_read, is_auto_reply, created_at FROM chat_messages WHERE user_id = $1 ORDER BY created_at ASC`,
+                    [req.params.userId]
+                );
+            } else {
+                throw dbErr;
+            }
+        }
 
         // Mark all user messages as read
         await query(
