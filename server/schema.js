@@ -326,9 +326,21 @@ export async function initDatabase() {
       message TEXT NOT NULL,
       sender VARCHAR(10) NOT NULL DEFAULT 'user',
       is_read BOOLEAN DEFAULT FALSE,
+      is_auto_reply BOOLEAN DEFAULT FALSE,
       created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
     );
   `);
+
+  // Migration: add is_auto_reply column to existing chat_messages tables
+  await query(`
+    ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS is_auto_reply BOOLEAN DEFAULT FALSE;
+  `).catch(() => {});
+
+  // Ensure auto_reply_enabled system setting exists (defaults to TRUE)
+  await query(`
+    INSERT INTO system_settings (key, value, updated_at) VALUES ('auto_reply_enabled', 'true', NOW())
+    ON CONFLICT (key) DO NOTHING;
+  `).catch(() => {});
 
   await seedInitialData();
   await reconcileBalances();

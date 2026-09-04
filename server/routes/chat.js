@@ -3,6 +3,7 @@ import { query } from '../db.js';
 import { requireAuth } from '../middleware/auth.js';
 import { requireAdminSecret } from './admin.js';
 import webpush from 'web-push';
+import { autoReplyIfNeeded } from './autoReply.js';
 
 // Configure VAPID (keys stored in .env)
 if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
@@ -73,6 +74,9 @@ router.post('/send', requireAuth, async (req, res) => {
         }
 
         res.json({ success: true, message: 'Message sent!', id });
+
+        // Fire auto-reply agent asynchronously — never blocks or throws to the user
+        autoReplyIfNeeded(req.userId, message.trim()).catch(() => {});
     } catch (err) {
         console.error('Chat send error:', err);
         res.status(500).json({ error: 'Failed to send message' });
@@ -83,7 +87,7 @@ router.post('/send', requireAuth, async (req, res) => {
 router.get('/messages', requireAuth, async (req, res) => {
     try {
         const result = await query(
-            `SELECT id, message, sender, is_read, created_at FROM chat_messages WHERE user_id = $1 ORDER BY created_at ASC`,
+            `SELECT id, message, sender, is_read, is_auto_reply, created_at FROM chat_messages WHERE user_id = $1 ORDER BY created_at ASC`,
             [req.userId]
         );
         res.json({ messages: result.rows });
@@ -120,7 +124,7 @@ router.get('/admin/conversations', requireAdminSecret, async (req, res) => {
 router.get('/admin/messages/:userId', requireAdminSecret, async (req, res) => {
     try {
         const result = await query(
-            `SELECT id, message, sender, is_read, created_at FROM chat_messages WHERE user_id = $1 ORDER BY created_at ASC`,
+            `SELECT id, message, sender, is_read, is_auto_reply, created_at FROM chat_messages WHERE user_id = $1 ORDER BY created_at ASC`,
             [req.params.userId]
         );
 

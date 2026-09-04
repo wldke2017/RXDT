@@ -142,7 +142,7 @@ function renderDashboard() {
         <button class="admin-nav-btn tab-btn" onclick="switchAdminTab('withdrawals',this)"><span>📤</span> Withdrawals</button>
         <button class="admin-nav-btn tab-btn" onclick="switchAdminTab('kyc',this)"><span>🪪</span> KYC</button>
         <button class="admin-nav-btn tab-btn" onclick="switchAdminTab('users',this)"><span>👥</span> Users</button>
-        <button class="admin-nav-btn tab-btn" onclick="switchAdminTab('chat',this);loadChatConversations()"><span>💬</span> Support Chat</button>
+        <button class="admin-nav-btn tab-btn" onclick="switchAdminTab('chat',this);loadChatConversations();loadAutoReplyStatus()"><span>💬</span> Support Chat</button>
         <button class="admin-nav-btn tab-btn" onclick="switchAdminTab('signals',this)"><span>📡</span> Signals</button>
         <button class="admin-nav-btn tab-btn" onclick="switchAdminTab('vip',this);loadVipRewardsView()"><span>🎁</span> VIP Rewards</button>
         <button class="admin-nav-btn tab-btn" onclick="switchAdminTab('earnings',this);loadEarningsView()"><span>📊</span> Earnings</button>
@@ -207,6 +207,19 @@ function renderDashboard() {
 
     <!-- Chat Panel -->
     <div id="admin-tab-chat" style="display:none;">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:16px;padding:12px 16px;background:rgba(0,242,254,0.05);border:1px solid rgba(0,242,254,0.15);border-radius:12px;">
+        <div>
+          <div style="font-size:14px;font-weight:700;color:#fff;">🤖 Auto-Reply Agent</div>
+          <div style="font-size:11px;color:var(--text-muted);">Automatically replies to similar past questions. Silent when no match found.</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span id="auto-reply-status-label" style="font-size:13px;font-weight:700;color:#00c49a;">Loading...</span>
+          <label class="signal-toggle">
+            <input type="checkbox" id="auto-reply-toggle-chk" onchange="toggleAutoReplyAgent(this.checked)"/>
+            <span class="signal-toggle-slider"></span>
+          </label>
+        </div>
+      </div>
       <div id="admin-chat-list" class="admin-loading">Loading conversations...</div>
       <div id="admin-chat-conversation" style="display:none;"></div>
     </div>
@@ -1280,11 +1293,14 @@ function initDashboard() {
 
       let msgsHtml = messages.map(m => {
         const isAdmin = m.sender === 'admin';
+        const autoBadge = m.is_auto_reply
+          ? `<span style="font-size:9px;background:rgba(0,242,254,0.15);border:1px solid rgba(0,242,254,0.3);color:#00f2fe;border-radius:6px;padding:1px 5px;margin-left:6px;">🤖 Auto</span>`
+          : '';
         return `
           <div style="display:flex;justify-content:${isAdmin ? 'flex-end' : 'flex-start'};margin-bottom:10px;">
             <div style="max-width:80%;padding:10px 14px;border-radius:12px;background:${isAdmin ? 'rgba(0,242,254,0.15)' : 'rgba(255,255,255,0.06)'};border:1px solid rgba(255,255,255,0.1);">
               <div style="font-size:13px;color:#fff;">${m.message}</div>
-              <div style="font-size:10px;color:var(--text-muted);margin-top:4px;">${m.created_at ? timeAgo(m.created_at).substring(0, 16) : ''}</div>
+              <div style="font-size:10px;color:var(--text-muted);margin-top:4px;">${m.created_at ? timeAgo(m.created_at).substring(0, 16) : ''}${autoBadge}</div>
             </div>
           </div>
         `;
@@ -1386,6 +1402,37 @@ Hello! Completing your KYC verification unlocks higher daily withdrawal limits a
     }
 
     input.focus();
+  };
+
+  // ---- CHAT: Auto-Reply Agent Toggle ----
+  window.loadAutoReplyStatus = async function () {
+    try {
+      const data = await adminFetch('/auto-reply-status');
+      const chk = document.getElementById('auto-reply-toggle-chk');
+      const lbl = document.getElementById('auto-reply-status-label');
+      if (chk) chk.checked = data.enabled;
+      if (lbl) {
+        lbl.textContent = data.enabled ? 'ON' : 'OFF';
+        lbl.style.color = data.enabled ? '#00c49a' : '#f59e0b';
+      }
+    } catch (e) { /* non-fatal */ }
+  };
+
+  window.toggleAutoReplyAgent = async function (enabled) {
+    try {
+      await adminFetch('/auto-reply-toggle', 'POST', { enabled });
+      const lbl = document.getElementById('auto-reply-status-label');
+      if (lbl) {
+        lbl.textContent = enabled ? 'ON' : 'OFF';
+        lbl.style.color = enabled ? '#00c49a' : '#f59e0b';
+      }
+      adminToast(enabled ? '🤖 Auto-Reply Agent enabled' : '🤖 Auto-Reply Agent disabled', enabled ? 'success' : 'info');
+    } catch (err) {
+      adminToast('Failed to toggle agent: ' + err.message, 'error');
+      // Revert checkbox on failure
+      const chk = document.getElementById('auto-reply-toggle-chk');
+      if (chk) chk.checked = !enabled;
+    }
   };
 
   // ---- INFOGRAPHICS: 30-Day Signal Earnings Cards Generator ----

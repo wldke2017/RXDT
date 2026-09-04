@@ -1082,4 +1082,32 @@ router.post('/settle-stuck-trades', requireAdminSecret, async (req, res) => {
   }
 });
 
+// ---- GET /api/admin/auto-reply-status ----
+// Returns the current auto-reply agent enabled state.
+router.get('/auto-reply-status', requireAdminSecret, async (req, res) => {
+  try {
+    const result = await query(`SELECT value FROM system_settings WHERE key = 'auto_reply_enabled'`);
+    const enabled = result.rows[0]?.value !== 'false';
+    res.json({ enabled });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ---- POST /api/admin/auto-reply-toggle ----
+// Enables or disables the auto-reply agent globally.
+router.post('/auto-reply-toggle', requireAdminSecret, async (req, res) => {
+  try {
+    const enabled = req.body?.enabled === true;
+    await query(
+      `INSERT INTO system_settings (key, value, updated_at) VALUES ('auto_reply_enabled', $1, NOW())
+       ON CONFLICT (key) DO UPDATE SET value = $1, updated_at = NOW()`,
+      [enabled ? 'true' : 'false']
+    );
+    res.json({ success: true, enabled });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 export default router;
